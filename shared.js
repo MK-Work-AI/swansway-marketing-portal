@@ -1477,11 +1477,29 @@ async function loadSiteContacts() {
 
 // ── DOMContentLoaded ──
 document.addEventListener('DOMContentLoaded', function() {
+  // Year references
   document.querySelectorAll('.year-ref').forEach(function(el){ el.textContent = PLAN_YEAR; });
   var tyEl = document.getElementById('topbar-year');
   if (tyEl) tyEl.textContent = PLAN_YEAR;
+
+  // Core init
   sbInit();
   loadAdminConfig();
-  loadActiveCampaignsBanner();
-  swEnsureUser();
+
+  // After auth resolves, trigger page-specific renders
+  setTimeout(function() {
+    loadActiveCampaignsBanner();
+    if (typeof mtLoad === 'function') mtLoad();
+
+    // Group page renders
+    if (document.getElementById('group-brand-grid')) {
+      if (typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
+      if (typeof renderGroupBudgetChart === 'function') renderGroupBudgetChart();
+      if (typeof loadSiteBudgets === 'function') loadSiteBudgets();
+      if (typeof loadSiteKPIs === 'function') loadSiteKPIs();
+      if (typeof loadBrandChannels === 'function') loadBrandChannels();
+      if (typeof spLoad === 'function') spLoad();
+      if (typeof calInit === 'function') calInit();
+    }
+  }, 1500);
 });
