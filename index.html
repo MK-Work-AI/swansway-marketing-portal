@@ -87,7 +87,7 @@
       </button>
       <div class="nav-dd-panel">
         <button class="nav-dd-item" data-view="crosscal" onclick="navGo('crosscal',this)">Campaign Calendar</button>
-        <button class="nav-dd-item nav-item-cta" data-view="brief" onclick="navGo('brief',this)">Brief Builder</button>
+        <button class="nav-dd-item nav-item-cta" href="brief.html">Brief Builder</a><button style="display:none"</button>
       </div>
     </div>
 
@@ -126,7 +126,7 @@
 <div class="briefs-panel" id="briefs-panel">
   <div class="briefs-panel-header">
     <div class="briefs-panel-title">📋 Saved Briefs</div>
-    <div style="display:flex;gap:8px;align-items:center"><button onclick="bbNewBrief()" style="font-family:var(--font-b);font-size:11px;font-weight:700;padding:5px 12px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer">+ New brief</button><button class="briefs-panel-close" onclick="closeBriefsPanel()">×</button></div>
+    <div style="display:flex;gap:8px;align-items:center"><button onclick="window.location='brief.html'" style="font-family:var(--font-b);font-size:11px;font-weight:700;padding:5px 12px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer">+ New brief</button><button class="briefs-panel-close" onclick="closeBriefsPanel()">×</button></div>
   </div>
   <div class="briefs-panel-body">
     <div class="brief-filters" id="brief-filters">
@@ -135,7 +135,7 @@
     <div id="briefs-list"><div style="text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:13px">Loading your briefs…</div></div>
   </div>
   <div class="briefs-panel-footer">
-    <button class="btn btn-accent" style="width:100%" onclick="closeBriefsPanel();switchView('brief',document.querySelector('[data-view=brief]'))">✏ New Brief</button>
+    <button class="btn btn-accent" style="width:100%" onclick="window.location='brief.html'">✏ New Brief</button>
   </div>
 </div>
 
@@ -170,10 +170,18 @@
 </main>
 
 <script>
-// Page-specific init
 document.addEventListener('DOMContentLoaded', function() {
-  // Default view
   switchView('group', document.querySelector('[data-view="group"]'));
+  // Render brand cards and charts once data loads
+  setTimeout(function() {
+    if (typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
+    if (typeof renderGroupBudgetChart === 'function') renderGroupBudgetChart();
+    if (typeof loadSiteBudgets === 'function') loadSiteBudgets();
+    if (typeof loadSiteKPIs === 'function') loadSiteKPIs();
+    if (typeof loadBrandChannels === 'function') loadBrandChannels();
+    if (typeof spLoad === 'function') spLoad();
+    if (typeof calInit === 'function') calInit();
+  }, 1000);
 });
 </script>
 </body>
