@@ -463,7 +463,7 @@
       </button>
       <div class="nav-dd-panel">
         <button class="nav-dd-item" data-view="crosscal" onclick="navGo('crosscal',this)">Campaign Calendar</button>
-        <button class="nav-dd-item nav-item-cta" data-view="brief" onclick="navGo('brief',this)">Brief Builder</button>
+        <a class="nav-dd-item nav-item-cta" href="brief.html">✏ Brief Builder</a>
       </div>
     </div>
 
@@ -502,7 +502,7 @@
 <div class="briefs-panel" id="briefs-panel">
   <div class="briefs-panel-header">
     <div class="briefs-panel-title">📋 Saved Briefs</div>
-    <div style="display:flex;gap:8px;align-items:center"><button onclick="bbNewBrief()" style="font-family:var(--font-b);font-size:11px;font-weight:700;padding:5px 12px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer">+ New brief</button><button class="briefs-panel-close" onclick="closeBriefsPanel()">×</button></div>
+    <div style="display:flex;gap:8px;align-items:center"><button onclick="window.location='brief.html'" style="font-family:var(--font-b);font-size:11px;font-weight:700;padding:5px 12px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer">+ New brief</button><button class="briefs-panel-close" onclick="closeBriefsPanel()">×</button></div>
   </div>
   <div class="briefs-panel-body">
     <div class="brief-filters" id="brief-filters">
@@ -511,7 +511,7 @@
     <div id="briefs-list"><div style="text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:13px">Loading your briefs…</div></div>
   </div>
   <div class="briefs-panel-footer">
-    <button class="btn btn-accent" style="width:100%" onclick="closeBriefsPanel();switchView('brief',document.querySelector('[data-view=brief]'))">✏ New Brief</button>
+    <button class="btn btn-accent" style="width:100%" onclick="window.location='brief.html'">✏ New Brief</button>
   </div>
 </div>
 
@@ -907,7 +907,7 @@
 
   <!-- LEFT: Live brief preview -->
   <aside id="bb-left">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div class="bb-panel-eyebrow" style="margin-bottom:0">Live brief</div><button onclick="bbNewBrief()" style="font-family:var(--font-b);font-size:10px;font-weight:700;padding:3px 9px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:rgba(255,255,255,0.8);cursor:pointer">+ New</button></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div class="bb-panel-eyebrow" style="margin-bottom:0">Live brief</div><button onclick="window.location='brief.html'" style="font-family:var(--font-b);font-size:10px;font-weight:700;padding:3px 9px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:rgba(255,255,255,0.8);cursor:pointer">+ New</button></div>
     <div class="bb-panel-brand" id="bbp-brand">SELECT BRAND</div>
     <div class="bb-brief-row"><div class="bb-brief-label">Dates</div><div id="bbp-dates" class="bb-brief-empty">—</div></div>
     <div class="bb-brief-row"><div class="bb-brief-label">Site</div><div id="bbp-site" class="bb-brief-empty">All sites</div></div>
@@ -1074,5 +1074,23 @@
 </div>
 </main>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Show brief builder view
+  var briefView = document.getElementById('view-brief');
+  if (briefView) briefView.classList.add('active');
+
+  // Check URL for brief ID to load
+  setTimeout(function() {
+    var params = new URLSearchParams(window.location.search);
+    var briefId = params.get('brief');
+    if (briefId && typeof bbLoadBrief === 'function') {
+      bbLoadBrief(briefId);
+    } else if (typeof bbNewBrief === 'function') {
+      bbNewBrief();
+    }
+  }, 800);
+});
+</script>
 </body>
 </html>
