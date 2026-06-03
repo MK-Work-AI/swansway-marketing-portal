@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Swansway Marketing Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter+Tight:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css?v=1">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared.js?v=1" defer></script>
+  <script src="js/group.js?v=1" defer></script>
+  <script src="js/brand.js?v=1" defer></script>
+  <script src="js/tasks.js?v=1" defer></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo-wrap" style="display:flex;align-items:center;gap:14px">
+      <img src="https://npfalcon.b-cdn.net/tenant_d9013b5a-4990-4f3e-beec-4e1fc85990eb/media/uploads/main-logo.svg" alt="Swansway Motor Group" style="height:46px;width:auto;object-fit:contain;filter:brightness(0) invert(1)">
+      <div style="border-left:1px solid rgba(255,255,255,0.2);padding-left:14px">
+        <div style="font-family:var(--font-d);font-size:15px;font-weight:700;color:#fff;line-height:1.2;letter-spacing:-0.01em">Group Marketing Planner <span id="topbar-year"></span></div>
+      </div>
+    </div>
+    <div class="topbar-meta">
+      <span class="topbar-pill" id="topbar-env-pill">Live <span class="year-ref"></span> Plan</span>
+      <button class="user-pill" id="user-pill" onclick="handleUserPillClick()" style="display:none">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="user-name">Loading…</span>
+      </button>
+      <div style="position:relative;display:inline-flex;align-items:center">
+        <button id="mt-btn" onclick="mtToggle(event)" style="font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 14px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:2px;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;position:relative">
+          MY TASKS
+          <span id="mt-badge" style="display:none;background:#C8102E;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:1">0</span>
+        </button>
+        <div id="mt-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:340px;background:var(--white);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:500;overflow:hidden">
+          <div id="mt-header" style="padding:14px 18px;border-bottom:1px solid var(--border);font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--ink)">Your tasks</div>
+          <div id="mt-list" style="max-height:360px;overflow-y:auto"></div>
+          <div id="mt-footer" style="padding:10px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--ink-faint);text-align:center"></div>
+        </div>
+
+      <button onclick="openAuth()" id="signin-btn" style="display:none;font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 16px;background:#fff;border:none;border-radius:2px;color:var(--swansway);cursor:pointer;transition:all .2s" onmouseover="this.style.background='#f0ede8'" onmouseout="this.style.background='#fff'">Sign in</button>
+      <button id="briefs-btn" onclick="openBriefsPanel()" style="display:none;font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 16px;background:#fff;border:none;border-radius:2px;color:var(--swansway);cursor:pointer;transition:all .2s" onmouseover="this.style.background='#f0ede8'" onmouseout="this.style.background='#fff'">📋 My Briefs</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="brand-nav" id="brand-nav">
+  <div class="brand-nav-inner" id="brand-nav-inner">
+
+    <!-- INTEL dropdown -->
+    <div class="nav-dd-wrap" id="nav-intel">
+      <button class="nav-dd-btn has-active" onclick="navToggle('nav-intel',event)">
+        Intel <span class="nav-dd-chevron">▾</span>
+      </button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item active" data-view="group" onclick="navGo('group',this)">Overview</button>
+        <button class="nav-dd-item" data-view="channels" onclick="navGo('channels',this)">Channels</button>
+        <button class="nav-dd-item" data-view="kpis" onclick="navGo('kpis',this)">KPIs</button>
+        <button class="nav-dd-item" data-view="priorities" onclick="navGo('priorities',this)">Priorities</button>
+        <button class="nav-dd-item" data-view="competitor" onclick="navGo('competitor',this)">Competitors</button>
+        <div class="nav-dd-sep"></div>
+        <div class="nav-dd-section-label">Brand plans</div>
+        <button class="dd-brand-btn" onclick="navBrand('audi')"><span class="nav-dot" style="background:#BB0A21"></span>Audi</button>
+        <button class="dd-brand-btn" onclick="navBrand('vw')"><span class="nav-dot" style="background:#001E50"></span>Volkswagen</button>
+        <button class="dd-brand-btn" onclick="navBrand('vwcv')"><span class="nav-dot" style="background:#1B4F72"></span>VW Commercial</button>
+        <button class="dd-brand-btn" onclick="navBrand('seat')"><span class="nav-dot" style="background:#E2231A"></span>SEAT</button>
+        <button class="dd-brand-btn" onclick="navBrand('cupra')"><span class="nav-dot" style="background:#C8920A"></span>CUPRA</button>
+        <button class="dd-brand-btn" onclick="navBrand('landrover')"><span class="nav-dot" style="background:#1D4E1D"></span>Land Rover</button>
+        <button class="dd-brand-btn" onclick="navBrand('jaguar')"><span class="nav-dot" style="background:#1B2631"></span>Jaguar</button>
+        <button class="dd-brand-btn" onclick="navBrand('honda')"><span class="nav-dot" style="background:#CC0000"></span>Honda</button>
+        <button class="dd-brand-btn" onclick="navBrand('peugeot')"><span class="nav-dot" style="background:#1B3A6B"></span>Peugeot</button>
+        <button class="dd-brand-btn" onclick="navBrand('byd')"><span class="nav-dot" style="background:#0066CC"></span>BYD</button>
+        <button class="dd-brand-btn" onclick="navBrand('omoda')"><span class="nav-dot" style="background:#6B21A8"></span>OMODA / JAECOO</button>
+        <button class="dd-brand-btn" onclick="navBrand('motormatch')"><span class="nav-dot" style="background:#374151"></span>Motor Match</button>
+      </div>
+    </div>
+
+    <!-- PLANNING dropdown -->
+    <div class="nav-dd-wrap" id="nav-planning">
+      <button class="nav-dd-btn" onclick="navToggle('nav-planning',event)">
+        Planning <span class="nav-dd-chevron">▾</span>
+      </button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item" data-view="crosscal" onclick="navGo('crosscal',this)">Campaign Calendar</button>
+        <button class="nav-dd-item nav-item-cta" data-view="brief" onclick="navGo('brief',this)">Brief Builder</button>
+      </div>
+    </div>
+
+    <!-- REVIEW dropdown -->
+    <div class="nav-dd-wrap" id="nav-review">
+      <button class="nav-dd-btn" onclick="navToggle('nav-review',event)">
+        Review <span class="nav-dd-chevron">▾</span>
+      </button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item" data-view="budget" onclick="navGo('budget',this)">Budget</button>
+        <button class="nav-dd-item" data-view="autopsy" onclick="navGo('autopsy',this)">Autopsy</button>
+      </div>
+    </div>
+
+  </div>
+</nav>
+
+<div class="auth-overlay" id="auth-overlay" onclick="if(event.target===this)closeAuth()">
+  <div class="auth-box" style="max-width:380px">
+    <div class="auth-header">
+      <div class="auth-header-title">Swansway Marketing Hub</div>
+      <div class="auth-header-sub">Sign in to access your team workspace</div>
+    </div>
+    <div style="padding:28px 24px;text-align:center">
+      <div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:var(--ink);margin-bottom:6px">Welcome back</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:24px">Sign in with your Swansway Google account</div>
+      <button onclick="authGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 16px;border:1.5px solid #dadce0;border-radius:4px;background:#fff;cursor:pointer;font-family:var(--font-b);font-size:14px;font-weight:600;color:#3c4043;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 1px 8px rgba(0,0,0,0.15)'" onmouseout="this.style.boxShadow='none'">
+        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.16C6.51 42.62 14.62 48 24 48z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.16C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.16C12.43 13.72 17.74 9.5 24 9.5z"/></svg>
+        Continue with Google
+      </button>
+      <div style="font-size:11px;color:var(--ink-faint);margin-top:16px">Access is restricted to authorised Swansway team members</div>
+    </div>
+  </div>
+</div>
+
+<div class="briefs-panel" id="briefs-panel">
+  <div class="briefs-panel-header">
+    <div class="briefs-panel-title">📋 Saved Briefs</div>
+    <div style="display:flex;gap:8px;align-items:center"><button onclick="bbNewBrief()" style="font-family:var(--font-b);font-size:11px;font-weight:700;padding:5px 12px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer">+ New brief</button><button class="briefs-panel-close" onclick="closeBriefsPanel()">×</button></div>
+  </div>
+  <div class="briefs-panel-body">
+    <div class="brief-filters" id="brief-filters">
+      <div class="brief-filter active" data-brand="all" onclick="filterBriefs('all',this)">All brands</div>
+    </div>
+    <div id="briefs-list"><div style="text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:13px">Loading your briefs…</div></div>
+  </div>
+  <div class="briefs-panel-footer">
+    <button class="btn btn-accent" style="width:100%" onclick="closeBriefsPanel();switchView('brief',document.querySelector('[data-view=brief]'))">✏ New Brief</button>
+  </div>
+</div>
+
+<main id="main-content">
+  <div class="view active" id="view-group">
+  
+  <div id="active-campaigns-banner" style="display:none;margin-bottom:1.5rem"></div>
+
+  <div class="page-strip">
+    <div class="page-strip-left"></div>
+    <div class="action-row">
+
+    </div>
+  </div>
+
+  <div class="metrics-row">
+    <div class="metric" style="color:#1A2E4A"><div class="metric-label">Total brands</div><div class="metric-val">11</div><div class="metric-sub">Audi to OMODA/JAECOO</div></div>
+    <div class="metric" style="color:#C8102E"><div class="metric-label">Dealership sites</div><div class="metric-val">30</div><div class="metric-sub">+ 5 Motor Match sites</div></div>
+    <div class="metric" style="color:#047857"><div class="metric-label">Group budget</div><div class="metric-val" id="group-budget-val">—</div><div class="metric-sub">Across all brands <span class="year-ref"></span></div></div>
+    <div class="metric" style="color:#7C3AED"><div class="metric-label">EV-focused spend</div><div class="metric-val">38%</div><div class="metric-sub">BYD, CUPRA, VW, OMODA</div></div>
+  </div>
+
+  <div class="sh"><div><div class="sh-title">All 11 Brands at a Glance</div><div class="sh-sub">Click any brand card to open its full marketing plan</div></div></div>
+  <div class="brand-grid" id="group-brand-grid"></div>
+
+  <div class="sh"><div><div class="sh-title">Recommended Budget Split by Brand</div><div class="sh-sub">Weighted by site count, segment margin and EV priority</div></div></div>
+  <div class="chart-wrap">
+    <div class="chart-canvas-wrap"><canvas id="groupBudgetChart" role="img" aria-label="Group budget split by brand">Audi 19%, VW 14%, Land Rover 12%, SEAT/CUPRA 10%, Honda 9%, Peugeot 9%, VW Commercial 8%, Jaguar 7%, BYD 6%, OMODA/JAECOO 4%, Motor Match 2%.</canvas></div>
+    <div class="chart-legend" id="groupBudgetLegend"></div>
+  </div>
+</div>
+</main>
+
+<script>
+// Page-specific init
+document.addEventListener('DOMContentLoaded', function() {
+  // Default view
+  switchView('group', document.querySelector('[data-view="group"]'));
+});
+</script>
+</body>
+</html>
