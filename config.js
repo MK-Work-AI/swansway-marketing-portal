@@ -1,7 +1,3 @@
-// Swansway Marketing Hub — Local configuration
-// ⚠ NEVER commit this file with real keys — it is in .gitignore
-// After deploying, edit this file directly in GitHub (private repo only)
-// or paste keys here in your local copy.
-window.SWANSWAY_CONFIG = {
-  serviceKey:   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1bWl0enJsZWZseG5sbm9kcGRlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTQzOTU1OSwiZXhwIjoyMDk1MDE1NTU5fQ.m8wV9tAaL9_5O5pZ0dtdNn_lsyFpLxFAnJGxbzX71IU'
-};
+// Swansway Marketing Portal — Configuration
+var SUPABASE_URL = 'https://humitzrleflxnlnodpde.supabase.co';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1bWl0enJsZWZseG5sbm9kcGRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0Mzk1NTksImV4cCI6MjA5NTAxNTU1OX0.p-i5P0jAj9M6c0V9cLPP06C5I88laufatX1b2WS-1lE';
