@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brief Builder — Swansway Marketing Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter+Tight:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css?v=1">
+  <style>
+/* ── Step 6 unified save card ── */
+.bb-save-bar-wrap{background:var(--white);border:1.5px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:1.5rem}
+.bb-s6-label{font-family:var(--font-b);font-size:11px;font-weight:600;color:var(--ink-soft);margin-bottom:6px}
+.bb-s6-row{display:flex;gap:8px;align-items:center}
+.bb-s6-input{flex:1;padding:0 14px;height:44px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:14px;color:var(--ink);background:var(--white);outline:none;transition:border-color .15s;box-sizing:border-box}
+.bb-s6-input::placeholder{color:var(--ink-faint)}
+.bb-s6-input:focus{border-color:var(--swansway)}
+.bb-s6-input:disabled{background:transparent;color:var(--ink);border-color:transparent;cursor:default;padding-left:0;font-weight:600}
+.bb-s6-btn{padding:0 22px;height:44px;background:var(--swansway);color:#fff;border:none;border-radius:6px;font-family:var(--font-b);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .2s;flex-shrink:0}
+.bb-s6-btn:hover:not(:disabled){background:var(--accent)}
+.bb-s6-btn:disabled{background:#059669;cursor:default}
+.bb-s6-confirm{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);flex-wrap:wrap}
+.bb-s6-tick{width:24px;height:24px;border-radius:50%;background:#D1FAE5;color:#059669;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.bb-s6-msg{flex:1;font-size:13px;color:var(--ink);line-height:1.5}
+.bb-s6-submit-btn{padding:9px 18px;background:var(--ink);color:#fff;border:none;border-radius:6px;font-family:var(--font-b);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.bb-s6-submit-btn:hover{opacity:0.85}
+.bb-s6-card{padding:24px;border-radius:8px;background:var(--white);border:1.5px solid var(--border)}
+.bb-s6-card-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;font-family:var(--font-m);text-transform:uppercase;letter-spacing:0.06em;color:#fff;margin-bottom:12px}
+.bb-s6-card-title{font-family:var(--font-d);font-size:20px;font-weight:700;color:var(--ink);margin-bottom:4px;letter-spacing:-0.01em;line-height:1.2}
+.bb-s6-card-sub{font-size:13px;color:var(--ink-soft);margin-bottom:20px;line-height:1.5}
+.bb-s6-launch{width:100%;padding:15px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:16px;font-weight:800;font-family:var(--font-d);letter-spacing:-0.01em;box-shadow:0 4px 16px rgba(200,16,46,0.2);transition:opacity .15s}
+.bb-s6-launch:hover{opacity:0.9}
+.bb-s6-launch-hint{text-align:center;margin-top:6px;font-size:11px;color:var(--ink-faint)}
+
+/* Overlay for briefs panel */
+.panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:399;display:none}
+.panel-overlay.open{display:block}
+
+
+/* ── QUARTERLY PLAN UPLOAD & DISPLAY ─────────────────────────── */
+.qplan-upload-zone {
+  border:2px dashed var(--border-med); border-radius:6px;
+  padding:2.5rem 2rem; text-align:center; cursor:pointer;
+  transition:all .2s; background:var(--white); margin-bottom:1.5rem;
+  position:relative;
+}
+.qplan-upload-zone:hover, .qplan-upload-zone.drag-over {
+  border-color:var(--swansway); background:rgba(26,46,74,0.03);
+}
+.qplan-upload-zone input[type=file] {
+  position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;
+}
+.qplan-upload-icon { font-size:32px; margin-bottom:10px; }
+.qplan-upload-title { font-family:var(--font-d); font-size:16px; font-weight:700; color:var(--ink); margin-bottom:4px; }
+.qplan-upload-sub { font-size:12px; color:var(--ink-soft); }
+.qplan-upload-formats { font-family:var(--font-m); font-size:10px; color:var(--ink-faint); margin-top:8px; letter-spacing:0.06em; }
+
+.qplan-processing {
+  display:none; padding:2rem; text-align:center;
+  background:var(--white); border:1px solid var(--border); border-radius:6px; margin-bottom:1.5rem;
+}
+.qplan-processing.active { display:block; }
+.qplan-spinner {
+  width:36px; height:36px; border:3px solid var(--border);
+  border-top-color:var(--swansway); border-radius:50%;
+  animation:qspin 0.8s linear infinite; margin:0 auto 12px;
+}
+@keyframes qspin { to { transform:rotate(360deg); } }
+.qplan-processing-text { font-size:13px; color:var(--ink-soft); }
+.qplan-processing-step { font-family:var(--font-m); font-size:10px; color:var(--swansway); margin-top:4px; letter-spacing:0.06em; }
+
+.qplan-error {
+  display:none; padding:14px 16px; background:#FEF2F2;
+  border:1px solid #FECACA; border-radius:4px; margin-bottom:1.5rem;
+  font-size:13px; color:#7F1D1D;
+}
+.qplan-error.active { display:block; }
+
+/* Plan header */
+.qplan-header {
+  display:flex; align-items:flex-start; justify-content:space-between;
+  padding:16px 20px; background:var(--swansway); border-radius:6px;
+  color:#fff; margin-bottom:1.5rem; gap:12px; flex-wrap:wrap;
+}
+.qplan-header-left {}
+.qplan-header-brand { font-family:var(--font-m); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:4px; }
+.qplan-header-title { font-family:var(--font-d); font-size:20px; font-weight:700; color:#fff; margin-bottom:2px; }
+.qplan-header-meta { font-size:12px; color:rgba(255,255,255,0.6); }
+.qplan-header-actions { display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap; }
+.qplan-hbtn { font-size:11px; font-weight:500; padding:6px 14px; border-radius:2px; cursor:pointer; transition:all .2s; border:1px solid rgba(255,255,255,0.3); background:transparent; color:rgba(255,255,255,0.8); font-family:var(--font-b); }
+.qplan-hbtn:hover { background:rgba(255,255,255,0.15); color:#fff; }
+.qplan-hbtn-accent { background:var(--accent); border-color:var(--accent); color:#fff; }
+.qplan-hbtn-accent:hover { background:#a00d26; }
+
+/* Section cards */
+.qplan-sections { display:flex; flex-direction:column; gap:1rem; margin-bottom:1.5rem; }
+.qplan-section {
+  background:var(--white); border:1px solid var(--border); border-radius:4px; overflow:hidden;
+}
+.qplan-section-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; cursor:pointer; user-select:none;
+  border-bottom:1px solid var(--border); background:var(--surface);
+  transition:background .15s;
+}
+.qplan-section-header:hover { background:var(--surface-2); }
+.qplan-section-header-left { display:flex; align-items:center; gap:10px; }
+.qplan-section-icon { font-size:16px; }
+.qplan-section-title { font-family:var(--font-d); font-size:14px; font-weight:700; color:var(--ink); }
+.qplan-section-count { font-family:var(--font-m); font-size:10px; color:var(--ink-soft); background:var(--surface-2); padding:2px 8px; border-radius:10px; }
+.qplan-section-chevron { font-size:12px; color:var(--ink-soft); transition:transform .2s; }
+.qplan-section-header.open .qplan-section-chevron { transform:rotate(180deg); }
+.qplan-section-body { display:none; padding:14px 16px; }
+.qplan-section-body.open { display:block; }
+
+/* Campaign cards */
+.qplan-campaign-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:10px; }
+.qplan-campaign-card {
+  border:1.5px solid var(--border); border-radius:4px; padding:14px;
+  background:var(--white); position:relative;
+}
+.qplan-campaign-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--card-accent,#1A2E4A); }
+.qplan-campaign-name { font-family:var(--font-d); font-size:13px; font-weight:700; margin-bottom:4px; color:var(--ink); }
+.qplan-campaign-dates { font-family:var(--font-m); font-size:10px; color:var(--swansway); margin-bottom:8px; letter-spacing:0.04em; }
+.qplan-campaign-models { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px; }
+.qplan-campaign-detail { font-size:11px; color:var(--ink-soft); line-height:1.6; }
+.qplan-campaign-budget { font-family:var(--font-m); font-size:11px; color:var(--accent); font-weight:500; margin-top:6px; }
+
+/* Action items */
+.qplan-action-list { display:flex; flex-direction:column; gap:6px; }
+.qplan-action-item {
+  display:flex; align-items:flex-start; gap:10px; padding:10px 12px;
+  border:1px solid var(--border); border-radius:3px; background:var(--white);
+  cursor:pointer; transition:all .2s;
+}
+.qplan-action-item:hover { border-color:var(--swansway); }
+.qplan-action-item.done { opacity:0.5; }
+.qplan-action-item.done .qplan-action-text { text-decoration:line-through; }
+.qplan-action-check {
+  width:18px; height:18px; border-radius:3px; border:1.5px solid var(--border-med);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  font-size:10px; color:transparent; transition:all .2s; margin-top:1px;
+}
+.qplan-action-item.done .qplan-action-check { background:var(--swansway); border-color:var(--swansway); color:#fff; }
+.qplan-action-body { flex:1; }
+.qplan-action-text { font-size:12px; color:var(--ink); line-height:1.5; }
+.qplan-action-meta { display:flex; gap:8px; margin-top:4px; flex-wrap:wrap; }
+.qplan-action-tag { font-family:var(--font-m); font-size:9px; padding:2px 7px; border-radius:2px; letter-spacing:0.04em; }
+.qplan-action-priority-high { background:#FEF2F2; color:#7F1D1D; }
+.qplan-action-priority-med  { background:#FFF8E1; color:#78350F; }
+.qplan-action-priority-low  { background:#F0FDF4; color:#14532D; }
+.qplan-action-deadline { font-family:var(--font-m); font-size:9px; color:var(--ink-faint); }
+
+/* Creative req cards */
+.qplan-creative-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px; }
+.qplan-creative-card {
+  padding:12px 14px; border:1px solid var(--border); border-radius:3px;
+  background:var(--white);
+}
+.qplan-creative-type { font-family:var(--font-m); font-size:9px; color:var(--swansway); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:4px; }
+.qplan-creative-spec { font-size:12px; font-weight:600; color:var(--ink); margin-bottom:3px; }
+.qplan-creative-detail { font-size:11px; color:var(--ink-soft); line-height:1.5; }
+.qplan-creative-deadline { font-family:var(--font-m); font-size:10px; color:var(--accent); margin-top:5px; }
+
+/* Co-op funding */
+.qplan-coop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; }
+.qplan-coop-card {
+  padding:14px; border:1px solid var(--border); border-top:3px solid var(--swansway);
+  border-radius:3px; background:var(--white);
+}
+.qplan-coop-label { font-size:10px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.06em; font-family:var(--font-m); margin-bottom:4px; }
+.qplan-coop-val { font-family:var(--font-d); font-size:22px; font-weight:700; color:var(--ink); margin-bottom:2px; }
+.qplan-coop-note { font-size:11px; color:var(--ink-soft); }
+
+/* History list */
+.qplan-history-list { display:flex; flex-direction:column; gap:6px; }
+.qplan-history-item {
+  display:flex; align-items:center; gap:12px; padding:10px 14px;
+  border:1px solid var(--border); border-radius:3px; background:var(--white);
+  cursor:pointer; transition:all .2s;
+}
+.qplan-history-item:hover { border-color:var(--swansway); }
+.qplan-history-quarter { font-family:var(--font-m); font-size:10px; color:var(--swansway); font-weight:500; min-width:40px; }
+.qplan-history-name { font-size:13px; color:var(--ink); flex:1; font-weight:500; }
+.qplan-history-meta { font-size:11px; color:var(--ink-soft); }
+.qplan-history-load { font-size:11px; color:var(--swansway); font-weight:600; }
+
+.qplan-empty {
+  text-align:center; padding:3rem 2rem;
+  border:2px dashed var(--border); border-radius:6px; color:var(--ink-soft);
+}
+.qplan-empty-icon { font-size:40px; margin-bottom:12px; opacity:0.5; }
+.qplan-empty-title { font-family:var(--font-d); font-size:16px; font-weight:700; color:var(--ink); margin-bottom:6px; }
+.qplan-empty-sub { font-size:13px; }
+
+
+/* ── NEW FEATURES CSS ── */
+.crosscal-grid{display:grid;grid-template-columns:120px repeat(12,1fr);gap:1px;background:var(--border);border-radius:4px;overflow:hidden}
+
+
+
+
+.budget-cell{padding:6px 10px;text-align:right;font-family:var(--font-m);font-size:12px;cursor:pointer;transition:background .15s}
+.budget-cell:hover{background:var(--surface-2)}
+.budget-over{color:#DC2626}.budget-under{color:#059669}.budget-on{color:var(--swansway)}
+.autopsy-card{background:var(--white);border:1px solid var(--border);border-radius:4px;padding:16px 18px;margin-bottom:10px}
+.autopsy-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.autopsy-brand-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+.autopsy-metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.autopsy-metric{background:var(--surface);border-radius:3px;padding:10px 12px}
+.autopsy-metric-label{font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em;font-family:var(--font-m);margin-bottom:4px}
+.autopsy-metric-row{display:flex;gap:8px;align-items:baseline}
+.autopsy-planned{font-size:14px;font-weight:600;color:var(--ink-soft)}
+.autopsy-actual{font-size:18px;font-weight:700;font-family:var(--font-d)}
+.autopsy-actual.over{color:#DC2626}.autopsy-actual.under{color:#059669}.autopsy-actual.on{color:var(--swansway)}
+.autopsy-section-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);margin:10px 0 5px;font-family:var(--font-m)}
+.autopsy-text{font-size:13px;color:var(--ink);line-height:1.65}
+.competitor-card{background:var(--white);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:1rem}
+.competitor-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface)}
+
+
+
+
+
+.quiz-question{background:var(--white);border:1px solid var(--border);border-radius:4px;padding:20px;margin-bottom:12px}
+.quiz-q-num{font-family:var(--font-m);font-size:10px;color:var(--ink-soft);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px}
+.quiz-q-text{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:14px;line-height:1.5}
+.quiz-options{display:flex;flex-direction:column;gap:6px}
+.quiz-option{padding:10px 14px;border:1.5px solid var(--border);border-radius:3px;cursor:pointer;font-size:13px;color:var(--ink);transition:all .15s;background:var(--white);text-align:left;font-family:var(--font-b);width:100%}
+.quiz-option:hover{border-color:var(--swansway)}
+.quiz-option.correct{border-color:#059669;background:#F0FDF4;color:#14532D}
+.quiz-option.wrong{border-color:#DC2626;background:#FEF2F2;color:#7F1D1D}
+.quiz-explanation{margin-top:10px;padding:10px 14px;background:var(--surface);border-radius:3px;font-size:12px;color:var(--ink-soft);line-height:1.6;display:none}
+.quiz-explanation.show{display:block}
+.quiz-score-card{background:var(--swansway);color:#fff;border-radius:6px;padding:2rem;text-align:center}
+.quiz-score-num{font-family:var(--font-d);font-size:64px;font-weight:700;line-height:1}
+.quiz-score-label{font-size:14px;color:rgba(255,255,255,0.7);margin-top:6px}
+.quiz-score-bar-wrap{height:8px;background:rgba(255,255,255,0.2);border-radius:4px;margin:16px 0}
+.quiz-score-bar{height:8px;border-radius:4px;background:#fff;transition:width 1s}
+
+
+
+/* ══════════════════════════════════════════
+   SWANSWAY DESIGN SYSTEM — SHARED TOKENS
+   ══════════════════════════════════════════ */
+
+/* Shared card */
+
+
+/* Label — used everywhere */
+.sw-label{font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-soft)}
+
+/* Pills */
+.sw-pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;font-family:var(--font-m);white-space:nowrap}
+.sw-pill-muted{background:var(--surface);color:var(--ink-soft)}
+
+/* Notices */
+.sw-notice{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:6px;font-size:13px;margin-bottom:16px}
+.sw-notice-amber{background:#FFFBEB;border:1.5px solid #FCD34D;color:#92400E}
+.sw-notice-green{background:#ECFDF5;border:1.5px solid #6EE7B7;color:#065F46}
+
+/* Avatars */
+.sw-avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;background:var(--swansway);font-family:var(--font-m);flex-shrink:0}
+.sw-avatar-sm{width:26px;height:26px;font-size:10px}
+.sw-avatar-lg{width:36px;height:36px;font-size:13px}
+
+/* Blocker + dept tags */
+.sw-blocker-tag{font-size:10px;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.04em}
+.sw-dept-tag{font-size:10px;background:var(--surface);color:var(--ink-soft);padding:2px 7px;border-radius:10px;font-family:var(--font-m)}
+
+/* Filter buttons */
+.sw-filter-btn{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:var(--white);color:var(--ink-soft);font-size:12px;font-family:var(--font-b);cursor:pointer;transition:all .15s;font-weight:500}
+.sw-filter-btn:hover{border-color:var(--swansway);color:var(--swansway)}
+.sw-filter-btn.active{background:var(--swansway);color:#fff;border-color:var(--swansway)}
+
+/* ══════════════════════════════════════════
+   CAMPAIGN BUILDER — SLACK-STYLE
+   ══════════════════════════════════════════ */
+
+/* Back button */
+.sw-back-btn{background:none;border:none;cursor:pointer;font-size:13px;color:var(--ink-soft);padding:0;margin-bottom:16px;display:inline-flex;align-items:center;gap:6px;font-family:var(--font-b);transition:color .15s}
+.sw-back-btn:hover{color:var(--ink)}
+
+/* Campaign header */
+.sw-campaign-header{background:var(--white);border:1.5px solid var(--border);border-radius:8px;margin-bottom:20px;overflow:hidden}
+.sw-ch-top{display:flex;justify-content:space-between;align-items:flex-start;padding:20px 22px;gap:16px}
+.sw-ch-meta{flex:1}
+.sw-ch-title{font-family:var(--font-d);font-size:22px;font-weight:700;color:var(--ink);letter-spacing:-0.01em;margin:6px 0 8px}
+.sw-ch-pills{display:flex;gap:6px;flex-wrap:wrap}
+.sw-ch-actions{display:flex;gap:8px;flex-shrink:0;align-items:flex-start;padding-top:4px}
+.sw-advance-btn{font-weight:700}
+
+/* Progress bar */
+.sw-ch-progress{padding:0 22px 14px}
+.sw-ch-prog-bar{height:5px;background:var(--surface-2);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.sw-ch-prog-fill{height:5px;background:var(--accent);border-radius:3px;transition:width .5s cubic-bezier(.16,1,.3,1)}
+.sw-ch-prog-labels{display:flex;justify-content:space-between;font-size:10px;font-family:var(--font-m);color:var(--ink-soft)}
+
+/* Stage pip strip */
+.sw-ch-stages{display:flex;border-top:1px solid var(--border)}
+.sw-stage-pip{flex:1;text-align:center;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;border-right:1px solid rgba(255,255,255,0.08)}
+.sw-stage-pip:last-child{border-right:none}
+.sw-stage-pip-icon{font-size:14px}
+.sw-stage-pip-name{font-size:9px;font-family:var(--font-m);font-weight:700;letter-spacing:0.04em}
+
+/* My tasks spotlight */
+.sw-spotlight{background:rgba(26,46,74,0.04);border:1.5px solid rgba(26,46,74,0.12);border-radius:8px;padding:16px 18px;margin-bottom:20px}
+.sw-spotlight-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.sw-spotlight-title{font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--ink)}
+.sw-spotlight-sub{font-size:12px;color:var(--ink-soft);margin-top:2px}
+.sw-spotlight-tasks{display:flex;flex-direction:column;gap:6px}
+.sw-spotlight-task{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink)}
+.sw-spotlight-task-done{color:var(--ink-soft);text-decoration:line-through}
+.sw-spotlight-tick{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+
+/* Stage divider — Slack channel style */
+.sw-stage-section{margin-bottom:8px}
+.sw-stage-future{opacity:0.4;pointer-events:none}
+.sw-stage-divider{display:flex;align-items:center;gap:10px;padding:16px 0 10px}
+.sw-stage-divider-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.sw-stage-divider-name{font-family:var(--font-d);font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap}
+.sw-stage-divider-line{flex:1;height:1px;background:var(--border)}
+.sw-empty-tasks{padding:12px 14px;font-size:12px;color:var(--ink-faint);font-style:italic}
+
+/* Task rows — Slack message style */
+.sw-task-row{display:grid;grid-template-columns:24px 28px 1fr auto;gap:10px;align-items:start;padding:11px 14px;border-radius:6px;margin-bottom:2px;transition:background .15s}
+.sw-task-row:hover{background:var(--white)}
+.sw-task-approved{background:rgba(5,150,105,0.04)}
+.sw-task-rejected{background:rgba(220,38,38,0.04)}
+.sw-task-pending{background:rgba(217,119,6,0.04)}
+.sw-task-todo{background:transparent}
+.sw-task-status-icon{font-size:16px;text-align:center;padding-top:2px}
+.sw-task-body{min-width:0}
+.sw-task-name-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.sw-task-name{font-size:13px;font-weight:500;color:var(--ink);line-height:1.3}
+.sw-task-blocker{font-weight:700}
+.sw-task-meta{font-size:11px;color:var(--ink-soft);line-height:1.5}
+.sw-task-assignee{color:var(--ink)}
+.sw-task-note{margin-top:6px;font-size:11px;color:var(--ink-soft);background:rgba(0,0,0,0.03);padding:5px 9px;border-radius:4px;font-style:italic}
+.sw-task-actions{display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;min-width:80px}
+
+/* Task action buttons */
+.sw-btn-complete,.sw-btn-approve,.sw-btn-reject,.sw-btn-note{font-size:11px;font-family:var(--font-b);font-weight:600;padding:5px 12px;border-radius:4px;cursor:pointer;border:none;white-space:nowrap;transition:opacity .15s}
+.sw-btn-complete{background:var(--swansway);color:#fff;font-family:var(--font-b)}
+.sw-btn-approve{background:#059669;color:#fff;font-family:var(--font-b)}
+.sw-btn-reject{background:none;color:#DC2626;border:1px solid #DC2626;font-family:var(--font-b)}
+.sw-btn-note{background:none;color:var(--ink-soft);border:1px solid var(--border)}
+.sw-btn-complete:hover,.sw-btn-approve:hover{opacity:0.85}
+.sw-btn-reject:hover{background:#FEE2E2}
+.sw-btn-note:hover{border-color:var(--ink-soft);color:var(--ink)}
+
+/* Brief list cards — cleaner */
+.brief-card{background:var(--white);border:1.5px solid var(--border);border-radius:6px;padding:16px;margin-bottom:8px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.brief-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:4px;background:var(--card-color,#ccc)}
+.brief-card:hover{box-shadow:0 2px 12px rgba(0,0,0,0.08);transform:translateY(-1px)}
+
+/* Steps 2-5 context placeholders */
+#bb-step2-context,#bb-step4-context,#bb-step5-context{margin-bottom:1.5rem}
+
+.cal-q-tab{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:4px;background:var(--white);cursor:pointer;font-family:var(--font-b);font-size:12px;font-weight:600;color:var(--ink-soft);transition:all .2s;text-align:center;display:block}
+.cal-q-tab span{display:block;font-size:10px;font-weight:400;color:var(--ink-faint);margin-top:2px;font-family:var(--font-m)}
+.cal-q-tab.active{background:var(--swansway);color:#fff;border-color:var(--swansway)}
+.cal-q-tab.active span{color:rgba(255,255,255,0.65)}
+.cal-q-tab:hover:not(.active){border-color:var(--swansway);color:var(--swansway)}
+.bb-out-hero{background:var(--hero-color,var(--swansway));color:#fff;border-radius:8px;overflow:hidden;margin-bottom:1.5rem}
+.bb-out-hero-top{padding:28px 28px 20px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.bb-out-hero-brand{display:inline-block;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#fff;padding:3px 10px;border-radius:4px;margin-bottom:12px;background:rgba(255,255,255,0.15)}
+.bb-out-hero-type{font-family:var(--font-m);font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px}
+.bb-out-hero-title{font-family:var(--font-d);font-size:26px;font-weight:800;color:#fff;letter-spacing:-0.02em;line-height:1.15}
+.bb-out-meta{display:flex;flex-wrap:wrap}
+.bb-out-meta-item{flex:1;min-width:110px;padding:14px 24px;border-right:1px solid rgba(255,255,255,0.08)}
+.bb-out-meta-item:last-child{border-right:none}
+.bb-out-meta-label{font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:4px}
+.bb-out-meta-val{font-family:var(--font-d);font-size:17px;font-weight:700;color:#fff;line-height:1.2}
+.bb-out-body{padding:2rem 2.5rem}
+.bb-out-section{margin-bottom:2rem}
+.bb-out-section-title{font-family:var(--font-b);font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.bb-out-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+.bb-out-field{padding:12px 14px;background:var(--surface);border-radius:4px}
+.bb-out-field-label{font-family:var(--font-m);font-size:9px;color:var(--ink-soft);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px}
+.bb-out-field-val{font-size:13px;color:var(--ink);line-height:1.5}
+.bb-out-peso{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.bb-out-peso-q{padding:12px;border-radius:4px}
+.bb-out-peso-q.P{background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2)}
+.bb-out-peso-q.E{background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.2)}
+
+
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="shared.js?v=1" defer></script>
+  <script src="js/brief.js?v=1" defer></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo-wrap" style="display:flex;align-items:center;gap:14px">
+      <img src="https://npfalcon.b-cdn.net/tenant_d9013b5a-4990-4f3e-beec-4e1fc85990eb/media/uploads/main-logo.svg" alt="Swansway Motor Group" style="height:46px;width:auto;object-fit:contain;filter:brightness(0) invert(1)">
+      <div style="border-left:1px solid rgba(255,255,255,0.2);padding-left:14px">
+        <div style="font-family:var(--font-d);font-size:15px;font-weight:700;color:#fff;line-height:1.2;letter-spacing:-0.01em">Group Marketing Planner <span id="topbar-year"></span></div>
+      </div>
+    </div>
+    <div class="topbar-meta">
+      <span class="topbar-pill" id="topbar-env-pill">Live <span class="year-ref"></span> Plan</span>
+      <button class="user-pill" id="user-pill" onclick="handleUserPillClick()" style="display:none">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="user-name">Loading…</span>
+      </button>
+      <div style="position:relative;display:inline-flex;align-items:center">
+        <button id="mt-btn" onclick="mtToggle(event)" style="font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 14px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:2px;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;position:relative">
+          MY TASKS
+          <span id="mt-badge" style="display:none;background:#C8102E;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:1">0</span>
+        </button>
+        <div id="mt-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:340px;background:var(--white);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:500;overflow:hidden">
+          <div id="mt-header" style="padding:14px 18px;border-bottom:1px solid var(--border);font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--ink)">Your tasks</div>
+          <div id="mt-list" style="max-height:360px;overflow-y:auto"></div>
+          <div id="mt-footer" style="padding:10px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--ink-faint);text-align:center"></div>
+        </div>
+
+      <button onclick="openAuth()" id="signin-btn" style="display:none;font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 16px;background:#fff;border:none;border-radius:2px;color:var(--swansway);cursor:pointer;transition:all .2s" onmouseover="this.style.background='#f0ede8'" onmouseout="this.style.background='#fff'">Sign in</button>
+      <button id="briefs-btn" onclick="openBriefsPanel()" style="display:none;font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 16px;background:#fff;border:none;border-radius:2px;color:var(--swansway);cursor:pointer;transition:all .2s" onmouseover="this.style.background='#f0ede8'" onmouseout="this.style.background='#fff'">📋 My Briefs</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="brand-nav" id="brand-nav">
+  <div class="brand-nav-inner" id="brand-nav-inner">
+
+    <!-- INTEL dropdown -->
+    <div class="nav-dd-wrap" id="nav-intel">
+      <button class="nav-dd-btn has-active" onclick="navToggle('nav-intel',event)">
+        Intel <span class="nav-dd-chevron">▾</span>
+      </button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item active" data-view="group" onclick="navGo('group',this)">Overview</button>
+        <button class="nav-dd-item" data-view="channels" onclick="navGo('channels',this)">Channels</button>
+        <button class="nav-dd-item" data-view="kpis" onclick="navGo('kpis',this)">KPIs</button>
+        <button class="nav-dd-item" data-view="priorities" onclick="navGo('priorities',this)">Priorities</button>
+        <button class="nav-dd-item" data-view="competitor" onclick="navGo('competitor',this)">Competitors</button>
+        <div class="nav-dd-sep"></div>
+        <div class="nav-dd-section-label">Brand plans</div>
+        <button class="dd-brand-btn" onclick="navBrand('audi')"><span class="nav-dot" style="background:#BB0A21"></span>Audi</button>
+        <button class="dd-brand-btn" onclick="navBrand('vw')"><span class="nav-dot" style="background:#001E50"></span>Volkswagen</button>
+        <button class="dd-brand-btn" onclick="navBrand('vwcv')"><span class="nav-dot" style="background:#1B4F72"></span>VW Commercial</button>
+        <button class="dd-brand-btn" onclick="navBrand('seat')"><span class="nav-dot" style="background:#E2231A"></span>SEAT</button>
+        <button class="dd-brand-btn" onclick="navBrand('cupra')"><span class="nav-dot" style="background:#C8920A"></span>CUPRA</button>
+        <button class="dd-brand-btn" onclick="navBrand('landrover')"><span class="nav-dot" style="background:#1D4E1D"></span>Land Rover</button>
+        <button class="dd-brand-btn" onclick="navBrand('jaguar')"><span class="nav-dot" style="background:#1B2631"></span>Jaguar</button>
+        <button class="dd-brand-btn" onclick="navBrand('honda')"><span class="nav-dot" style="background:#CC0000"></span>Honda</button>
+        <button class="dd-brand-btn" onclick="navBrand('peugeot')"><span class="nav-dot" style="background:#1B3A6B"></span>Peugeot</button>
+        <button class="dd-brand-btn" onclick="navBrand('byd')"><span class="nav-dot" style="background:#0066CC"></span>BYD</button>
+        <button class="dd-brand-btn" onclick="navBrand('omoda')"><span class="nav-dot" style="background:#6B21A8"></span>OMODA / JAECOO</button>
+        <button class="dd-brand-btn" onclick="navBrand('motormatch')"><span class="nav-dot" style="background:#374151"></span>Motor Match</button>
+      </div>
+    </div>
+
+    <!-- PLANNING dropdown -->
+    <div class="nav-dd-wrap" id="nav-planning">
+      <button class="nav-dd-btn" onclick="navToggle('nav-planning',event)">
+        Planning <span class="nav-dd-chevron">▾</span>
+      </button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item" data-view="crosscal" onclick="navGo('crosscal',this)">Campaign Calendar</button>
+        <button class="nav-dd-item nav-item-cta" data-view="brief" onclick="navGo('brief',this)">Brief Builder</button>
+      </div>
+    </div>
+
+    <!-- REVIEW dropdown -->
+    <div class="nav-dd-wrap" id="nav-review">
+      <button class="nav-dd-btn" onclick="navToggle('nav-review',event)">
+        Review <span class="nav-dd-chevron">▾</span>
+      </button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item" data-view="budget" onclick="navGo('budget',this)">Budget</button>
+        <button class="nav-dd-item" data-view="autopsy" onclick="navGo('autopsy',this)">Autopsy</button>
+      </div>
+    </div>
+
+  </div>
+</nav>
+
+<div class="auth-overlay" id="auth-overlay" onclick="if(event.target===this)closeAuth()">
+  <div class="auth-box" style="max-width:380px">
+    <div class="auth-header">
+      <div class="auth-header-title">Swansway Marketing Hub</div>
+      <div class="auth-header-sub">Sign in to access your team workspace</div>
+    </div>
+    <div style="padding:28px 24px;text-align:center">
+      <div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:var(--ink);margin-bottom:6px">Welcome back</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:24px">Sign in with your Swansway Google account</div>
+      <button onclick="authGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 16px;border:1.5px solid #dadce0;border-radius:4px;background:#fff;cursor:pointer;font-family:var(--font-b);font-size:14px;font-weight:600;color:#3c4043;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 1px 8px rgba(0,0,0,0.15)'" onmouseout="this.style.boxShadow='none'">
+        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.16C6.51 42.62 14.62 48 24 48z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.16C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.16C12.43 13.72 17.74 9.5 24 9.5z"/></svg>
+        Continue with Google
+      </button>
+      <div style="font-size:11px;color:var(--ink-faint);margin-top:16px">Access is restricted to authorised Swansway team members</div>
+    </div>
+  </div>
+</div>
+
+<div class="briefs-panel" id="briefs-panel">
+  <div class="briefs-panel-header">
+    <div class="briefs-panel-title">📋 Saved Briefs</div>
+    <div style="display:flex;gap:8px;align-items:center"><button onclick="bbNewBrief()" style="font-family:var(--font-b);font-size:11px;font-weight:700;padding:5px 12px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer">+ New brief</button><button class="briefs-panel-close" onclick="closeBriefsPanel()">×</button></div>
+  </div>
+  <div class="briefs-panel-body">
+    <div class="brief-filters" id="brief-filters">
+      <div class="brief-filter active" data-brand="all" onclick="filterBriefs('all',this)">All brands</div>
+    </div>
+    <div id="briefs-list"><div style="text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:13px">Loading your briefs…</div></div>
+  </div>
+  <div class="briefs-panel-footer">
+    <button class="btn btn-accent" style="width:100%" onclick="closeBriefsPanel();switchView('brief',document.querySelector('[data-view=brief]'))">✏ New Brief</button>
+  </div>
+</div>
+
+<main id="main-content" style="padding:0;margin:0;background:var(--surface)">
+  <div class="view" id="view-brief" style="padding:0;margin:0;background:var(--surface)">
+
+<style>
+/* ── BRIEF BUILDER SCOPED STYLES ──────────────────────────────── */
+.bb-scope-btn{padding:6px 14px;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;font-size:12px;font-family:var(--font-b);background:var(--white);color:var(--ink);transition:all .15s;}
+.bb-scope-btn:hover{border-color:var(--accent);}
+.bb-scope-btn.bb-selected{border-color:var(--accent);background:rgba(200,16,46,0.06);color:var(--accent);font-weight:600;}
+.bb-site-tile{padding:8px 12px;border:1.5px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;background:var(--white);transition:all .15s;}
+.bb-site-tile:hover,.bb-site-tile.bb-selected{border-color:var(--accent);}
+.bb-site-tile.bb-selected{background:rgba(200,16,46,0.05);font-weight:600;}
+
+/* All selectors prefixed with #view-brief to avoid hub conflicts  */
+
+#view-brief { font-family:var(--font-b); }
+
+/* Progress bar under nav */
+#bb-progress-track {
+  height:3px; background:#E5E1DA; position:relative; overflow:hidden;
+}
+#bb-progress-fill {
+  height:3px; background:var(--accent); width:0%;
+  transition:width 0.5s cubic-bezier(0.16,1,0.3,1);
+}
+
+/* Step indicator dots */
+#bb-step-indicator {
+  display:flex; align-items:center; gap:8px; padding:12px 1.5rem;
+  background:var(--white); border-bottom:1px solid var(--border);
+  max-width:1500px; margin:0 auto;
+}
+.bb-step-item {
+  display:flex; align-items:center; gap:6px; font-size:11px;
+  font-weight:500; letter-spacing:0.04em; text-transform:uppercase;
+  color:var(--ink-soft); cursor:pointer; padding:4px 0; transition:color 0.2s;
+}
+.bb-step-item.active { color:var(--accent); }
+.bb-step-item.done { color:var(--ink); }
+.bb-step-dot {
+  width:22px; height:22px; border-radius:50%; border:1.5px solid currentColor;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:700; flex-shrink:0; transition:all 0.2s;
+  font-family:var(--font-m);
+}
+.bb-step-item.active .bb-step-dot { background:var(--accent); border-color:var(--accent); color:#fff; }
+.bb-step-item.done .bb-step-dot { background:var(--ink); border-color:var(--ink); color:#fff; }
+.bb-step-arrow { color:var(--ink-soft); font-size:10px; margin:0 4px; }
+
+/* Main layout */
+#bb-layout {
+  display:grid; grid-template-columns:300px 1fr;
+  max-width:1500px; margin:0 auto;
+  min-height:calc(100vh - 160px);
+}
+
+/* Left panel — live brief */
+#bb-left {
+  background:var(--swansway); color:#fff;
+  border-right:1px solid rgba(255,255,255,0.06);
+  padding:1.5rem; display:flex; flex-direction:column;
+  position:sticky; top:108px; height:calc(100vh - 108px);
+  overflow-y:auto;
+}
+#bb-left::-webkit-scrollbar { width:3px; }
+#bb-left::-webkit-scrollbar-thumb { background:#2A2A2A; border-radius:2px; }
+
+.bb-panel-eyebrow {
+  font-family:var(--font-m); font-size:10px; letter-spacing:0.08em;
+  text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:8px;
+}
+.bb-panel-brand {
+  font-family:var(--font-d); font-size:15px; font-weight:600;
+  letter-spacing:-0.01em; line-height:1; margin-bottom:1.25rem;
+  transition:color 0.3s;
+}
+.bb-brief-row { padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.08); }
+.bb-brief-label { font-family:var(--font-m); font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:3px; }
+.bb-brief-val { font-size:13px; color:#fff; line-height:1.4; font-weight:500; }
+.bb-brief-empty { font-size:13px; color:rgba(255,255,255,0.28); font-style:italic; }
+
+.bb-completeness { margin-top:auto; padding-top:1.25rem; }
+.bb-comp-score {
+  font-family:var(--font-d); font-size:28px; font-weight:700;
+  line-height:1; margin-bottom:4px; color:#fff;
+}
+.bb-comp-label {
+  display:flex; justify-content:space-between;
+  font-size:10px; letter-spacing:0.04em; text-transform:uppercase;
+  color:rgba(255,255,255,0.4); margin-bottom:6px;
+}
+.bb-comp-track { height:2px; background:rgba(255,255,255,0.1); border-radius:1px; }
+.bb-comp-fill { height:2px; border-radius:1px; background:var(--accent); transition:width 0.4s; }
+.bb-health { display:flex; flex-direction:column; gap:5px; margin-top:10px; }
+.bb-health-item { display:flex; align-items:flex-start; gap:6px; font-size:11px; color:rgba(255,255,255,0.45); }
+
+/* Right panel — steps */
+#bb-right { padding:2rem 2.5rem; background:var(--surface); }
+.bb-step { display:none; }
+.bb-step.bb-active {
+  display:block;
+  animation:bbFadeUp 0.35s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+@keyframes bbFadeUp {
+  from { opacity:0; transform:translateY(12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.bb-eyebrow {
+  font-family:var(--font-m); font-size:10px; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:6px;
+}
+.bb-headline {
+  font-family:var(--font-d); font-weight:700; font-size:clamp(20px,2.5vw,28px);
+  letter-spacing:-0.01em; line-height:1.15; color:var(--ink); margin-bottom:10px;
+}
+.bb-headline em { font-style:normal; color:var(--accent); font-weight:700; }
+.bb-desc { font-size:13px; color:var(--ink-soft); line-height:1.7; max-width:560px; margin-bottom:1.75rem; }
+.bb-section-label {
+  font-family:var(--font-m); font-size:10px; letter-spacing:0.08em;
+  text-transform:uppercase; color:var(--ink-soft); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--border);
+}
+
+/* Brand grid */
+.bb-brand-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:2rem; }
+.bb-brand-pill {
+  border:1.5px solid var(--border); border-radius:4px; padding:12px 10px;
+  cursor:pointer; transition:all 0.2s; background:var(--white); position:relative;
+  overflow:hidden;
+}
+.bb-brand-pill::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background:var(--pill-color,#ccc); transform:scaleX(0); transition:transform 0.25s;
+  transform-origin:left;
+}
+.bb-brand-pill:hover { border-color:var(--pill-color,#ccc); transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.bb-brand-pill:hover::before, .bb-brand-pill.bb-selected::before { transform:scaleX(1); }
+.bb-brand-pill.bb-selected { border-color:var(--pill-color,#ccc); background:rgba(0,0,0,0.02); }
+.bb-pill-name { font-family:var(--font-d); font-size:13px; font-weight:600; margin-bottom:2px; }
+.bb-pill-seg { font-family:var(--font-m); font-size:9px; color:var(--ink-soft); letter-spacing:0.04em; }
+.bb-pill-sites { font-family:var(--font-m); font-size:9px; color:var(--ink-faint); margin-top:5px; }
+.bb-pill-check {
+  position:absolute; top:8px; right:8px; width:16px; height:16px;
+  border-radius:50%; border:1.5px solid var(--border); background:transparent;
+  display:flex; align-items:center; justify-content:center; font-size:8px;
+  transition:all 0.2s; color:transparent;
+}
+.bb-brand-pill.bb-selected .bb-pill-check { background:var(--pill-color,#ccc); border-color:var(--pill-color,#ccc); color:#fff; }
+
+/* Campaign type */
+.bb-ctype-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:1.75rem; }
+.bb-ctype-card {
+  border:1.5px solid var(--border); border-radius:4px; padding:14px 12px;
+  cursor:pointer; transition:all 0.2s; background:var(--white);
+}
+.bb-ctype-card:hover, .bb-ctype-card.bb-selected { border-color:var(--accent); background:rgba(200,16,46,0.03); }
+.bb-ctype-icon { font-size:18px; margin-bottom:6px; }
+.bb-ctype-name { font-family:var(--font-b); font-size:12px; font-weight:600; margin-bottom:3px; color:var(--ink); }
+.bb-ctype-desc { font-size:11px; color:var(--ink-soft); line-height:1.4; }
+
+/* Objectives */
+.bb-obj-grid { display:flex; flex-direction:column; gap:6px; margin-bottom:1.75rem; }
+.bb-obj-row {
+  display:grid; grid-template-columns:36px 1fr auto;
+  gap:12px; align-items:center; padding:12px 14px;
+  border:1.5px solid var(--border); border-radius:4px; cursor:pointer;
+  transition:all 0.2s; background:var(--white);
+}
+.bb-obj-row:hover, .bb-obj-row.bb-selected { border-color:var(--accent); }
+.bb-obj-row.bb-selected { background:rgba(200,16,46,0.03); }
+.bb-obj-num {
+  font-family:var(--font-m); font-size:14px; font-weight:500;
+  color:var(--ink-faint); transition:color 0.2s; line-height:1;
+}
+.bb-obj-row.bb-selected .bb-obj-num { color:var(--accent); }
+.bb-obj-text { font-size:13px; font-weight:500; color:var(--ink); }
+.bb-obj-kpi { font-family:var(--font-m); font-size:9px; color:var(--ink-soft); margin-top:2px; }
+.bb-obj-funnel {
+  font-family:var(--font-m); font-size:9px; padding:3px 8px;
+  border:1px solid var(--border); border-radius:2px; color:var(--ink-soft);
+  white-space:nowrap;
+}
+
+/* Budget */
+.bb-budget-display {
+  font-family:var(--font-d); font-size:32px; font-weight:700;
+  letter-spacing:-0.02em; line-height:1; color:var(--ink); margin-bottom:4px;
+}
+.bb-budget-sub { font-family:var(--font-m); font-size:11px; color:var(--ink-soft); margin-bottom:1rem; }
+.bb-slider {
+  width:100%; -webkit-appearance:none; appearance:none; height:3px;
+  background:var(--surface-2); border-radius:2px; outline:none; cursor:pointer; margin:0.75rem 0;
+}
+.bb-slider::-webkit-slider-thumb {
+  -webkit-appearance:none; width:20px; height:20px; border-radius:50%;
+  background:var(--accent); border:2.5px solid #fff; cursor:pointer;
+  box-shadow:0 2px 8px rgba(200,16,46,0.3);
+}
+.bb-presets { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1.75rem; }
+.bb-preset {
+  font-family:var(--font-m); font-size:10px; padding:5px 12px;
+  border:1.5px solid var(--border); border-radius:3px; cursor:pointer;
+  color:var(--ink-soft); background:var(--white); transition:all 0.2s;
+}
+.bb-preset:hover, .bb-preset.bb-active { border-color:var(--accent); color:var(--accent); }
+
+/* Duration */
+.bb-dur-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:1.75rem; }
+.bb-dur-card {
+  border:1.5px solid var(--border); border-radius:4px; padding:14px 10px;
+  cursor:pointer; text-align:center; background:var(--white); transition:all 0.2s;
+}
+.bb-dur-card:hover, .bb-dur-card.bb-selected { border-color:var(--accent); }
+.bb-dur-weeks { font-family:var(--font-d); font-size:22px; font-weight:700; color:var(--ink); line-height:1; }
+.bb-dur-label { font-family:var(--font-m); font-size:9px; color:var(--ink-soft); margin-top:4px; letter-spacing:0.06em; }
+
+/* Allocation bars */
+.bb-alloc-list { display:flex; flex-direction:column; gap:6px; margin-bottom:1.75rem; }
+.bb-alloc-row { display:grid; grid-template-columns:170px 1fr 50px 75px; gap:10px; align-items:center; }
+.bb-alloc-name { font-size:11px; color:var(--ink); }
+.bb-alloc-track { height:4px; background:var(--surface-2); border-radius:2px; }
+.bb-alloc-fill { height:4px; border-radius:2px; transition:width 0.5s cubic-bezier(0.16,1,0.3,1); }
+.bb-alloc-pct { font-family:var(--font-m); font-size:10px; color:var(--ink-soft); text-align:right; }
+.bb-alloc-amt { font-family:var(--font-m); font-size:10px; color:var(--accent); text-align:right; font-weight:500; }
+
+/* Science callout */
+.bb-science {
+  border:1.5px solid rgba(255,200,0,0.25); border-left:3px solid #D4A017;
+  border-radius:4px; padding:12px 14px; margin-bottom:1.5rem;
+  background:rgba(212,160,23,0.04);
+}
+.bb-science-eyebrow { font-family:var(--font-m); font-size:9px; color:#D4A017; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:4px; }
+.bb-science-text { font-size:12px; color:var(--ink-soft); line-height:1.65; }
+.bb-science-text strong { color:var(--ink); font-weight:600; }
+
+/* Audience cards */
+.bb-aud-grid { display:flex; flex-direction:column; gap:8px; margin-bottom:1.75rem; }
+.bb-aud-card {
+  display:grid; grid-template-columns:32px 1fr auto;
+  gap:12px; align-items:start; padding:14px;
+  border:1.5px solid var(--border); border-radius:4px; cursor:pointer;
+  transition:all 0.2s; background:var(--white);
+}
+.bb-aud-card:hover, .bb-aud-card.bb-selected { border-color:var(--accent); }
+.bb-aud-card.bb-selected { background:rgba(200,16,46,0.03); }
+.bb-aud-icon { font-size:20px; margin-top:2px; }
+.bb-aud-name { font-family:var(--font-d); font-size:13px; font-weight:700; margin-bottom:3px; color:var(--ink); }
+.bb-aud-desc { font-size:11px; color:var(--ink-soft); line-height:1.5; }
+.bb-aud-tags { display:flex; gap:4px; flex-wrap:wrap; margin-top:6px; }
+.bb-aud-tag { font-family:var(--font-m); font-size:9px; padding:2px 6px; border:1px solid var(--border); border-radius:2px; color:var(--ink-soft); }
+.bb-aud-meta { text-align:right; }
+.bb-aud-size { font-family:var(--font-m); font-size:9px; color:var(--ink-faint); margin-bottom:6px; white-space:nowrap; }
+.bb-aud-check {
+  width:20px; height:20px; border-radius:50%; border:1.5px solid var(--border);
+  display:flex; align-items:center; justify-content:center; font-size:10px;
+  transition:all 0.2s; margin-left:auto;
+}
+.bb-aud-card.bb-selected .bb-aud-check { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+/* PESO quadrants */
+.bb-peso-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:1.75rem; }
+.bb-peso-q {
+  border:1.5px solid var(--border); border-radius:4px; padding:14px;
+  background:var(--white); position:relative; overflow:hidden;
+}
+.bb-peso-q::before { content:''; position:absolute; top:0; left:0; bottom:0; width:3px; }
+.bb-peso-P::before { background:#FF6B35; }
+.bb-peso-E::before { background:#4ECDC4; }
+.bb-peso-S::before { background:#A855F7; }
+.bb-peso-O::before { background:#22C55E; }
+.bb-peso-letter {
+  font-family:var(--font-d); font-size:24px; font-weight:700; line-height:1;
+  opacity:0.07; position:absolute; top:8px; right:10px; color:var(--ink);
+}
+.bb-peso-title { font-family:var(--font-d); font-size:12px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; margin-bottom:2px; }
+.bb-peso-subtitle { font-family:var(--font-m); font-size:9px; color:var(--ink-soft); margin-bottom:10px; }
+.bb-ch-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:5px 8px; border-radius:2px; cursor:pointer; border:1px solid transparent;
+  transition:all 0.15s;
+}
+.bb-ch-row:hover { background:var(--surface); border-color:var(--border); }
+.bb-ch-row.bb-ch-active { border-color:var(--accent); background:rgba(200,16,46,0.04); }
+.bb-ch-name { font-size:11px; color:var(--ink); }
+.bb-ch-pct { font-family:var(--font-m); font-size:10px; color:var(--accent); }
+.bb-ch-bar { height:2px; background:var(--surface-2); border-radius:1px; margin-top:3px; }
+.bb-ch-bar-fill { height:2px; border-radius:1px; background:var(--accent); transition:width 0.4s; }
+
+/* Maturity */
+.bb-maturity {
+  margin-bottom:1.75rem; padding:14px;
+  background:var(--swansway); border-radius:4px; color:#fff;
+}
+.bb-maturity-label { font-family:var(--font-m); font-size:9px; color:rgba(255,255,255,0.4); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:8px; display:flex; justify-content:space-between; }
+.bb-maturity-pips { display:flex; gap:4px; margin-bottom:8px; }
+.bb-maturity-pip { flex:1; height:4px; border-radius:2px; background:rgba(255,255,255,0.12); transition:background 0.3s; }
+.bb-maturity-pip.bb-active { background:var(--accent); }
+.bb-maturity-text { font-size:12px; color:rgba(255,255,255,0.65); line-height:1.6; }
+.bb-maturity-text strong { color:#fff; font-weight:600; }
+
+/* Proposition textarea */
+.bb-textarea {
+  width:100%; padding:12px 14px; background:var(--white);
+  border:1.5px solid var(--border); border-radius:4px;
+  font-family:var(--font-b); font-size:13px; color:var(--ink);
+  resize:vertical; min-height:80px; outline:none; line-height:1.6;
+  transition:border-color 0.2s;
+}
+.bb-textarea:focus { border-color:var(--accent); }
+.bb-textarea::placeholder { color:var(--ink-faint); }
+.bb-prop-hint { font-family:var(--font-m); font-size:9px; color:var(--ink-soft); margin-top:4px; letter-spacing:0.04em; }
+
+/* Tone chips */
+.bb-tone-chip {
+  font-family:var(--font-m); font-size:10px; padding:4px 10px;
+  border:1.5px solid var(--border); border-radius:3px; cursor:pointer;
+  color:var(--ink-soft); background:var(--white); transition:all 0.2s;
+}
+.bb-tone-chip.bb-active { border-color:var(--accent); color:var(--accent); background:rgba(200,16,46,0.04); }
+
+/* KPI suggestions */
+.bb-kpi-item {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 14px; border:1.5px solid var(--border); border-radius:4px;
+  background:var(--white); margin-bottom:6px;
+}
+.bb-kpi-item-label { font-size:12px; color:var(--ink-soft); }
+.bb-kpi-item-val { font-family:var(--font-d); font-size:16px; font-weight:700; color:var(--accent); }
+
+/* Nav buttons */
+.bb-nav-btns { display:flex; gap:10px; margin-top:1.75rem; padding-top:1.75rem; border-top:1px solid var(--border); }
+.bb-btn-back {
+  font-family:var(--font-b); font-size:12px; font-weight:600;
+  letter-spacing:0.04em; text-transform:uppercase; padding:11px 24px;
+  border-radius:3px; cursor:pointer; background:var(--white);
+  border:1.5px solid var(--border-med); color:var(--ink-soft); transition:all 0.2s;
+}
+.bb-btn-back:hover { border-color:var(--ink); color:var(--ink); }
+.bb-btn-next {
+  font-family:var(--font-b); font-size:12px; font-weight:700;
+  letter-spacing:0.04em; text-transform:uppercase; padding:11px 28px;
+  border-radius:3px; cursor:pointer; background:var(--accent);
+  border:1.5px solid var(--accent); color:#fff; transition:all 0.2s;
+}
+.bb-btn-next:hover { background:#a00d26; border-color:#a00d26; }
+.bb-btn-next:disabled { opacity:0.35; cursor:not-allowed; }
+
+/* Output brief */
+#bb-output {
+  background:var(--white); margin:-2rem -2.5rem; padding:0; min-height:500px;
+}
+  .bb-ctype-grid { grid-template-columns:repeat(2,1fr); }
+  .bb-peso-grid { grid-template-columns:1fr; }
+  .bb-out-grid { grid-template-columns:1fr; }
+  .bb-out-peso { grid-template-columns:repeat(2,1fr); }
+  .bb-out-kpis { grid-template-columns:1fr 1fr; }
+}
+@media print {
+  #bb-left, #bb-step-indicator, #bb-progress-track, .bb-nav-btns { display:none !important; }
+  #bb-output { margin:0; }
+  .bb-out-hero { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
+.cal-q-tab{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:4px;background:var(--white);cursor:pointer;font-family:var(--font-b);font-size:12px;font-weight:600;color:var(--ink-soft);transition:all .2s;text-align:center;display:block}
+.cal-q-tab span{display:block;font-size:10px;font-weight:400;color:var(--ink-faint);margin-top:2px;font-family:var(--font-m)}
+.cal-q-tab.active{background:var(--swansway);color:#fff;border-color:var(--swansway)}
+.cal-q-tab.active span{color:rgba(255,255,255,0.65)}
+.cal-q-tab:hover:not(.active){border-color:var(--swansway);color:var(--swansway)}
+</style>
+
+<!-- Progress -->
+<div id="bb-progress-track"><div id="bb-progress-fill"></div></div>
+
+<!-- Step indicator -->
+<div id="bb-step-indicator">
+  <div class="bb-step-item active" id="bb-si-1" onclick="bbGoStep(1)"><div class="bb-step-dot">1</div><span>Brand</span></div>
+  <span class="bb-step-arrow">›</span>
+  <div class="bb-step-item" id="bb-si-2" onclick="bbGoStep(2)"><div class="bb-step-dot">2</div><span>Campaign</span></div>
+  <span class="bb-step-arrow">›</span>
+  <div class="bb-step-item" id="bb-si-3" onclick="bbGoStep(3)"><div class="bb-step-dot">3</div><span>Budget</span></div>
+  <span class="bb-step-arrow">›</span>
+  <div class="bb-step-item" id="bb-si-4" onclick="bbGoStep(4)"><div class="bb-step-dot">4</div><span>Audience</span></div>
+  <span class="bb-step-arrow">›</span>
+  <div class="bb-step-item" id="bb-si-5" onclick="bbGoStep(5)"><div class="bb-step-dot">5</div><span>PESO & Proposition</span></div>
+  <span class="bb-step-arrow">›</span>
+  <div class="bb-step-item" id="bb-si-6" onclick="bbGoStep(6)"><div class="bb-step-dot">6</div><span>Brief</span></div>
+</div>
+
+<!-- Two-col layout -->
+<div id="bb-layout">
+
+  <!-- LEFT: Live brief preview -->
+  <aside id="bb-left">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div class="bb-panel-eyebrow" style="margin-bottom:0">Live brief</div><button onclick="bbNewBrief()" style="font-family:var(--font-b);font-size:10px;font-weight:700;padding:3px 9px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:rgba(255,255,255,0.8);cursor:pointer">+ New</button></div>
+    <div class="bb-panel-brand" id="bbp-brand">SELECT BRAND</div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Dates</div><div id="bbp-dates" class="bb-brief-empty">—</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Site</div><div id="bbp-site" class="bb-brief-empty">All sites</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Campaign type</div><div id="bbp-type" class="bb-brief-empty">—</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Budget</div><div id="bbp-budget" class="bb-brief-empty">—</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Duration</div><div id="bbp-duration" class="bb-brief-empty">—</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Audiences</div><div id="bbp-audiences" class="bb-brief-empty">—</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Objective</div><div id="bbp-objective" class="bb-brief-empty">—</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Proposition</div><div id="bbp-prop" class="bb-brief-empty">Not written yet</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Primary channel</div><div id="bbp-channel" class="bb-brief-empty">—</div></div>
+    <div class="bb-completeness">
+      <div class="bb-comp-score" id="bb-comp-score">0%</div>
+      <div class="bb-comp-label"><span>Brief completeness</span><span id="bb-comp-label">Incomplete</span></div>
+      <div class="bb-comp-track"><div class="bb-comp-fill" id="bb-comp-fill" style="width:0%"></div></div>
+      <div class="bb-health" id="bb-health"></div>
+    </div>
+  </aside>
+
+  <!-- RIGHT: Step content -->
+  <div id="bb-right">
+
+    <!-- Step 1: Brand -->
+    <div class="bb-step bb-active" id="bb-step-1">
+      <div class="bb-eyebrow">Step 1 of 6</div>
+      <div class="bb-headline">Pick your brand.</div>
+      <div class="bb-desc">Every brand in the Swansway portfolio has a distinct voice, audience and competitive context. The brief adapts dynamically to your selection — CPL benchmarks, tone, models and audience segments all update automatically.</div>
+      <div class="bb-section-label">Select brand</div>
+      <div class="bb-brand-grid" id="bb-brand-grid"></div>
+
+      <div id="bb-scope-section" style="display:none;margin-top:1.5rem">
+        <div class="bb-section-label">Campaign scope</div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem">
+          <button class="bb-scope-btn bb-selected" id="scope-brand" onclick="bbSetScope('brand',this)">Brand-wide</button>
+          <button class="bb-scope-btn" id="scope-site" onclick="bbSetScope('site',this)">Specific site</button>
+        </div>
+        <div id="bb-site-picker" style="display:none">
+          <div class="bb-section-label" style="margin-top:0">Select site</div>
+          <div id="bb-site-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px"></div>
+        </div>
+      </div>
+
+      <div id="bb-dates-section" style="display:none;margin-top:1.5rem">
+        <div class="bb-section-label">Campaign dates</div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div>
+            <div style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px">Start date</div>
+            <input type="date" id="bb-start-date" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:13px;color:var(--ink);background:var(--white);outline:none" onchange="bbOnDateChange()">
+          </div>
+          <div>
+            <div style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px">End date</div>
+            <input type="date" id="bb-end-date" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:13px;color:var(--ink);background:var(--white);outline:none" onchange="bbOnDateChange()">
+          </div>
+          <div id="bb-date-duration" style="font-size:12px;color:var(--ink-soft);margin-top:18px"></div>
+        </div>
+        <div id="bb-headroom-bar" style="display:none;margin-top:12px"></div>
+      </div>
+
+      <div class="bb-nav-btns">
+        <button class="bb-btn-next" id="bb-btn-1-next" onclick="bbGoStep(2)" disabled>Next: Campaign type →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Campaign type + Objective -->
+    <div class="bb-step" id="bb-step-2">
+      <div class="bb-eyebrow">Step 02 of 06 — Purpose</div>
+      <div class="bb-headline">What's the <em>job</em><br>of this campaign?</div>
+      <div class="bb-desc">Marketing should drive the business, not support it. Every campaign has a primary commercial job. Define it before you touch a single channel.</div>
+      <div class="bb-section-label">Campaign type</div>
+      <div class="bb-ctype-grid" id="bb-ctype-grid"></div>
+      <div class="bb-section-label">Primary objective</div>
+      <div class="bb-obj-grid" id="bb-obj-grid"></div>
+      <div id="bb-step2-context" style="display:none"></div>
+      <div class="bb-nav-btns">
+        <button class="bb-btn-back" onclick="bbGoStep(1)">← Back</button>
+        <button class="bb-btn-next" id="bb-btn-2-next" onclick="bbGoStep(3)" disabled>Next: Budget →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Budget science -->
+    <div class="bb-step" id="bb-step-3">
+      <div class="bb-eyebrow">Step 03 of 06 — Science</div>
+      <div class="bb-headline">What's the budget?</div>
+      <div class="bb-desc">Be honest about what you can spend. The numbers will tell you what you'll get — and whether it's worth it.ber updates in real time.</div>
+      <div class="bb-science" id="bb-science-box">
+        <div class="bb-science-eyebrow">📊 What the data says</div>
+        <div class="bb-science-text" id="bb-science-text">Select a brand and campaign type to see your reach estimate.</div>
+      </div>
+      <div class="bb-section-label">Set campaign budget</div>
+      <div class="bb-budget-display" id="bb-budget-display">£5,000</div>
+      <div class="bb-budget-sub" id="bb-budget-sub">—</div>
+      <input type="range" class="bb-slider" id="bb-slider" min="1000" max="100000" step="500" value="5000" oninput="bbOnBudget(this.value)">
+      <div class="bb-presets" id="bb-presets"></div>
+      <div class="bb-section-label">Campaign duration</div>
+      <div class="bb-dur-grid" id="bb-dur-grid"></div>
+      <div class="bb-section-label">Science-based budget allocation</div>
+      <div class="bb-alloc-list" id="bb-alloc-list"></div>
+      <div class="bb-nav-btns">
+        <button class="bb-btn-back" onclick="bbGoStep(2)">← Back</button>
+        <button class="bb-btn-next" id="bb-btn-3-next" onclick="bbGoStep(4)" disabled>Next: Audiences →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Audiences -->
+    <div class="bb-step" id="bb-step-4">
+      <div class="bb-eyebrow">Step 04 of 06 — Who</div>
+      <div class="bb-headline">Who are we talking to?</div>
+      <div class="bb-desc">Get specific. The tighter the audience, the harder your budget works. Pick multiple segments and your CPL will climb.stimates are based on Swansway brand benchmarks from the playbook.</div>
+      <div id="bb-step4-context" style="display:none"></div>
+      <div class="bb-science">
+        <div class="bb-science-eyebrow">📖 Byron Sharp says</div>
+        <div class="bb-science-text"><strong>95% of your market is not buying right now.</strong> Focusing only on in-market buyers leaves 95% of future revenue untouched. Build mental availability across all three funnel stages — the brand recalled at the moment of purchase wins.</div>
+      </div>
+      <div class="bb-section-label">Select audiences (up to 3)</div>
+      <div class="bb-aud-grid" id="bb-aud-grid"></div>
+      <div class="bb-nav-btns">
+        <button class="bb-btn-back" onclick="bbGoStep(3)">← Back</button>
+        <button class="bb-btn-next" id="bb-btn-4-next" onclick="bbGoStep(5)" disabled>Next: PESO & Proposition →</button>
+      </div>
+    </div>
+
+    <!-- Step 5: PESO + Proposition -->
+    <div class="bb-step" id="bb-step-5">
+      <div class="bb-eyebrow">Step 05 of 06 — How</div>
+      <div class="bb-headline">How are we reaching them?</div>
+      <div class="bb-desc">Pick your channels, nail your proposition. One message, many placements. If you can't say it clearly here, the campaign won't work.Then write the one thing you want the audience to think, feel or do.</div>
+      <div id="bb-step5-context" style="display:none"></div>
+      <div class="bb-maturity" id="bb-maturity-box">
+        <div class="bb-maturity-label"><span>PESO maturity level</span><span id="bb-maturity-level-label">—</span></div>
+        <div class="bb-maturity-pips" id="bb-maturity-pips"></div>
+        <div class="bb-maturity-text" id="bb-maturity-text">Set a budget to see your maturity level.</div>
+      </div>
+      <div class="bb-section-label">Channel activation (pre-recommended, toggle to adjust)</div>
+      <div class="bb-peso-grid" id="bb-peso-grid"></div>
+      <div class="bb-section-label" style="margin-top:1.5rem">Single-minded proposition</div>
+      <textarea class="bb-textarea" id="bb-smp" placeholder="What's the ONE thing you want the audience to think, feel or do? e.g. 'BYD Seal offers Tesla-level technology at £10K less — and it is ready now.'" oninput="bbUpdateBrief()"></textarea>
+      <div class="bb-prop-hint">Research: A single clear proposition outperforms multi-message campaigns by 3.5× (Binet & Field, IPA Databank)</div>
+      <div class="bb-section-label" style="margin-top:1.25rem">Brand tone for this campaign</div>
+      <div id="bb-tone-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem"></div>
+      <div class="bb-section-label">Mandatories & restrictions</div>
+      <textarea class="bb-textarea" id="bb-mandatories" placeholder="e.g. Must include finance rep example / Manufacturer disclaimer / T&Cs URL / APR required" style="min-height:60px" oninput="bbUpdateBrief()"></textarea>
+      <div class="bb-section-label" style="margin-top:1.25rem">Science-based KPI targets</div>
+      <div id="bb-kpi-targets"></div>
+      <div class="bb-nav-btns">
+        <button class="bb-btn-back" onclick="bbGoStep(4)">← Back</button>
+        <button class="bb-btn-next" onclick="bbGoStep(6)">Generate full brief →</button>
+      </div>
+    </div>
+
+    <!-- Step 6: Output -->
+    <div class="bb-step" id="bb-step-6">
+      <div id="bb-save-bar" class="bb-save-bar-wrap" style="display:none">
+        <div class="bb-s6-row">
+          <input class="bb-s6-input" id="bb-brief-title" placeholder="e.g. Volkswagen Plate Change June 2026" maxlength="80">
+          <button class="bb-s6-btn" id="bb-save-btn" onclick="bbSaveBrief()">Save brief</button>
+        </div>
+        <div id="bb-save-feedback" style="display:none;margin-top:12px"></div>
+      </div>
+      <div id="bb-campaign-section" style="display:none;margin-bottom:1.5rem"></div>
+      <div id="bb-output"></div>
+    </div>
+
+  </div><!-- end bb-right -->
+</div><!-- end bb-layout -->
+</div>
+</main>
+
+</body>
+</html>
