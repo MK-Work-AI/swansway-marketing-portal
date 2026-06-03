@@ -791,6 +791,9 @@ function switchView(id, el) {
     if(brand) renderBrand(brand);
   }
   if(id === 'brief') {
+    // Navigate to brief.html (separate page in portal)
+    window.location = 'brief.html';
+    return;
     // Only reset to new brief if not loading a specific brief (bbLoadBrief sets _bbLoadingBrief flag)
     if (!window._bbLoadingBrief) bbNewBrief();
   }
@@ -1409,7 +1412,7 @@ async function openCampaignFromBanner(campId, briefId) {
   if (!brief) return;
   if (!window.SB_BRIEFS_CACHE) window.SB_BRIEFS_CACHE = [];
   if (!SB_BRIEFS_CACHE.find(function(b){return b.id===brief.id;})) SB_BRIEFS_CACHE.push(brief);
-  bbLoadBrief(brief.id);
+  window.location = 'brief.html?view=brief&brief=' + brief.id;
 }
 
 
