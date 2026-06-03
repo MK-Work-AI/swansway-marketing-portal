@@ -1093,7 +1093,7 @@ function sbInit() {
     }
   SB = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
-      redirectTo: 'https://mk-work-ai.github.io/swansway-marketing-hub/',
+      redirectTo: 'https://mk-work-ai.github.io/swansway-marketing-portal/',
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
@@ -1220,7 +1220,7 @@ function switchAuthTab(tab) {
 
 function authGoogle() {
   if (!SB) { alert('Supabase not configured'); return; }
-  SB.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: 'https://mk-work-ai.github.io/swansway-marketing-hub/' } });
+  SB.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: 'https://mk-work-ai.github.io/swansway-marketing-portal/' } });
 }
 
 
