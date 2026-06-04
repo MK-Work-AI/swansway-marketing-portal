@@ -2462,9 +2462,17 @@ async function bbDeleteBrief(id) {
   }
 }
 
-// ── Brief Builder init ──
+// ── Brief page init ──
 document.addEventListener('DOMContentLoaded', function() {
-  bbCheckUrlOnLoad();
-  swEnsureUser();
-  loadAdminConfig();
+  var briefView = document.getElementById('view-brief');
+  if (briefView) briefView.classList.add('active');
+  setTimeout(function() {
+    var params = new URLSearchParams(window.location.search);
+    var briefId = params.get('brief');
+    if (briefId && typeof bbLoadBrief === 'function') {
+      bbLoadBrief(briefId);
+    } else if (typeof bbNewBrief === 'function') {
+      bbNewBrief();
+    }
+  }, 800);
 });
