@@ -2208,10 +2208,7 @@ function bbExitCampaignMode() {
 
 
 function bbNewBrief() {
-  console.log('bbNewBrief CALLED, stack:', new Error().stack.split('\n').slice(1,4).join(' | '));
-  console.log('_bbBriefLoading:', window._bbBriefLoading, '_bbSuppressNewBrief:', window._bbSuppressNewBrief);
-  // Skip if a brief is currently being loaded
-  if (window._bbBriefLoading) { console.log('bbNewBrief: blocked by _bbBriefLoading'); return; }
+  if (window._bbBriefLoading) { return; }
   if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; return; }
   // Restore sidebar to original brief panel HTML (campaign mode overwrites it)
   var _left = document.getElementById('bb-left');
@@ -2315,23 +2312,18 @@ async function bbLoadBrief(id) {
   window._bbSuppressNewBrief = true;
   window._bbBriefLoading = true; // set synchronously before any await
   let brief = SB_BRIEFS_CACHE.find(b=>b.id===id);
-  console.log('brief in cache:', !!brief, 'cache size:', SB_BRIEFS_CACHE.length);
   if (!brief) {
     try {
-      console.log('fetching brief from Supabase...');
       var resp = await fetch(SUPABASE_URL + '/rest/v1/briefs?id=eq.' + id + '&select=*&limit=1', {
         headers: getAuthHeaders({'Content-Type':'application/json'})
       });
-      console.log('fetch response:', resp.status);
       if (resp.ok) {
         var rows = await resp.json();
-        console.log('rows returned:', rows.length);
         if (rows && rows.length) { brief = rows[0]; SB_BRIEFS_CACHE.unshift(brief); }
       }
     } catch(e) { console.warn('bbLoadBrief fetch:', e); }
     if (!brief) { console.warn('bbLoadBrief: not found', id); return; }
   }
-  console.log('brief found, loading:', brief.title);
 
   // Switch to brief builder view — set flag so switchView doesn't reset to new brief
   window._bbLoadingBrief = true;
