@@ -826,7 +826,7 @@ async function ctLoad() {
 function ctRenderList() {
   var el = document.getElementById('ct-team-list');
   if (!el) return;
-  var members = Object.values(CT_MEMBERS);
+  var members = Object.values(CT_MEMBERS).filter(function(m){ return m.id !== 'leadership'; });
   if (!members.length) { el.innerHTML='<div style="padding:20px;color:var(--ink-faint);font-size:13px">No team members yet. Add one below.</div>'; return; }
   el.innerHTML = '';
   var hdr = document.createElement('div');
@@ -870,6 +870,7 @@ function ctEdit(id) {
     + ctField('Email','ct-email',m.email||'','email','name@swansway.co.uk')
     + ctField('Role','ct-role',m.role||'','text','e.g. Head of Marketing')
     + '<div><div class="admin-field-label">Active</div><label style="display:flex;align-items:center;gap:6px;margin-top:8px"><input type="checkbox" id="ct-active" '+(m.active?'checked':'')+'>Active member</label></div>'
+    + '<div><div class="admin-field-label">Marketing Leadership</div><label style="display:flex;align-items:center;gap:6px;margin-top:8px"><input type="checkbox" id="ct-leadership" '+(m.is_leadership?'checked':'')+'>In leadership group</label></div>'
     + '</div>'
     + '<div style="margin-bottom:16px"><div class="admin-field-label" style="margin-bottom:10px">Permissions</div>'
     + CT_PERM_LABELS.map(function(p){
