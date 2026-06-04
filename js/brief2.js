@@ -963,6 +963,11 @@ async function bbLaunchCampaignFromBrief(briefId, briefTitle, btnEl) {
         site_id:(brief&&brief.site_id)||null,
         status:'active',
         current_stage:1,
+        start_date:(brief&&brief.start_date)||null,
+        end_date:(brief&&brief.end_date)||null,
+        planned_budget:(brief&&brief.budget)||null,
+        campaign_type:(brief&&brief.campaign_type)||null,
+        planned_objective:(brief&&brief.objective)||null,
         confirmed_channels:(brief&&(brief.confirmed_channels||brief.channels))||[],
         created_by:CB_CURRENT_USER||'system'
       }])
