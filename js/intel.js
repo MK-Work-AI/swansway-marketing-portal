@@ -287,14 +287,18 @@ function renderAssetChecklist() { return ''; }
 
 
 async function loadAutopsies() {
-  if (!SB || !SB_USER) return;
+  if (!SB_USER) return;
   try {
-    var r = await SB.from('autopsies').select('data').eq('user_id', SB_USER.id).order('created_at', {ascending: false});
-    if (r.data && r.data.length) {
-      AUTOPSY_LIST = r.data.map(function(row) { return row.data; });
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/autopsies?select=data&order=created_at.desc', {
+      headers: getAuthHeaders({'Content-Type': 'application/json'})
+    });
+    if (!resp.ok) return;
+    var rows = await resp.json();
+    if (rows && rows.length) {
+      AUTOPSY_LIST = rows.map(function(row) { return row.data; });
       renderAutopsyList();
     }
-  } catch(e) {}
+  } catch(e) { console.warn('loadAutopsies error:', e); }
 }
 
 
