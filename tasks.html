@@ -275,8 +275,8 @@
           + (campTasks.length?'<span style="font-size:11px;color:#92400E;background:#FEF3C7;padding:2px 8px;border-radius:8px;font-weight:600">'+campTasks.length+' task'+(campTasks.length!==1?'s':'')+' for you</span>':'')
           + '</div></div>'
           + '<div style="text-align:right;flex-shrink:0">'
-          + '<div style="font-family:var(--font-m);font-size:10px;color:var(--ink-soft);margin-bottom:4px">Progress</div>'
-          + '<div style="width:80px;height:6px;background:var(--border);border-radius:3px"><div style="height:6px;border-radius:3px;background:'+pct>=100?'#059669':'var(--swansway)'+';width:'+pct+'%"></div></div>'
+        var barColor = pct >= 100 ? '#059669' : 'var(--swansway)';
+          + '<div style="width:80px;height:6px;background:var(--border);border-radius:3px"><div style="height:6px;border-radius:3px;background:'+barColor+';width:'+pct+'%"></div></div>'
           + '<div style="font-size:11px;font-family:var(--font-m);color:var(--ink-soft);margin-top:2px">'+done+'/'+allCampTasks.length+'</div>'
           + '</div>'
           + (camp.brief_id?'<a href="brief.html?brief='+camp.brief_id+'" class="btn" style="font-size:11px;margin-left:8px;text-decoration:none;flex-shrink:0">Open →</a>':'')
