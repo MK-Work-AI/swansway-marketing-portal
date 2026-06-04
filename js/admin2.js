@@ -111,10 +111,40 @@ var BK_CURRENT_BRAND = 'audi';
 var BC_CURRENT_BRAND = 'audi';
 
 /* ══ INIT ══ */
+var ADMIN_EMAILS = [
+  'mkworkgmail@gmail.com',   // Marcus
+  'anna.ling@swansway.co.uk',
+  'beth.almond@swansway.co.uk',
+];
+
 async function adminInit() {
   var sess = await SB.auth.getSession();
   if (!sess.data.session) { window.location = 'index.html'; return; }
-  document.getElementById('admin-user').textContent = sess.data.session.user.email;
+  var email = sess.data.session.user.email;
+
+  // Check access — email list + campaign_team can_approve_all fallback
+  var allowed = ADMIN_EMAILS.some(function(e) { return e.toLowerCase() === email.toLowerCase(); });
+  if (!allowed) {
+    // Also allow if they have can_approve_all permission in campaign_team
+    try {
+      var tr = await fetch(SUPA + '/campaign_team?email=eq.' + encodeURIComponent(email) + '&select=id', { headers: getAuthHeaders() });
+      if (tr.ok) {
+        var members = await tr.json();
+        if (members && members.length) {
+          var pr = await fetch(SUPA + '/campaign_permissions?team_member_id=eq.' + members[0].id + '&can_approve_all=eq.true&select=id', { headers: getAuthHeaders() });
+          if (pr.ok) { var perms = await pr.json(); allowed = perms && perms.length > 0; }
+        }
+      }
+    } catch(e) {}
+  }
+
+  if (!allowed) {
+    alert('You do not have permission to access the admin area.');
+    window.location = 'index.html';
+    return;
+  }
+
+  document.getElementById('admin-user').textContent = email;
   showLoading(true);
   await loadAdminCfg();
   showLoading(false);
