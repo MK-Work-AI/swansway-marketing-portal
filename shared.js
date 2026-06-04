@@ -1530,7 +1530,7 @@ function renderBriefsList() {
         <span style="font-size:10px;color:var(--ink-faint)">Updated ${updated}</span>
         <div class="brief-card-actions" onclick="event.stopPropagation()" style="margin-top:0;padding-top:0;border-top:none">
           <button class="brief-card-btn" onclick="openBriefFromPanel('${brief.id}')">&#8617; Open</button>
-          <button class="brief-card-btn" onclick="bbArchiveBrief('${brief.id}')">Archive</button>
+          <button class="brief-card-btn" onclick="if(typeof bbArchiveBrief==='function'){bbArchiveBrief('${brief.id}');}else{alert('Open the brief first to archive it.');}">Archive</button>
           <button class="brief-card-btn danger" onclick="if(typeof bbDeleteBrief==='function'){bbDeleteBrief('${brief.id}');}else{deleteBriefFromPanel('${brief.id}');}">Delete</button>
         </div>
       </div>
