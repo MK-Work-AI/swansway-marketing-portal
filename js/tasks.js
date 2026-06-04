@@ -1,16 +1,15 @@
 // Swansway Marketing Portal — Tasks functions // v8-cache-bust
 
 
-var LEADERSHIP_IDS = ['marcus', 'anna', 'beth_a'];
-
 async function mtLoad() {
   await swEnsureUser();
   if (!CB_CURRENT_USER) { mtRender([], []); return; }
   var anon = SUPABASE_ANON_KEY;
   var base = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
   var hdrs = getAuthHeaders();
-  // Leadership members also see shared 'leadership' tasks
-  var isLeadership = LEADERSHIP_IDS.indexOf(CB_CURRENT_USER) >= 0;
+  // Leadership = anyone with can_approve_all permission — sees shared 'leadership' tasks too
+  var myPerms = CB_PERMS[CB_CURRENT_USER] || {};
+  var isLeadership = !!(myPerms.can_approve_all || myPerms.can_approve_digital);
   var taskFilter = isLeadership
     ? '&or=(assigned_to.eq.'+CB_CURRENT_USER+',assigned_to.eq.leadership)'
     : '&assigned_to=eq.'+CB_CURRENT_USER;
