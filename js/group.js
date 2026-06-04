@@ -1211,10 +1211,3 @@ function applyAdminKPITargets() {
     if (ak.owner && ak.owner !== '--') gk.o = ak.owner;
   });
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-  loadSiteBudgets();
-  loadSiteKPIs();
-  calInit();
-  spLoad();
-});
