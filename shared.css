@@ -345,7 +345,7 @@ td strong{font-weight:600}
 .brief-card-btn.danger:hover{background:#FEE2E2;color:var(--accent);border-color:var(--accent)}
 
 /* ── Strategic Priorities ── */
-.sp-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:28px;margin-bottom:2rem}
+.sp-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:40px;margin-bottom:2rem}
 .sp-card{background:var(--white);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1.5px solid var(--border);transition:box-shadow .2s,transform .2s;display:flex;flex-direction:column}
 .sp-card:hover{box-shadow:0 6px 24px rgba(0,0,0,0.10);transform:translateY(-2px)}
 .sp-card-top{background:var(--sp-col,#1A2E4A);padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
