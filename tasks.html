@@ -334,7 +334,7 @@
         await fetch('https://humitzrleflxnlnodpde.supabase.co/rest/v1/campaign_tasks?id=eq.'+taskId, {
           method: 'PATCH',
           headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
-          body: JSON.stringify({completed: true, completed_at: new Date().toISOString()})
+          body: JSON.stringify({completed: true, approved: true, completed_at: new Date().toISOString(), approved_by: CB_CURRENT_USER||''})
         });
         showToast('Task complete ✓','success');
         setTimeout(tasksPageLoad, 500);
