@@ -1277,14 +1277,13 @@ async function bbMarkTaskDone(taskId, campId) {
       body:JSON.stringify({completed:true,approved:true,completed_at:new Date().toISOString(),completed_by:CB_CURRENT_USER,approved_by:CB_CURRENT_USER})
     });
     if (!r.ok) throw new Error(await r.text());
-    // Re-render stage with fresh data
-    var section = document.getElementById('sw-campaign-section-'+campId);
-    var camp = CB_CAMPAIGNS ? CB_CAMPAIGNS.find(function(c){return c.id===campId;}) : null;
-    if (section && camp && typeof bbRenderStages==='function') {
-      bbRenderStages(section, camp, camp.brief_id||'');
-    }
-    // Update My Tasks badge
+    // Re-render by reloading the brief
     if (typeof mtLoad === 'function') mtLoad();
+    // Reload the full campaign view to show updated task state
+    var _briefId = window._lastSavedBriefId || (BB && BB.id);
+    if (_briefId && typeof bbLoadBrief === 'function') {
+      setTimeout(function() { bbLoadBrief(_briefId); }, 300);
+    }
   } catch(e) { alert('Error: '+e.message); }
 }
 
