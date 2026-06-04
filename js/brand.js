@@ -131,6 +131,7 @@ function renderBrand(b) {
 
 function renderGroupBrandCards() {
   const g = document.getElementById('group-brand-grid');
+  if (!g) return;
   g.innerHTML = BRANDS.map(b=>`
     <div class="brand-card" style="--brand-color:${b.color}" onclick="window.location='brand.html?brand=${b.id}'">
       <div class="brand-card-name">${b.name}</div>
