@@ -1263,7 +1263,7 @@ function sbInit() {
       sbHandleSession(session);
       if(_event === 'SIGNED_IN') {
         closeAuth();
-        history.replaceState(null, '', window.location.pathname);
+        history.replaceState(null, '', window.location.pathname + window.location.search + window.location.hash);
         const name = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'You';
         showToast('✓ Signed in as ' + name, 'success');
       }
