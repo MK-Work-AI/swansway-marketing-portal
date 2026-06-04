@@ -1481,6 +1481,8 @@ function filterBriefs(brandId, el) {
 function openBriefFromPanel(id) {
   closeBriefsPanel();
   if (typeof bbLoadBrief === 'function') {
+    window._BRIEF_ID_FROM_URL = id;
+    window._bbLoadingBriefFromPanel = true;
     bbLoadBrief(id);
   } else {
     window.location = 'brief.html?brief=' + id;
