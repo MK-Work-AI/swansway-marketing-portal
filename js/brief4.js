@@ -929,9 +929,10 @@ async function bbApproveBriefAndLaunch(briefId) {
     }
     var brief = Array.isArray(briefs) ? briefs[0] : briefs;
     if (!brief || !brief.id) throw new Error('No brief data returned from approval PATCH');
-    loadBriefs();
-    showToast('Brief approved ✓ Launching campaign…', 'success');
-    await bbRenderCampaignSection(brief);
+    showToast('Campaign approved ✓ Launching…', 'success');
+    // Immediately launch — no re-render showing a second button
+    var btn = document.querySelector('.bb-s6-launch');
+    await bbLaunchCampaignFromBrief(brief.id, brief.title || window._lastSavedBriefTitle, btn);
   } catch(e) {
     console.error('bbApproveBriefAndLaunch error:', e);
     alert('Approval error: ' + e.message);
