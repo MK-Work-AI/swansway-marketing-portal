@@ -1517,7 +1517,7 @@ function renderBriefsList() {
     }
     const site = brief.site_id ? brief.site_id.replace(/-/g,' ').replace(/\b\w/g,l=>l.toUpperCase()) : '';
     const chips = [brief.campaign_type, brief.budget ? '£'+Number(brief.budget).toLocaleString() : '', brief.duration_label||(brief.duration_weeks?brief.duration_weeks+' wks':''), dateStr, site].filter(Boolean).map(t=>`<span style="background:var(--surface);padding:2px 7px;border-radius:4px;font-size:10px;white-space:nowrap">${t}</span>`).join('');
-    return `<div class="brief-card" style="--card-color:${color}" onclick="bbLoadBrief('${brief.id}');closeBriefsPanel()">
+    return `<div class="brief-card" style="--card-color:${color}" onclick="openBriefFromPanel('${brief.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
         <div class="brief-card-brand" style="color:${color};margin-bottom:0">${brief.brand_name}</div>
         <span style="font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.06em;padding:2px 8px;border-radius:10px;flex-shrink:0;${ss}">${status}</span>
@@ -1529,7 +1529,7 @@ function renderBriefsList() {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
         <span style="font-size:10px;color:var(--ink-faint)">Updated ${updated}</span>
         <div class="brief-card-actions" onclick="event.stopPropagation()" style="margin-top:0;padding-top:0;border-top:none">
-          <button class="brief-card-btn" onclick="bbLoadBrief('${brief.id}');closeBriefsPanel()">&#8617; Open</button>
+          <button class="brief-card-btn" onclick="openBriefFromPanel('${brief.id}')">&#8617; Open</button>
           <button class="brief-card-btn" onclick="bbArchiveBrief('${brief.id}')">Archive</button>
           <button class="brief-card-btn danger" onclick="if(typeof bbDeleteBrief==='function'){bbDeleteBrief('${brief.id}');}else{deleteBriefFromPanel('${brief.id}');}">Delete</button>
         </div>
