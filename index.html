@@ -10,10 +10,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="shared.js?v=1" defer></script>
-  <script src="js/group.js?v=1" defer></script>
-  <script src="js/brand.js?v=1" defer></script>
-  <script src="js/tasks.js?v=1" defer></script>
+  <script src="shared.js?v=2"></script>
+  <script src="js/group.js?v=2"></script>
+  <script src="js/brand.js?v=2"></script>
+  <script src="js/tasks.js?v=2"></script>
 </head>
 <body>
 
@@ -170,14 +170,12 @@
 </main>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Render brand grid immediately (uses static BRANDS data — no auth needed)
+window.addEventListener('load', function() {
+  // All scripts loaded — safe to call functions
   if (typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
-  if (typeof renderGroupBudgetChart === 'function') setTimeout(renderGroupBudgetChart, 300);
-  // calInit uses static data too
+  if (typeof renderGroupBudgetChart === 'function') setTimeout(renderGroupBudgetChart, 200);
   if (typeof calInit === 'function') calInit();
   if (typeof spLoad === 'function') spLoad();
-  // loadSiteBudgets / loadSiteKPIs / loadBrandChannels need auth — fired by sbHandleSession
 });
 </script>
 </body>
