@@ -2208,6 +2208,8 @@ function bbExitCampaignMode() {
 
 
 function bbNewBrief() {
+  // Skip if a brief is currently being loaded from panel or URL
+  if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; return; }
   // Restore sidebar to original brief panel HTML (campaign mode overwrites it)
   var _left = document.getElementById('bb-left');
   if (_left && typeof BB_LEFT_ORIGINAL_HTML !== 'undefined') {
@@ -2307,6 +2309,7 @@ function bbCheckUrlOnLoad() {
 
 
 async function bbLoadBrief(id) {
+  window._bbSuppressNewBrief = true; // prevent bbNewBrief from wiping this load
   let brief = SB_BRIEFS_CACHE.find(b=>b.id===id);
   if (!brief) {
     try {
