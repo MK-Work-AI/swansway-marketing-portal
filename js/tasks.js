@@ -1,15 +1,22 @@
 // Swansway Marketing Portal — Tasks functions // v8-cache-bust
 
 
+var LEADERSHIP_IDS = ['marcus', 'anna', 'beth_a'];
+
 async function mtLoad() {
   await swEnsureUser();
   if (!CB_CURRENT_USER) { mtRender([], []); return; }
   var anon = SUPABASE_ANON_KEY;
   var base = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
   var hdrs = getAuthHeaders();
+  // Leadership members also see shared 'leadership' tasks
+  var isLeadership = LEADERSHIP_IDS.indexOf(CB_CURRENT_USER) >= 0;
+  var taskFilter = isLeadership
+    ? '&or=(assigned_to.eq.'+CB_CURRENT_USER+',assigned_to.eq.leadership)'
+    : '&assigned_to=eq.'+CB_CURRENT_USER;
   try {
     var results = await Promise.all([
-      fetch(base+'/campaign_tasks?select=id,task_name,stage,campaign_id,campaigns(id,title,current_stage,brief_id)&assigned_to=eq.'+CB_CURRENT_USER+'&completed=eq.false&approved=eq.false&rejected=eq.false',{headers:hdrs}).then(function(r){return r.json();}),
+      fetch(base+'/campaign_tasks?select=id,task_name,stage,campaign_id,campaigns(id,title,current_stage,brief_id)'+taskFilter+'&completed=eq.false&approved=eq.false&rejected=eq.false',{headers:hdrs}).then(function(r){return r.json();}),
       fetch(base+'/campaigns?status=eq.active&select=*&order=created_at.desc',{headers:hdrs}).then(function(r){return r.json();})
     ]);
     var allTasks = Array.isArray(results[0]) ? results[0] : [];
