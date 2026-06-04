@@ -2209,7 +2209,8 @@ function bbExitCampaignMode() {
 
 function bbNewBrief() {
   // Skip if a brief is currently being loaded from panel or URL
-  if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; return; }
+  if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; console.log('bbNewBrief: suppressed'); return; }
+  console.log('bbNewBrief: CALLED from:', new Error().stack.split('\n')[2]);
   // Restore sidebar to original brief panel HTML (campaign mode overwrites it)
   var _left = document.getElementById('bb-left');
   if (_left && typeof BB_LEFT_ORIGINAL_HTML !== 'undefined') {
