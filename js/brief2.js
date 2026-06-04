@@ -2208,7 +2208,10 @@ function bbExitCampaignMode() {
 
 
 function bbNewBrief() {
+  console.log('bbNewBrief CALLED, stack:', new Error().stack.split('\n').slice(1,4).join(' | '));
+  console.log('_bbBriefLoading:', window._bbBriefLoading, '_bbSuppressNewBrief:', window._bbSuppressNewBrief);
   // Skip if a brief is currently being loaded
+  if (window._bbBriefLoading) { console.log('bbNewBrief: blocked by _bbBriefLoading'); return; }
   if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; return; }
   // Restore sidebar to original brief panel HTML (campaign mode overwrites it)
   var _left = document.getElementById('bb-left');
