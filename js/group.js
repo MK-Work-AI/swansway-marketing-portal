@@ -442,9 +442,11 @@ function renderBudgetTracker() {
   if (!thead) return;
 
   // Header
-  var hdr = '<tr><th>Brand / Site</th>';
-  CAL_MONTHS.forEach(function(m) { hdr += '<th style="text-align:right;font-size:10px">' + m + '</th>'; });
-  hdr += '<th style="text-align:right">Planned</th><th style="text-align:right">Actual</th><th style="text-align:right">Variance</th></tr>';
+  var thStyle = 'background:var(--swansway);color:#fff;font-family:var(--font-m);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;padding:9px 10px;text-align:right;white-space:nowrap';
+  var th1Style = thStyle.replace('text-align:right','text-align:left');
+  var hdr = '<tr><th style="'+th1Style+'">Brand / Site</th>';
+  CAL_MONTHS.forEach(function(m) { hdr += '<th style="'+thStyle+'">' + m + '</th>'; });
+  hdr += '<th style="'+thStyle+'">Planned</th><th style="'+thStyle+'">Actual</th><th style="'+thStyle+'">Variance</th></tr>';
   thead.innerHTML = hdr;
 
   var totalPlanned = 0, totalActual = 0;
