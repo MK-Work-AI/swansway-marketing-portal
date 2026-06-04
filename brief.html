@@ -951,21 +951,7 @@
         </div>
       </div>
 
-      <div id="bb-dates-section" style="display:none;margin-top:1.5rem">
-        <div class="bb-section-label">Campaign dates</div>
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <div>
-            <div style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px">Start date</div>
-            <input type="date" id="bb-start-date" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:13px;color:var(--ink);background:var(--white);outline:none" onchange="bbOnDateChange()">
-          </div>
-          <div>
-            <div style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px">End date</div>
-            <input type="date" id="bb-end-date" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:13px;color:var(--ink);background:var(--white);outline:none" onchange="bbOnDateChange()">
-          </div>
-          <div id="bb-date-duration" style="font-size:12px;color:var(--ink-soft);margin-top:18px"></div>
-        </div>
-        <div id="bb-headroom-bar" style="display:none;margin-top:12px"></div>
-      </div>
+
 
       <div class="bb-nav-btns">
         <button class="bb-btn-next" id="bb-btn-1-next" onclick="bbGoStep(2)" disabled>Next: Campaign type →</button>
@@ -1004,6 +990,20 @@
       <div class="bb-presets" id="bb-presets"></div>
       <div class="bb-section-label">Campaign duration</div>
       <div class="bb-dur-grid" id="bb-dur-grid"></div>
+      <div class="bb-section-label" style="margin-top:1.5rem">Campaign dates</div>
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem">
+        <div>
+          <div style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px">Start date</div>
+          <input type="date" id="bb-start-date" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:13px;color:var(--ink);background:var(--white);outline:none" onchange="bbOnDateChange()">
+        </div>
+        <div>
+          <div style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px">End date <span id="bb-end-date-auto" style="font-weight:400;color:var(--ink-faint)">(auto from duration)</span></div>
+          <input type="date" id="bb-end-date" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:13px;color:var(--ink);background:var(--white);outline:none" onchange="bbOnDateChange()">
+        </div>
+        <div id="bb-date-duration" style="font-size:13px;font-weight:600;color:var(--swansway);padding-bottom:10px"></div>
+      </div>
+      <div id="bb-headroom-bar" style="display:none;margin-top:4px;margin-bottom:1rem"></div>
+
       <div class="bb-section-label">Science-based budget allocation</div>
       <div class="bb-alloc-list" id="bb-alloc-list"></div>
       <div class="bb-nav-btns">
