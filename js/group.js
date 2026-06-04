@@ -266,8 +266,15 @@ async function calLoadFromSupabase() {
       return {
         id: r.id, brand: brandName, name: r.title || 'Untitled',
         start: startMonth, end: endMonth, color: color,
-        status: r.status || 'planned', budget: r.planned_budget,
-        type: r.campaign_type, objective: r.planned_objective
+        status: r.status || 'planned',
+        budget: r.planned_budget,
+        type: r.campaign_type,
+        objective: r.planned_objective,
+        brief_id: r.brief_id || null,
+        start_date: r.start_date || null,
+        end_date: r.end_date || null,
+        scope: r.scope || 'brand',
+        channels: r.confirmed_channels || []
       };
     });
     console.log('calLoadFromSupabase: loaded ' + BUILT_IN_CAMPAIGNS.length + ' campaigns');
