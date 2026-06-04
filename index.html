@@ -14,6 +14,8 @@
   <script src="js/group.js?v=4"></script>
   <script src="js/brand.js?v=4"></script>
   <script src="js/tasks.js?v=4"></script>
+  <script src="js/campaigns.js?v=1"></script>
+  <script src="js/intel.js?v=1"></script>
 </head>
 <body>
 
@@ -167,6 +169,112 @@
     <div class="chart-legend" id="groupBudgetLegend"></div>
   </div>
 </div>
+
+  <!-- ── CHANNELS VIEW ── -->
+  <div class="view" id="view-channels">
+    <div class="page-strip">
+      <div><div class="page-title">Channel Mix</div><div class="page-subtitle">Group-wide spend allocation across all brands <span class="year-ref"></span></div></div>
+    </div>
+    <div class="metrics-row" id="channel-summary-cards"></div>
+    <div class="channels-layout">
+      <div>
+        <div class="sh"><div><div class="sh-title">Channel Allocation</div><div class="sh-sub" id="channels-subtitle">Loading…</div></div></div>
+        <div id="group-channel-list"></div>
+      </div>
+      <div class="chart-sidebar">
+        <div class="sh"><div><div class="sh-title">Split</div></div></div>
+        <div class="chart-wrap" style="max-width:320px">
+          <div class="chart-canvas-wrap"><canvas id="channelChart"></canvas></div>
+          <div class="chart-legend" id="channelChartLegend"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── KPIs VIEW ── -->
+  <div class="view" id="view-kpis">
+    <div class="page-strip">
+      <div><div class="page-title">Group KPI Framework</div><div class="page-subtitle">Performance targets and actuals across all 30 sites <span class="year-ref"></span></div></div>
+    </div>
+    <div class="metrics-row" id="kpi-summary-cards"></div>
+    <div class="sh"><div><div class="sh-title">All KPIs</div><div class="sh-sub">Targets set in Admin · Actuals updated monthly</div></div></div>
+    <div id="group-kpi-list"></div>
+  </div>
+
+  <!-- ── PRIORITIES VIEW ── -->
+  <div class="view" id="view-priorities">
+    <div class="page-strip">
+      <div><div class="page-title">Group Priorities</div><div class="page-subtitle">Strategic priorities for <span class="year-ref"></span></div></div>
+      <div class="action-row">
+        <button class="btn btn-accent" onclick="spAdd()">+ Add priority</button>
+      </div>
+    </div>
+    <div id="sp-list"></div>
+  </div>
+
+  <!-- ── CAMPAIGN CALENDAR VIEW ── -->
+  <div class="view" id="view-crosscal">
+    <div class="page-strip">
+      <div><div class="page-title">Campaign Calendar</div><div class="page-subtitle">Cross-brand campaign schedule <span class="year-ref"></span></div></div>
+      <div class="action-row">
+        <button class="btn btn-accent" onclick="calAddEvent()">+ Add campaign</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:1.25rem;align-items:center;flex-wrap:wrap">
+      <button class="cal-q-tab" id="cal-tab-0" onclick="calSetQuarter(0)">Q1</button>
+      <button class="cal-q-tab" id="cal-tab-1" onclick="calSetQuarter(1)">Q2</button>
+      <button class="cal-q-tab" id="cal-tab-2" onclick="calSetQuarter(2)">Q3</button>
+      <button class="cal-q-tab" id="cal-tab-3" onclick="calSetQuarter(3)">Q4</button>
+      <span id="cal-quarter-label" style="font-family:var(--font-m);font-size:12px;color:var(--ink-soft);margin-left:8px"></span>
+    </div>
+    <div id="crosscal-grid"></div>
+    <div id="crosscal-legend" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:1rem"></div>
+  </div>
+
+  <!-- ── BUDGET VIEW ── -->
+  <div class="view" id="view-budget">
+    <div class="page-strip">
+      <div><div class="page-title">Budget Tracker</div><div class="page-subtitle">Planned vs actual spend by brand and site <span class="year-ref"></span></div></div>
+      <div class="action-row">
+        <button class="btn" onclick="budgetExportCSV()">↓ Export CSV</button>
+      </div>
+    </div>
+    <div class="metrics-row" id="budget-metrics"></div>
+    <div style="overflow-x:auto;margin-top:1rem">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;font-family:var(--font-b)">
+        <thead id="budget-thead"></thead>
+        <tbody id="budget-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── AUTOPSY VIEW ── -->
+  <div class="view" id="view-autopsy">
+    <div class="page-strip">
+      <div><div class="page-title">Campaign Autopsy</div><div class="page-subtitle">Post-campaign analysis and learnings</div></div>
+      <div class="action-row">
+        <button class="btn btn-accent" onclick="autopsyNew()">+ New autopsy</button>
+      </div>
+    </div>
+    <div id="autopsy-form" style="display:none;margin-bottom:1.5rem"></div>
+    <div id="autopsy-list"></div>
+  </div>
+
+  <!-- ── COMPETITOR VIEW ── -->
+  <div class="view" id="view-competitor">
+    <div class="page-strip">
+      <div><div class="page-title">Competitor Intelligence</div><div class="page-subtitle">AI-powered competitor analysis</div></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap;align-items:flex-end">
+      <div style="flex:1;min-width:220px">
+        <div style="font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-soft);margin-bottom:5px">Competitor URL or brand name</div>
+        <input id="comp-url" type="text" placeholder="e.g. arnold-clark.com or Arnold Clark" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:13px;color:var(--ink);outline:none">
+      </div>
+      <button class="btn btn-accent" onclick="competitorScan()">Scan competitor</button>
+    </div>
+    <div id="competitor-results"></div>
+  </div>
+
 </main>
 
 <script>
