@@ -2529,11 +2529,17 @@ async function bbDeleteBrief(id) {
     // If this was the currently loaded brief, reset to new
     if (window._lastSavedBriefId === id) bbNewBrief();
     loadBriefs();
-    // Reload calendar to remove deleted campaign
+    // Remove from local cache immediately
+    if (Array.isArray(window.BUILT_IN_CAMPAIGNS)) {
+      window.BUILT_IN_CAMPAIGNS = window.BUILT_IN_CAMPAIGNS.filter(function(x){
+        return !camps.some(function(c){ return c.id === x.id; });
+      });
+    }
+    // Reload and re-render calendar
     if (typeof calLoadFromSupabase === 'function') {
       await calLoadFromSupabase();
-      if (typeof renderCrossCalendar === 'function') renderCrossCalendar();
     }
+    if (typeof renderCrossCalendar === 'function') renderCrossCalendar();
     showToast('Campaign deleted', 'success');
   } catch(e) {
     showToast('Delete error: ' + e.message, 'error');
