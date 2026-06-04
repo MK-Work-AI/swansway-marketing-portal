@@ -1177,9 +1177,9 @@ function bbShowStageDetail(stageNum, allTasks, currentStage, container, camp, ca
     myTasks.forEach(function(task) {
       var done = task.completed;
       var approved = task.approved;
-      var taskStatus = approved ? 'approved' : done ? 'pending' : 'todo';
-      var statusIcon = approved ? '✓' : done ? '⏳' : '○';
-      var statusColor = {approved:'#059669', pending:'#D97706', todo:'var(--ink-faint)'}[taskStatus];
+      var taskStatus = (approved || done) ? 'approved' : 'todo';
+      var statusIcon = (approved || done) ? '✓' : '○';
+      var statusColor = taskStatus === 'approved' ? '#059669' : 'var(--ink-faint)';
 
       var row = document.createElement('div');
       row.className = 'sw-task-row sw-task-' + taskStatus;
@@ -1272,7 +1272,7 @@ async function bbMarkTaskDone(taskId, campId, cardEl, taskNameEl) {
     var r = await fetch(base+'/campaign_tasks?id=eq.'+taskId, {
       method:'PATCH',
       headers:getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
-      body:JSON.stringify({completed:true,completed_at:new Date().toISOString(),completed_by:CB_CURRENT_USER})
+      body:JSON.stringify({completed:true,approved:true,completed_at:new Date().toISOString(),completed_by:CB_CURRENT_USER,approved_by:CB_CURRENT_USER})
     });
     if (!r.ok) throw new Error(await r.text());
     // Update card visually
