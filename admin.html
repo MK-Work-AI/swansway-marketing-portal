@@ -196,10 +196,7 @@
       <button class="snav" data-page="users" onclick="showPage('users')">👥 Users</button>
       <button class="snav" data-page="campaignteam" onclick="showPage('campaignteam')">⚙️ Campaign Team</button>
     </div>
-    <div class="admin-sidebar-section">
-      <div class="admin-sidebar-label">Account</div>
-      <button class="snav" data-page="security" onclick="showPage('security')">🔒 Security</button>
-    </div>
+
     <div class="admin-sidebar-section">
       <div class="admin-sidebar-label">System</div>
       <button class="snav" data-page="history" onclick="showPage('history')">🕐 History</button>
@@ -395,33 +392,6 @@
       </div>
       <div class="admin-metrics-row" id="users-metrics"></div>
       <div id="users-list"></div>
-    </div>
-
-    <!-- SECURITY -->
-    <div class="admin-page" id="page-security">
-      <div class="admin-page-header">
-        <div><div class="admin-page-title">Security</div><div class="admin-page-sub">Manage your account credentials</div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;max-width:700px">
-        <div class="admin-card">
-          <h3 class="admin-card-title">Update email</h3>
-          <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px">Change the email address linked to your account. A confirmation will be sent to the new address.</p>
-          <div><div class="admin-field-label">New email address</div><input class="admin-input" id="sec-new-email" type="email" placeholder="new@email.com" style="width:100%;margin-bottom:10px"></div>
-          <button id="sec-email-btn" class="btn btn-accent" onclick="securityUpdateEmail()">Update email</button>
-        </div>
-        <div class="admin-card">
-          <h3 class="admin-card-title">Update password</h3>
-          <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px">Set a new password for your account. Minimum 8 characters.</p>
-          <div><div class="admin-field-label">New password</div><input class="admin-input" id="sec-new-pw" type="password" placeholder="Min. 8 characters" style="width:100%;margin-bottom:10px"></div>
-          <div><div class="admin-field-label">Confirm password</div><input class="admin-input" id="sec-confirm-pw" type="password" placeholder="Repeat password" style="width:100%;margin-bottom:10px"></div>
-          <button id="sec-pw-btn" class="btn btn-accent" onclick="securityUpdatePassword()">Update password</button>
-        </div>
-        <div class="admin-card" style="grid-column:1/-1">
-          <h3 class="admin-card-title">Sign out</h3>
-          <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px">Sign out from all devices and sessions.</p>
-          <button class="btn" style="color:#C8102E;border-color:#C8102E" onclick="securitySignOut()">Sign out all devices</button>
-        </div>
-      </div>
     </div>
 
   </div><!-- end admin-main -->
