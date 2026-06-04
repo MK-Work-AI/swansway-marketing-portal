@@ -1059,7 +1059,7 @@ async function bbRenderCampaignSection(briefData) {
         + '<div class="bb-s6-card-pill" style="background:var(--accent)">Ready to launch</div>'
         + '<div class="bb-s6-card-title">' + (firstName ? firstName + ', this brief is waiting for you.' : 'Ready to launch.') + '</div>'
         + '<div class="bb-s6-card-sub">Approve it and the team will get their tasks automatically.</div>'
-        + '<button class="bb-s6-launch" onclick="bbApproveBriefAndLaunch()">\xf0\x9f\x9a\x80 LAUNCH CAMPAIGN</button>'
+        + '<button class="bb-s6-launch" onclick="bbApproveBriefAndLaunch()">LAUNCH CAMPAIGN</button>'
         + '<div class="bb-s6-launch-hint">Creates all 58 tasks and assigns them to the team</div>'
         + '</div>';
     } else {
