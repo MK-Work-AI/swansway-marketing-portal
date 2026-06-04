@@ -195,48 +195,34 @@ function bbRenderSiteGrid() {
 function bbOnDateChange() {
   var sd = document.getElementById('bb-start-date');
   var ed = document.getElementById('bb-end-date');
-  var autoLabel = document.getElementById('bb-end-date-auto');
   BB.start_date = sd ? sd.value : '';
   BB.end_date   = ed ? ed.value : '';
 
-  // If start date set and duration chosen but no end date yet — auto-fill end date
-  if (BB.start_date && !BB.end_date && BB.duration && BB.duration.weeks) {
-    var start = new Date(BB.start_date + 'T00:00:00');
-    var end = new Date(start);
-    end.setDate(end.getDate() + (BB.duration.weeks * 7) - 1);
-    BB.end_date = end.toISOString().split('T')[0];
-    if (ed) ed.value = BB.end_date;
-    if (autoLabel) autoLabel.style.display = '';
-  }
-
-  // If end date manually changed, hide auto label
-  if (BB.end_date && ed && ed.value !== '' && autoLabel) {
-    autoLabel.style.display = 'none';
-  }
-
-  var durEl = document.getElementById('bb-date-duration');
-  if (BB.start_date && BB.end_date && durEl) {
+  if (BB.start_date && BB.end_date) {
     var days = Math.max(1, Math.round((new Date(BB.end_date + 'T00:00:00') - new Date(BB.start_date + 'T00:00:00')) / 86400000) + 1);
     var weeks = Math.round(days / 7);
+    var partialDays = days % 7;
     BB.duration_weeks = weeks;
     BB.campaign_days = days;
-    durEl.textContent = weeks + ' week' + (weeks !== 1 ? 's' : '') + ' · ' + days + ' days';
-    // Match to a duration card if exact, otherwise deselect all cards
-    var matchDur = BB_DURATIONS.find(function(d){ return d.weeks === weeks; });
-    document.querySelectorAll('.bb-dur-card').forEach(function(dc){ dc.classList.remove('bb-selected'); });
-    if (matchDur) {
-      BB.duration = matchDur;
-      document.querySelectorAll('.bb-dur-card').forEach(function(dc){
-        var weeksEl = dc.querySelector('.bb-dur-weeks');
-        if (weeksEl && parseInt(weeksEl.textContent) === weeks) dc.classList.add('bb-selected');
-      });
-    } else {
-      // Custom duration — update BB.duration to reflect actual weeks
-      BB.duration = {weeks: weeks, label: 'Custom'};
-    }
+    BB.duration = {weeks: weeks, label: weeks === 1 ? '1 week' : weeks + ' weeks'};
+    // Update big duration display
+    var bigWeeks = document.getElementById('bb-dur-weeks-big');
+    var bigLabel = document.getElementById('bb-dur-label-big');
+    var bigDays  = document.getElementById('bb-dur-days-big');
+    if (bigWeeks) bigWeeks.textContent = weeks;
+    if (bigLabel) bigLabel.textContent = weeks === 1 ? 'week' : 'weeks';
+    if (bigDays)  bigDays.textContent  = days + ' days total' + (partialDays ? ' (' + weeks + ' weeks + ' + partialDays + ' days)' : '');
     var btn3 = document.getElementById('bb-btn-3-next');
     if (btn3) btn3.disabled = false;
-  } else if (durEl) { durEl.textContent = ''; }
+  } else {
+    BB.campaign_days = 0;
+    var bigWeeks = document.getElementById('bb-dur-weeks-big');
+    var bigLabel = document.getElementById('bb-dur-label-big');
+    var bigDays  = document.getElementById('bb-dur-days-big');
+    if (bigWeeks) bigWeeks.textContent = '—';
+    if (bigLabel) bigLabel.textContent = 'Set dates below';
+    if (bigDays)  bigDays.textContent  = '';
+  }
   bbOnBudget(BB.budget);
   bbUpdateBrief();
   bbLoadHeadroom();
@@ -400,14 +386,7 @@ function bbUpdateScienceBox() {
 
 
 function bbRenderDurations() {
-  const el = document.getElementById('bb-dur-grid');
-  if(!el) return;
-  el.innerHTML = BB_DURATIONS.map(d=>`
-    <div class="bb-dur-card" onclick="bbSelectDur(${d.weeks},'${d.label}')">
-      <div class="bb-dur-weeks">${d.weeks}</div>
-      <div class="bb-dur-label">WEEKS · ${d.label}</div>
-    </div>
-  `).join('');
+  // Duration cards replaced by live date-driven display
 }
 
 
