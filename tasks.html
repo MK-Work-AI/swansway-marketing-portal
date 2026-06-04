@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Swansway Marketing Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter+Tight:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css?v=2">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="config.js?v=2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared5.js"></script>
+  <script src="js/group.js?v=10"></script>
+  <script src="js/brand.js?v=4"></script>
+  <script src="js/tasks.js?v=4"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo-wrap" style="display:flex;align-items:center;gap:14px">
+      <img src="https://npfalcon.b-cdn.net/tenant_d9013b5a-4990-4f3e-beec-4e1fc85990eb/media/uploads/main-logo.svg" alt="Swansway Motor Group" style="height:46px;width:auto;object-fit:contain;filter:brightness(0) invert(1)">
+      <div style="border-left:1px solid rgba(255,255,255,0.2);padding-left:14px">
+        <div style="font-family:var(--font-d);font-size:15px;font-weight:700;color:#fff;line-height:1.2;letter-spacing:-0.01em">Group Marketing Planner <span id="topbar-year"></span></div>
+      </div>
+    </div>
+    <div class="topbar-meta">
+      <span class="topbar-pill" id="topbar-env-pill">Live <span class="year-ref"></span> Plan</span>
+      <button class="user-pill" id="user-pill" onclick="handleUserPillClick()" style="display:none">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="user-name">Loading…</span>
+      </button>
+      <div style="position:relative;display:inline-flex;align-items:center">
+        <button id="mt-btn" onclick="mtToggle(event)" style="font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 14px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:2px;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;position:relative">
+          MY TASKS
+          <span id="mt-badge" style="display:none;background:#C8102E;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:1">0</span>
+        </button>
+        <div id="mt-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:340px;background:var(--white);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:500;overflow:hidden">
+          <div id="mt-header" style="padding:14px 18px;border-bottom:1px solid var(--border);font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--ink)">Your tasks</div>
+          <div id="mt-list" style="max-height:360px;overflow-y:auto"></div>
+          <div id="mt-footer" style="padding:10px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--ink-faint);text-align:center"></div>
+        </div>
+
+      <button onclick="openAuth()" id="signin-btn" style="display:none;font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 16px;background:#fff;border:none;border-radius:2px;color:var(--swansway);cursor:pointer;transition:all .2s" onmouseover="this.style.background='#f0ede8'" onmouseout="this.style.background='#fff'">Sign in</button>
+      <button id="briefs-btn" onclick="openBriefsPanel()" style="display:none;font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 16px;background:#fff;border:none;border-radius:2px;color:var(--swansway);cursor:pointer;transition:all .2s" onmouseover="this.style.background='#f0ede8'" onmouseout="this.style.background='#fff'">📋 My Campaigns</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="brand-nav" id="brand-nav">
+  <div class="brand-nav-inner" id="brand-nav-inner">
+
+    <!-- INTEL dropdown -->
+    <div class="nav-dd-wrap" id="nav-intel">
+      <button class="nav-dd-btn" onclick="navToggle('nav-intel',event)">
+        Intel <span class="nav-dd-chevron">▾</span>
+      </button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item" onclick="window.location='index.html'">Overview</button>
+        <button class="nav-dd-item" onclick="window.location='channels.html'">Channels</button>
+        <button class="nav-dd-item" onclick="window.location='kpis.html'">KPIs</button>
+        <button class="nav-dd-item" onclick="window.location='priorities.html'">Priorities</button>
+        <button class="nav-dd-item" onclick="window.location='competitor.html'">Competitors</button>
+        <div class="nav-dd-sep"></div>
+        <div class="nav-dd-section-label">Brand plans</div>
+        <button class="dd-brand-btn" onclick="navBrand('audi')"><span class="nav-dot" style="background:#BB0A21"></span>Audi</button>
+        <button class="dd-brand-btn" onclick="navBrand('vw')"><span class="nav-dot" style="background:#001E50"></span>Volkswagen</button>
+        <button class="dd-brand-btn" onclick="navBrand('vwcv')"><span class="nav-dot" style="background:#1B4F72"></span>VW Commercial</button>
+        <button class="dd-brand-btn" onclick="navBrand('seat')"><span class="nav-dot" style="background:#E2231A"></span>SEAT</button>
+        <button class="dd-brand-btn" onclick="navBrand('cupra')"><span class="nav-dot" style="background:#C8920A"></span>CUPRA</button>
+        <button class="dd-brand-btn" onclick="navBrand('landrover')"><span class="nav-dot" style="background:#1D4E1D"></span>Land Rover</button>
+        <button class="dd-brand-btn" onclick="navBrand('jaguar')"><span class="nav-dot" style="background:#1B2631"></span>Jaguar</button>
+        <button class="dd-brand-btn" onclick="navBrand('honda')"><span class="nav-dot" style="background:#CC0000"></span>Honda</button>
+        <button class="dd-brand-btn" onclick="navBrand('peugeot')"><span class="nav-dot" style="background:#1B3A6B"></span>Peugeot</button>
+        <button class="dd-brand-btn" onclick="navBrand('byd')"><span class="nav-dot" style="background:#0066CC"></span>BYD</button>
+        <button class="dd-brand-btn" onclick="navBrand('omoda')"><span class="nav-dot" style="background:#6B21A8"></span>OMODA / JAECOO</button>
+        <button class="dd-brand-btn" onclick="navBrand('motormatch')"><span class="nav-dot" style="background:#374151"></span>Motor Match</button>
+      </div>
+    </div>
+
+    <!-- PLANNING dropdown -->
+    <div class="nav-dd-wrap" id="nav-planning">
+      <button class="nav-dd-btn" onclick="navToggle('nav-planning',event)">
+        Planning <span class="nav-dd-chevron">▾</span>
+      </button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item" onclick="window.location='calendar.html'">Campaign Calendar</button>
+        <button class="nav-dd-item nav-item-cta" onclick="window.location='brief.html'">Campaign Builder</button>
+      </div>
+    </div>
+
+    <!-- REVIEW dropdown -->
+    <div class="nav-dd-wrap" id="nav-review">
+      <button class="nav-dd-btn" onclick="navToggle('nav-review',event)">
+        Review <span class="nav-dd-chevron">▾</span>
+      </button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item" onclick="window.location='budget.html'">Budget</button>
+        <button class="nav-dd-item" onclick="window.location='autopsy.html'">Autopsy</button>
+      </div>
+    </div>
+
+    <button class="nav-dd-btn" style="color:var(--swansway);font-weight:700" onclick="window.location='admin.html'">⚙ Admin</button>
+  </div>
+</nav>
+
+<div class="auth-overlay" id="auth-overlay" onclick="if(event.target===this)closeAuth()">
+  <div class="auth-box" style="max-width:380px">
+    <div class="auth-header">
+      <div class="auth-header-title">Swansway Marketing Hub</div>
+      <div class="auth-header-sub">Sign in to access your team workspace</div>
+    </div>
+    <div style="padding:28px 24px;text-align:center">
+      <div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:var(--ink);margin-bottom:6px">Welcome back</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:24px">Sign in with your Swansway Google account</div>
+      <button onclick="authGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 16px;border:1.5px solid #dadce0;border-radius:4px;background:#fff;cursor:pointer;font-family:var(--font-b);font-size:14px;font-weight:600;color:#3c4043;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 1px 8px rgba(0,0,0,0.15)'" onmouseout="this.style.boxShadow='none'">
+        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.16C6.51 42.62 14.62 48 24 48z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.16C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.16C12.43 13.72 17.74 9.5 24 9.5z"/></svg>
+        Continue with Google
+      </button>
+      <div style="font-size:11px;color:var(--ink-faint);margin-top:16px">Access is restricted to authorised Swansway team members</div>
+    </div>
+  </div>
+</div>
+
+<div class="briefs-panel" id="briefs-panel">
+  <div class="briefs-panel-header">
+    <div class="briefs-panel-title">📋 My Campaigns</div>
+    <div style="display:flex;gap:8px;align-items:center"><button onclick="window.location='brief.html'" style="font-family:var(--font-b);font-size:11px;font-weight:700;padding:5px 12px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer">+ New campaign</button><button class="briefs-panel-close" onclick="closeBriefsPanel()">×</button></div>
+  </div>
+  <div class="briefs-panel-body">
+    <div class="brief-filters" id="brief-filters">
+      <div class="brief-filter active" data-brand="all" onclick="filterBriefs('all',this)">All brands</div>
+    </div>
+    <div id="briefs-list"><div style="text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:13px">Loading your campaigns…</div></div>
+  </div>
+  <div class="briefs-panel-footer">
+    <button class="btn btn-accent" style="width:100%" onclick="window.location='brief.html'">✏ New Campaign</button>
+  </div>
+</div>
+
+<main id="main-content" class="main" style="padding:1.5rem 2rem">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px">
+    <div>
+      <h1 style="font-family:var(--font-d);font-size:28px;font-weight:800;color:var(--ink);margin-bottom:4px">My Tasks</h1>
+      <div style="font-size:13px;color:var(--ink-soft)" id="tasks-subtitle">Loading your tasks…</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="tasksPageLoad()" style="font-size:12px">↻ Refresh</button>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div id="tasks-metrics" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem"></div>
+
+  <!-- Filter tabs -->
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.5rem">
+    <button class="tasks-filter-btn active" data-filter="mine" onclick="tasksSetFilter('mine',this)">My tasks</button>
+    <button class="tasks-filter-btn" data-filter="all" onclick="tasksSetFilter('all',this)">All active campaigns</button>
+  </div>
+
+  <!-- Task list -->
+  <div id="tasks-content"></div>
+
+  <style>
+    .tasks-filter-btn{padding:8px 20px;font-family:var(--font-m);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;color:var(--ink-soft);transition:all .15s}
+    .tasks-filter-btn.active{color:var(--swansway);border-bottom-color:var(--swansway)}
+    .task-card{background:var(--white);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden;transition:box-shadow .15s}
+    .task-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+    .task-card-header{padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:10px}
+    .task-card-body{padding:0 16px 14px;display:none}
+    .task-card.open .task-card-body{display:block}
+    .task-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+    .task-row:last-child{border-bottom:none}
+    .task-check{width:18px;height:18px;border:2px solid var(--border);border-radius:3px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px}
+    .task-check.done{background:#059669;border-color:#059669;color:#fff}
+    .task-check.approved{background:#2563EB;border-color:#2563EB;color:#fff}
+    .stage-badge{font-size:10px;font-family:var(--font-m);font-weight:700;padding:2px 8px;border-radius:8px;background:#DBEAFE;color:#2563EB}
+    .tasks-metric{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:14px 18px;border-top:3px solid var(--swansway)}
+    .tasks-metric-label{font-family:var(--font-m);font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
+    .tasks-metric-val{font-family:var(--font-d);font-size:28px;font-weight:800;color:var(--swansway)}
+  </style>
+
+  <script>
+    var TASKS_ALL = [];
+    var TASKS_CAMPS = [];
+    var TASKS_FILTER = 'mine';
+    var STAGE_NAMES = ['Pre-Production','Production','Pre-Live Approval','Go Live','In-Flight','Close & Review'];
+    var SUPA = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
+
+    async function tasksPageLoad() {
+      await swEnsureUser();
+      var hdrs = getAuthHeaders();
+      var subtitle = document.getElementById('tasks-subtitle');
+      if (subtitle) subtitle.textContent = 'Loading…';
+      try {
+        var results = await Promise.all([
+          fetch(SUPA+'/campaign_tasks?select=id,task_name,stage,completed,approved,rejected,assigned_to,campaign_id,campaigns(id,title,current_stage,brief_id,brand_id)&order=stage,task_name',{headers:hdrs}).then(function(r){return r.json();}),
+          fetch(SUPA+'/campaigns?status=eq.active&select=*&order=created_at.desc',{headers:hdrs}).then(function(r){return r.json();})
+        ]);
+        TASKS_ALL = Array.isArray(results[0]) ? results[0] : [];
+        TASKS_CAMPS = Array.isArray(results[1]) ? results[1] : [];
+        tasksRender();
+      } catch(e) {
+        console.warn('tasksPageLoad:', e);
+        var el = document.getElementById('tasks-content');
+        if (el) el.innerHTML = '<div style="padding:20px;color:#C8102E">Error loading tasks: '+e.message+'</div>';
+      }
+    }
+
+    function tasksSetFilter(f, btn) {
+      TASKS_FILTER = f;
+      document.querySelectorAll('.tasks-filter-btn').forEach(function(b){b.classList.remove('active');});
+      if (btn) btn.classList.add('active');
+      tasksRender();
+    }
+
+    function tasksRender() {
+      var myId = CB_CURRENT_USER;
+      var me = CB_TEAM[myId] || {};
+      var firstName = me.name ? me.name.split(' ')[0] : 'there';
+
+      var myTasks = TASKS_ALL.filter(function(t){ return t.assigned_to === myId && !t.completed && !t.approved; });
+      var activeTasks = TASKS_ALL.filter(function(t){ return !t.completed && !t.approved; });
+
+      // Metrics
+      var metrics = document.getElementById('tasks-metrics');
+      if (metrics) metrics.innerHTML = [
+        {l:'My open tasks', v:myTasks.length, c:'var(--swansway)'},
+        {l:'Active campaigns', v:TASKS_CAMPS.length, c:'#059669'},
+        {l:'Total open tasks', v:activeTasks.length, c:'#D97706'},
+        {l:'Completed today', v:TASKS_ALL.filter(function(t){return t.completed;}).length, c:'#6B7280'},
+      ].map(function(m){
+        return '<div class="tasks-metric" style="border-top-color:'+m.c+'"><div class="tasks-metric-label">'+m.l+'</div><div class="tasks-metric-val" style="color:'+m.c+'">'+m.v+'</div></div>';
+      }).join('');
+
+      // Subtitle
+      var sub = document.getElementById('tasks-subtitle');
+      if (sub) sub.textContent = myTasks.length > 0
+        ? 'Hi '+firstName+' — '+myTasks.length+' task'+(myTasks.length!==1?'s':'')+' waiting for you'
+        : 'Hi '+firstName+' — all caught up ✅';
+
+      // Content
+      var el = document.getElementById('tasks-content');
+      if (!el) return;
+      el.innerHTML = '';
+
+      var displayTasks = TASKS_FILTER === 'mine' ? myTasks : activeTasks;
+
+      if (!TASKS_CAMPS.length) {
+        el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink-soft)"><div style="font-size:32px;margin-bottom:10px">📋</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;margin-bottom:6px">No active campaigns</div><div style="font-size:13px">Launch a campaign in the Campaign Builder to generate tasks.</div><a href="brief.html" class="btn btn-accent" style="display:inline-block;margin-top:16px;text-decoration:none">Open Campaign Builder</a></div>';
+        return;
+      }
+
+      // Group by campaign
+      TASKS_CAMPS.forEach(function(camp) {
+        var campTasks = displayTasks.filter(function(t){ return t.campaign_id === camp.id; });
+        if (TASKS_FILTER === 'mine' && !campTasks.length) return;
+
+        var allCampTasks = TASKS_ALL.filter(function(t){ return t.campaign_id === camp.id; });
+        var done = allCampTasks.filter(function(t){ return t.completed || t.approved; }).length;
+        var pct = allCampTasks.length ? Math.round(done/allCampTasks.length*100) : 0;
+        var stage = camp.current_stage || 1;
+
+        var card = document.createElement('div');
+        card.className = 'task-card';
+        card.innerHTML = '<div class="task-card-header" onclick="this.parentElement.classList.toggle('open')">'
+          + '<div style="flex:1">'
+          + '<div style="font-family:var(--font-d);font-size:16px;font-weight:800;color:var(--ink);margin-bottom:4px">'+camp.title+'</div>'
+          + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+          + '<span class="stage-badge">Stage '+stage+': '+(STAGE_NAMES[stage-1]||'')+'</span>'
+          + (campTasks.length?'<span style="font-size:11px;color:#92400E;background:#FEF3C7;padding:2px 8px;border-radius:8px;font-weight:600">'+campTasks.length+' task'+(campTasks.length!==1?'s':'')+' for you</span>':'')
+          + '</div></div>'
+          + '<div style="text-align:right;flex-shrink:0">'
+          + '<div style="font-family:var(--font-m);font-size:10px;color:var(--ink-soft);margin-bottom:4px">Progress</div>'
+          + '<div style="width:80px;height:6px;background:var(--border);border-radius:3px"><div style="height:6px;border-radius:3px;background:'+pct>=100?'#059669':'var(--swansway)'+';width:'+pct+'%"></div></div>'
+          + '<div style="font-size:11px;font-family:var(--font-m);color:var(--ink-soft);margin-top:2px">'+done+'/'+allCampTasks.length+'</div>'
+          + '</div>'
+          + (camp.brief_id?'<a href="brief.html?brief='+camp.brief_id+'" class="btn" style="font-size:11px;margin-left:8px;text-decoration:none;flex-shrink:0">Open →</a>':'')
+          + '</div>';
+
+        // Task rows
+        var body = document.createElement('div');
+        body.className = 'task-card-body';
+        var stageTasks = {};
+        campTasks.forEach(function(t){
+          if (!stageTasks[t.stage]) stageTasks[t.stage] = [];
+          stageTasks[t.stage].push(t);
+        });
+        Object.keys(stageTasks).sort().forEach(function(s) {
+          var sHdr = document.createElement('div');
+          sHdr.style.cssText = 'font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-faint);padding:10px 0 4px';
+          sHdr.textContent = 'Stage '+s+': '+(STAGE_NAMES[s-1]||'');
+          body.appendChild(sHdr);
+          stageTasks[s].forEach(function(t) {
+            var row = document.createElement('div');
+            row.className = 'task-row';
+            var check = document.createElement('div');
+            check.className = 'task-check'+(t.completed||t.approved?' done':'');
+            check.innerHTML = t.completed||t.approved ? '✓' : '';
+            check.title = 'Mark complete';
+            (function(tid){ check.onclick = function(){ tasksMarkComplete(tid, this); }; })(t.id);
+            var name = document.createElement('div');
+            name.style.cssText = 'font-size:13px;font-weight:500;color:var(--ink);flex:1'+(t.completed?' opacity:.5 text-decoration:line-through':'');
+            name.textContent = t.task_name;
+            var assignee = CB_TEAM[t.assigned_to];
+            if (assignee) {
+              var pill = document.createElement('span');
+              pill.style.cssText = 'font-size:10px;font-family:var(--font-m);padding:2px 8px;border-radius:8px;background:var(--surface);color:var(--ink-soft)';
+              pill.textContent = assignee.name;
+              row.appendChild(check); row.appendChild(name); row.appendChild(pill);
+            } else {
+              row.appendChild(check); row.appendChild(name);
+            }
+            body.appendChild(row);
+          });
+        });
+        card.appendChild(body);
+        el.appendChild(card);
+      });
+
+      if (!el.children.length) {
+        el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink-soft)"><div style="font-size:32px;margin-bottom:10px">✅</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;margin-bottom:6px">All caught up!</div><div style="font-size:13px">No tasks assigned to you right now.</div></div>';
+      }
+    }
+
+    async function tasksMarkComplete(taskId, el) {
+      if (!el || el.classList.contains('done')) return;
+      el.classList.add('done'); el.textContent = '✓';
+      try {
+        await fetch('https://humitzrleflxnlnodpde.supabase.co/rest/v1/campaign_tasks?id=eq.'+taskId, {
+          method: 'PATCH',
+          headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
+          body: JSON.stringify({completed: true, completed_at: new Date().toISOString()})
+        });
+        showToast('Task complete ✓','success');
+        setTimeout(tasksPageLoad, 500);
+      } catch(e) { el.classList.remove('done'); el.textContent = ''; }
+    }
+
+    window.addEventListener('load', function() { tasksPageLoad(); });
+  </script>
+
+</main>
+
+<script>
+// On index.html, brand nav buttons go to brand.html?brand=X
+function navBrand(id) {
+  navCloseAll();
+  window.location = 'brand.html?brand=' + id;
+}
+
+window.addEventListener('load', function() {
+  // All scripts loaded — safe to call functions
+  if (typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
+  if (typeof renderGroupBudgetChart === 'function') setTimeout(renderGroupBudgetChart, 200);
+  if (typeof calInit === 'function') calInit();
+  if (typeof spLoad === 'function') spLoad();
+});
+</script>
+</body>
+</html>
