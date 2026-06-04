@@ -1089,10 +1089,10 @@ function applyAdminConfig(cfg) {
     // Re-render budget tracker with updated planned figures
     if (typeof renderBudgetTracker === 'function') renderBudgetTracker();
     // Update BRANDS array budget strings from site sums
-    updateBrandBudgetsFromSites();
+    if(typeof updateBrandBudgetsFromSites==='function') updateBrandBudgetsFromSites();
 
     // Group budget only from site budgets — never from admin config (avoids flash)
-    // updateBrandBudgetsFromSites() handles this after loadSiteBudgets()
+    // if(typeof updateBrandBudgetsFromSites==='function') updateBrandBudgetsFromSites() handles this after loadSiteBudgets()
   }
 
   // ── 2. UPDATE GROUP METRICS ───────────────────────────────────
