@@ -514,8 +514,8 @@ function renderBudgetTracker() {
       brandCells += '<td class="budget-cell' + cls + '">' + inner + '</td>';
     }
 
-    rows += '<tr style="background:var(--surface);border-top:2px solid var(--border)">'
-      + '<td style="padding:8px 8px 2px"><div style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">'
+    rows += '<tr style="background:var(--white);border-top:3px solid var(--border)">'
+      + '<td style="padding:12px 10px 10px;border-left:4px solid '+b.color+'"><div style="display:flex;align-items:center;gap:6px;font-family:var(--font-d);font-weight:800;font-size:14px">'
       + '<span style="width:10px;height:10px;border-radius:50%;background:' + b.color + ';display:inline-block;flex-shrink:0"></span>'
       + b.name + '</div>'
       + (sites.length > 0 ? '<div style="font-size:10px;color:var(--ink-soft);margin-left:16px;padding-bottom:4px">' + sites.length + (sites.length === 1 ? ' site' : ' sites') + '</div>' : '')
@@ -555,8 +555,8 @@ function renderBudgetTracker() {
         } else { sVarStyle = ''; sVarStr = '&mdash;'; }
         var actOrCmt = siteActual > 0 ? '&pound;' + siteActual.toLocaleString()
           : siteCommitted > 0 ? '<span style="color:#D97706">&pound;' + siteCommitted.toLocaleString() + '</span>' : '&mdash;';
-        rows += '<tr style="background:var(--white);border-left:3px solid ' + b.color + ';border-top:1px solid var(--border)">'
-          + '<td style="padding:5px 8px 5px 20px;font-size:12px;color:var(--ink-soft)">' + site.site_name + '</td>'
+        rows += '<tr style="background:var(--white);border-bottom:1px solid var(--border)">'
+          + '<td style="padding:7px 10px 7px 28px;font-size:12px;color:var(--ink);border-left:4px solid '+b.color+'">' + site.site_name + '</td>'
           + siteCells
           + '<td style="text-align:right;font-size:11px;color:var(--ink-faint);padding:4px 8px">' + (sitePlan > 0 ? '&pound;' + sitePlan.toLocaleString() : '&mdash;') + '</td>'
           + '<td style="text-align:right;font-size:11px;padding:4px 8px">' + actOrCmt + '</td>'
