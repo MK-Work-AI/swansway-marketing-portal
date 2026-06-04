@@ -862,11 +862,21 @@ function bbShowPostSave(briefId, status) {
 
   if (status === 'draft') {
     fb.style.display = 'block';
-    fb.innerHTML = '<div class="bb-s6-confirm">'
-      + '<div class="bb-s6-tick">✓</div>'
-      + '<div class="bb-s6-msg"><strong>Saved, ' + firstName + '.</strong> When ready, submit for approval.</div>'
-      + '<button class="bb-s6-submit-btn" onclick="bbSubmitBrief()">Submit →</button>'
-      + '</div>';
+    var _perms = CB_PERMS[CB_CURRENT_USER] || {};
+    var _canLaunchNow = _perms.can_approve_all || _perms.can_approve_digital;
+    if (_canLaunchNow) {
+      fb.innerHTML = '<div class="bb-s6-confirm">'
+        + '<div class="bb-s6-tick">✓</div>'
+        + '<div class="bb-s6-msg"><strong>Saved, ' + firstName + '.</strong> Ready to go live.</div>'
+        + '<button class="bb-s6-launch" onclick="bbSubmitAndLaunch()">LAUNCH CAMPAIGN</button>'
+        + '</div>';
+    } else {
+      fb.innerHTML = '<div class="bb-s6-confirm">'
+        + '<div class="bb-s6-tick">✓</div>'
+        + '<div class="bb-s6-msg"><strong>Saved, ' + firstName + '.</strong> When ready, submit for approval.</div>'
+        + '<button class="bb-s6-submit-btn" onclick="bbSubmitBrief()">Submit for approval →</button>'
+        + '</div>';
+    }
   } else {
 
     // submitted/approved/campaigned — bbRenderCampaignSection handles the UI, hide feedback
@@ -875,6 +885,25 @@ function bbShowPostSave(briefId, status) {
 
   }
 
+}
+
+
+async function bbSubmitAndLaunch() {
+  if (!window._lastSavedBriefId) { showToast('Save the campaign first', 'error'); return; }
+  var btn = document.querySelector('.bb-s6-launch');
+  if (btn) { btn.textContent = 'Launching...'; btn.disabled = true; }
+  try {
+    var r = await fetch('https://humitzrleflxnlnodpde.supabase.co/rest/v1/briefs?id=eq.' + window._lastSavedBriefId, {
+      method: 'PATCH',
+      headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
+      body: JSON.stringify({status:'submitted', submitted_by: CB_CURRENT_USER||'', updated_at: new Date().toISOString()})
+    });
+    if (!r.ok) throw new Error(await r.text());
+    await bbApproveBriefAndLaunch(window._lastSavedBriefId);
+  } catch(e) {
+    showToast('Launch failed: ' + e.message, 'error');
+    if (btn) { btn.textContent = 'LAUNCH CAMPAIGN'; btn.disabled = false; }
+  }
 }
 
 
