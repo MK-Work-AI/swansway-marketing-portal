@@ -2,6 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <script>
+    // Capture brief ID at the very first moment — before anything else runs
+    window._BRIEF_ID_FROM_URL = new URLSearchParams(window.location.search).get('brief');
+    window._bbBriefLoading = false;
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Brief Builder — Swansway Marketing Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1081,9 +1086,5 @@
 </div>
 </main>
 
-<script>
-// Capture brief ID immediately before any auth events can wipe the URL
-window._BRIEF_ID_FROM_URL = new URLSearchParams(window.location.search).get('brief');
-</script>
 </body>
 </html>
