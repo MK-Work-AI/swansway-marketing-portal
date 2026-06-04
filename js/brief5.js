@@ -1117,8 +1117,10 @@ async function bbRenderCampaignSection(briefData) {
 function bbShowStageDetail(stageNum, allTasks, currentStage, container, camp, canApprove) {
   container.innerHTML = '';
   var stageTasks = allTasks.filter(function(t){ return t.stage === stageNum; });
-  var myTasks    = stageTasks.filter(function(t){ return t.assigned_to === CB_CURRENT_USER; });
-  var otherTasks = stageTasks.filter(function(t){ return t.assigned_to !== CB_CURRENT_USER; });
+  var _leadershipIds = ['marcus', 'anna', 'beth_a'];
+  var _isLeadership = _leadershipIds.indexOf(CB_CURRENT_USER) >= 0;
+  var myTasks    = stageTasks.filter(function(t){ return t.assigned_to === CB_CURRENT_USER || (_isLeadership && t.assigned_to === 'leadership'); });
+  var otherTasks = stageTasks.filter(function(t){ return t.assigned_to !== CB_CURRENT_USER && !(_isLeadership && t.assigned_to === 'leadership'); });
   var SN = ['Pre-Production','Production','Pre-Live Approval','Go Live','In-Flight','Close & Review'];
   var SI = ['📋','⚙️','✅','🚀','📊','🏁'];
   var isActive = stageNum === currentStage;
