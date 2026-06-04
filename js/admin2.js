@@ -111,32 +111,26 @@ var BK_CURRENT_BRAND = 'audi';
 var BC_CURRENT_BRAND = 'audi';
 
 /* ══ INIT ══ */
-var ADMIN_EMAILS = [
-  'mkworkgmail@gmail.com',   // Marcus
-  'anna.ling@swansway.co.uk',
-  'beth.almond@swansway.co.uk',
-];
-
 async function adminInit() {
   var sess = await SB.auth.getSession();
   if (!sess.data.session) { window.location = 'index.html'; return; }
   var email = sess.data.session.user.email;
 
-  // Check access — email list + campaign_team can_approve_all fallback
-  var allowed = ADMIN_EMAILS.some(function(e) { return e.toLowerCase() === email.toLowerCase(); });
-  if (!allowed) {
-    // Also allow if they have can_approve_all permission in campaign_team
-    try {
-      var tr = await fetch(SUPA + '/campaign_team?email=eq.' + encodeURIComponent(email) + '&select=id', { headers: getAuthHeaders() });
-      if (tr.ok) {
-        var members = await tr.json();
-        if (members && members.length) {
-          var pr = await fetch(SUPA + '/campaign_permissions?team_member_id=eq.' + members[0].id + '&can_approve_all=eq.true&select=id', { headers: getAuthHeaders() });
-          if (pr.ok) { var perms = await pr.json(); allowed = perms && perms.length > 0; }
+  // Check is_admin flag via campaign_team email lookup + campaign_permissions.is_admin
+  var allowed = false;
+  try {
+    var tr = await fetch(SUPA + '/campaign_team?email=eq.' + encodeURIComponent(email) + '&select=id', { headers: getAuthHeaders() });
+    if (tr.ok) {
+      var members = await tr.json();
+      if (members && members.length) {
+        var pr = await fetch(SUPA + '/campaign_permissions?team_member_id=eq.' + members[0].id + '&select=is_admin', { headers: getAuthHeaders() });
+        if (pr.ok) {
+          var perms = await pr.json();
+          allowed = perms && perms.length > 0 && perms[0].is_admin === true;
         }
       }
-    } catch(e) {}
-  }
+    }
+  } catch(e) { console.warn('adminInit auth check:', e); }
 
   if (!allowed) {
     alert('You do not have permission to access the admin area.');
@@ -832,6 +826,7 @@ function ctEdit(id) {
     + CT_PERM_LABELS.map(function(p){
         return '<label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px"><input type="checkbox" id="perm-'+p.key+'" '+(perms[p.key]?'checked':'')+'><div><div style="font-weight:600">'+p.label+'</div><div style="font-size:11px;color:var(--ink-soft)">'+p.desc+'</div></div></label>';
       }).join('')
+    + '<label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;border-top:1px solid var(--border);padding-top:12px;margin-top:4px"><input type="checkbox" id="perm-is_admin" '+(perms.is_admin?'checked':'')+'><div><div style="font-weight:700;color:var(--swansway)">Admin access</div><div style="font-size:11px;color:var(--ink-soft)">Can access the Admin section of the portal</div></div></label>'
     + '</div>'
     + '<div style="display:flex;gap:8px"><button class="btn btn-accent" onclick="ctSave()">Save</button><button class="btn" onclick="ctCancelForm()">Cancel</button></div>';
 }
@@ -854,6 +849,8 @@ async function ctSave() {
     var el = document.getElementById('perm-'+p.key);
     perms[p.key] = el ? el.checked : false;
   });
+  var isAdminEl = document.getElementById('perm-is_admin');
+  perms.is_admin = isAdminEl ? isAdminEl.checked : false;
   CT_PERMISSIONS[id] = perms;
   try {
     await fetch(SUPA + '/campaign_team?id=eq.'+id, {method:'PATCH',headers:getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),body:JSON.stringify({name:m.name,role:m.role,email:m.email,active:m.active,updated_at:new Date().toISOString()})});
