@@ -221,14 +221,18 @@ function bbOnDateChange() {
     BB.duration_weeks = weeks;
     BB.campaign_days = days;
     durEl.textContent = weeks + ' week' + (weeks !== 1 ? 's' : '') + ' · ' + days + ' days';
-    // Match to a duration card if exact
+    // Match to a duration card if exact, otherwise deselect all cards
     var matchDur = BB_DURATIONS.find(function(d){ return d.weeks === weeks; });
-    if (matchDur && (!BB.duration || BB.duration.weeks !== weeks)) {
+    document.querySelectorAll('.bb-dur-card').forEach(function(dc){ dc.classList.remove('bb-selected'); });
+    if (matchDur) {
       BB.duration = matchDur;
-      document.querySelectorAll('.bb-dur-card').forEach(function(dc){ dc.classList.remove('bb-selected'); });
       document.querySelectorAll('.bb-dur-card').forEach(function(dc){
-        if (parseInt(dc.querySelector('.bb-dur-weeks') ? dc.querySelector('.bb-dur-weeks').textContent : 0) === weeks) dc.classList.add('bb-selected');
+        var weeksEl = dc.querySelector('.bb-dur-weeks');
+        if (weeksEl && parseInt(weeksEl.textContent) === weeks) dc.classList.add('bb-selected');
       });
+    } else {
+      // Custom duration — update BB.duration to reflect actual weeks
+      BB.duration = {weeks: weeks, label: 'Custom'};
     }
     var btn3 = document.getElementById('bb-btn-3-next');
     if (btn3) btn3.disabled = false;
