@@ -171,6 +171,12 @@
 </main>
 
 <script>
+// On index.html, brand nav buttons go to brand.html?brand=X
+function navBrand(id) {
+  navCloseAll();
+  window.location = 'brand.html?brand=' + id;
+}
+
 window.addEventListener('load', function() {
   // All scripts loaded — safe to call functions
   if (typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
