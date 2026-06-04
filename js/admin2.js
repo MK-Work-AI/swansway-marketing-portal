@@ -147,7 +147,7 @@ async function adminInit() {
     return;
   }
 
-  var adminUserEl = document.getElementById('admin-user'); if (adminUserEl) adminUserEl.textContent = email;
+  var unEl = document.getElementById('user-name'); if (unEl) unEl.textContent = email.split('@')[0];
   showLoading(true);
   await loadAdminCfg();
   showLoading(false);
