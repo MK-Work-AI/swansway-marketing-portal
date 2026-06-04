@@ -2514,16 +2514,21 @@ async function bbDeleteBrief(id) {
 document.addEventListener('DOMContentLoaded', function() {
   var briefView = document.getElementById('view-brief');
   if (briefView) briefView.classList.add('active');
+  // Load brief from URL if ID present
   setTimeout(function() {
-    // Skip if a brief is being loaded
+    var briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.search).get('brief');
+    if (briefId && typeof bbLoadBrief === 'function') {
+      window._bbBriefLoading = true;
+      bbLoadBrief(briefId);
+    }
+  }, 400);
+
+  // Start new blank brief only if nothing has loaded after 1500ms
+  setTimeout(function() {
     if (window._bbBriefLoading) { return; }
     if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; return; }
     if (window._bbLoadingBriefFromPanel) { window._bbLoadingBriefFromPanel = false; return; }
-    var briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.search).get('brief');
-    if (briefId && typeof bbLoadBrief === 'function') {
-      bbLoadBrief(briefId);
-    } else if (typeof bbNewBrief === 'function') {
-      bbNewBrief();
-    }
-  }, 800);
+    if (typeof BB !== 'undefined' && BB.brand) { return; }
+    if (typeof bbNewBrief === 'function') bbNewBrief();
+  }, 1500);
 });
