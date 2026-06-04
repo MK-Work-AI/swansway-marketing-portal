@@ -15,3 +15,5 @@ Multi-page marketing planning portal for Swansway Motor Group.
 - Vanilla JS + CSS (no framework)
 
 Built: June 2026
+
+Last rebuild: June 2026
