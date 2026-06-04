@@ -260,8 +260,9 @@ async function calLoadFromSupabase() {
     BUILT_IN_CAMPAIGNS = rows.map(function(r) {
       var brandName = BRAND_ID_MAP[r.brand_id] || r.brand_id || 'All brands';
       var color = BRAND_COLOR_MAP[brandName] || '#374151';
-      var startMonth = r.start_date ? new Date(r.start_date).getMonth() : 0;
-      var endMonth   = r.end_date   ? new Date(r.end_date).getMonth()   : startMonth;
+      // Parse date as local to avoid UTC-offset shifting month (e.g. 2026-04-01 UTC = March in BST)
+      var startMonth = r.start_date ? (parseInt(r.start_date.split('-')[1], 10) - 1) : 0;
+      var endMonth   = r.end_date   ? (parseInt(r.end_date.split('-')[1],   10) - 1) : startMonth;
       return {
         id: r.id, brand: brandName, name: r.title || 'Untitled',
         start: startMonth, end: endMonth, color: color,
