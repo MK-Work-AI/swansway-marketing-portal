@@ -1519,7 +1519,7 @@ function renderBriefsList() {
         <div class="brief-card-actions" onclick="event.stopPropagation()" style="margin-top:0;padding-top:0;border-top:none">
           <button class="brief-card-btn" onclick="bbLoadBrief('${brief.id}');closeBriefsPanel()">&#8617; Open</button>
           <button class="brief-card-btn" onclick="bbArchiveBrief('${brief.id}')">Archive</button>
-          <button class="brief-card-btn danger" onclick="bbDeleteBrief('${brief.id}')">Delete</button>
+          <button class="brief-card-btn danger" onclick="if(typeof bbDeleteBrief==='function'){bbDeleteBrief('${brief.id}');}else{deleteBriefFromPanel('${brief.id}');}">Delete</button>
         </div>
       </div>
     </div>`;
@@ -1637,6 +1637,19 @@ async function loadSiteContacts() {
     var _brandParam = new URLSearchParams(window.location.search).get('brand');
     if (_brandParam && typeof renderBrandCentres === 'function') renderBrandCentres(_brandParam);
   } catch(e) { console.warn('loadSiteContacts error:', e); }
+}
+
+
+async function deleteBriefFromPanel(id) {
+  if (!confirm('Delete this brief?')) return;
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/briefs?id=eq.' + id, {
+      method: 'DELETE',
+      headers: getAuthHeaders({'Content-Type': 'application/json'})
+    });
+    SB_BRIEFS_CACHE = SB_BRIEFS_CACHE.filter(function(b) { return b.id !== id; });
+    if (typeof renderBriefsList === 'function') renderBriefsList();
+  } catch(e) { console.warn('deleteBriefFromPanel error:', e); }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
