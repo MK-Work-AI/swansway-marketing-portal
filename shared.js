@@ -1,33 +1,26 @@
-// Swansway Marketing Portal — Shared JS
-// Data constants, auth, nav, toast, briefs panel
-// Auto-generated from v1 — https://mk-work-ai.github.io/swansway-marketing-portal/
-
-// ── DATA BLOCK ──
+// Swansway Marketing Portal — Shared JS v4
 var PLAN_YEAR = new Date().getFullYear();
-// Snapshot of original bb-left sidebar HTML — restored on bbNewBrief
-var BB_LEFT_ORIGINAL_HTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div class="bb-panel-eyebrow" style="margin-bottom:0">Live brief</div><button onclick="bbNewBrief()" style="font-family:var(--font-b);font-size:10px;font-weight:700;padding:3px 9px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:rgba(255,255,255,0.8);cursor:pointer">+ New</button></div>
-    <div class="bb-panel-brand" id="bbp-brand">SELECT BRAND</div>
-    <div class="bb-brief-row"><div class="bb-brief-label">Dates</div><div id="bbp-dates" class="bb-brief-empty">—</div></div>
-    <div class="bb-brief-row"><div class="bb-brief-label">Site</div><div id="bbp-site" class="bb-brief-empty">All sites</div></div>
-    <div class="bb-brief-row"><div class="bb-brief-label">Campaign type</div><div id="bbp-type" class="bb-brief-empty">—</div></div>
-    <div class="bb-brief-row"><div class="bb-brief-label">Budget</div><div id="bbp-budget" class="bb-brief-empty">—</div></div>
-    <div class="bb-brief-row"><div class="bb-brief-label">Duration</div><div id="bbp-duration" class="bb-brief-empty">—</div></div>
-    <div class="bb-brief-row"><div class="bb-brief-label">Audiences</div><div id="bbp-audiences" class="bb-brief-empty">—</div></div>
-    <div class="bb-brief-row"><div class="bb-brief-label">Objective</div><div id="bbp-objective" class="bb-brief-empty">—</div></div>
-    <div class="bb-brief-row"><div class="bb-brief-label">Proposition</div><div id="bbp-prop" class="bb-brief-empty">Not written yet</div></div>
-    <div class="bb-brief-row"><div class="bb-brief-label">Primary channel</div><div id="bbp-channel" class="bb-brief-empty">—</div></div>
-    <div class="bb-completeness">
-      <div class="bb-comp-score" id="bb-comp-score">0%</div>
-      <div class="bb-comp-label"><span>Brief completeness</span><span id="bb-comp-label">Incomplete</span></div>
-      <div class="bb-comp-track"><div class="bb-comp-fill" id="bb-comp-fill" style="width:0%"></div></div>
-      <div class="bb-health" id="bb-health"></div>
-    </div>
+const SUPABASE_URL = 'https://humitzrleflxnlnodpde.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1bWl0enJsZWZseG5sbm9kcGRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0Mzk1NTksImV4cCI6MjA5NTAxNTU1OX0.p-i5P0jAj9M6c0V9cLPP06C5I88laufatX1b2WS-1lE';
+let SB = null; let SB_USER = null; let SB_BRIEFS_CACHE = []; let SB_ACTIVE_FILTER = 'all';
+window.SB_ACCESS_TOKEN = null;
+var CB_TEAM = {}; var CB_PERMS = {}; var CB_CURRENT_USER = null;
+var CB_CAMPAIGNS = []; var CB_TASKS = {}; var CB_FILTER = 'all'; var CB_CURRENT = null;
+var CB_API = SUPABASE_URL + '/rest/v1';
+var CB_STAGE_NAMES = ['Pre-Production','Production','Pre-Live Approval','Go Live','In-Flight','Close & Review'];
+var CB_ALL_BRIEFS = []; var CB_BRIEF_FILTER = 'all'; var CB_MY_TASKS_FILTER = false;
+var SITE_KPIS = {}; var SITE_BUDGETS = {}; var SITE_CONTACTS = {};
+var BRAND_KPIS_DATA = {}; var BRAND_CHANNELS_DATA = {}; var BRIEF_COMMITMENTS = {};
+var SP_DATA = []; var SP_EDITING_ID = null; var SP_BASE = SUPABASE_URL + '/rest/v1';
+var MT_OPEN = false; var SW_INIT_DONE = false; var SW_INIT_PROMISE = null;
+var BUDGET_ACTUALS = {}; var budgetChartInst;
+var AUTOPSY_LIST = []; var autopsyScore = 0; var COMP_SCANS = [];
+var QUIZ_STATE = {questions:[],current:0,answers:[],score:0,title:''};
+var _navOpen = null; var BUILT_IN_CAMPAIGNS = []; var CAL_CURRENT_QUARTER = 0;
+var _channelChartInst = null; var _updatingGroupChannels = false;
+var BB = {brand:null,ctype:null,objective:null,duration:null,budget:5000,sites:[],audiences:[],channels:[],tone:'',kpi:'',prop:'',step:1};
 
-  <!-- RIGHT: Step content -->`;
-/* ══════════════════════════════════════
-   DATA LAYER
-══════════════════════════════════════ */
-
+// BRANDS
 const BRANDS = [
   {
     id:'audi', name:'Audi', color:'#CC0000', segment:'Premium',
@@ -686,9 +679,7 @@ const BRANDS = [
   },
 ];
 
-/* ══════════════════════════════════════
-   GROUP CALENDAR DATA
-══════════════════════════════════════ */
+// GROUP_CALENDAR
 const GROUP_CALENDAR = [
   { q:'Q1 — Jan to Mar', events:[
     {brand:'All brands',label:'New Year finance reset — PCP/PCH lead generation across all brands',color:'#374151'},
@@ -727,14 +718,10 @@ const GROUP_CALENDAR = [
   ]},
 ];
 
-/* ══════════════════════════════════════
-   GROUP CHANNELS DATA
-══════════════════════════════════════ */
-var GROUP_CHANNELS = []; // populated from Supabase brand_channels
+// GROUP_CHANNELS
+var GROUP_CHANNELS = [];
 
-/* ══════════════════════════════════════
-   GROUP KPIs
-══════════════════════════════════════ */
+// GROUP_KPIS
 const GROUP_KPIS = [
   {l:'Total new car/van units',       t:'--', p:0, o:'--', icon:'', cat:'Volume', unit:'',
    def:'Total new retail and fleet registrations across all brands and sites in 2026.',
@@ -786,111 +773,7 @@ const GROUP_KPIS = [
    bench:'Set your benchmark in Admin > KPIs.', split:''},
 ];
 
-
-
-/* ══════════════════════════════════════
-   RENDERING ENGINE
-══════════════════════════════════════ */
-
-/* ── RENDER GROUP BRAND CARDS ── */
-
-/* ── RENDER GROUP CALENDAR ── */
-
-/* ── RENDER GROUP CHANNELS ── */
-
-/* ── RENDER GROUP KPIs ── */
-
-/* ── AI MODAL ── */
-
-/* ── CHARTS ── */
-
-var _channelChartInst = null;
-
-/* ── INIT ── */
-/* ══════════════════════════════════════
-   ADMIN CONFIG LOADER
-   Reads saved config from admin.html localStorage
-   and overrides default data where configured
-══════════════════════════════════════ */
-
-/* ── AUTH HEADERS HELPER ──
-   Uses user JWT when signed in (authenticated role → RLS enforced).
-   Falls back to anon key when no session.                            */
-
-document.addEventListener('DOMContentLoaded',()=>{
-  loadAdminConfig();
-  loadSiteBudgets();
-  bbCheckUrlOnLoad();
-  loadSiteKPIs();
-  loadSiteContacts();
-  setTimeout(mtLoad, 3000);
-  // Auto-detect current user from auth email after team loads
-  setTimeout(async function() {
-    if (CB_CURRENT_USER) return; // already set
-    if (!window.SB_USER || !SB_USER.email) return;
-    var anon = SUPABASE_ANON_KEY;
-    var base = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
-    var hdrs = getAuthHeaders();
-    try {
-      if (!Object.keys(CB_TEAM).length) {
-        var t = await fetch(base+'/campaign_team?select=*&active=eq.true',{headers:hdrs}).then(r=>r.json());
-        (Array.isArray(t)?t:[]).forEach(function(m){CB_TEAM[m.id]=m;});
-      }
-      if (!Object.keys(CB_PERMS).length) {
-        var p = await fetch(base+'/campaign_permissions?select=*',{headers:hdrs}).then(r=>r.json());
-        (Array.isArray(p)?p:[]).forEach(function(x){CB_PERMS[x.team_member_id]=x;});
-      }
-      var emailLower = SB_USER.email.toLowerCase();
-      var match = Object.values(CB_TEAM).find(function(m){return m.email&&m.email.toLowerCase()===emailLower;});
-      if (match) {
-        CB_CURRENT_USER = match.id;
-        console.log('User detected:', match.name);
-        // Update user dropdown if it exists
-        var sel = document.getElementById('cb-user-sel');
-        if (sel) sel.value = match.id;
-        // Update My Tasks
-        if (typeof mtLoad === 'function') mtLoad();
-      }
-    } catch(e) { console.warn('User detect error:', e); }
-  }, 1000);
-  // Auto-detect current user from auth email
-  window.SWANSWAY_USER_ID = null;
-  if (SB_USER && SB_USER.email && window.CB_TEAM) {
-    var match = Object.values(CB_TEAM).find(function(m){ return m.email && m.email.toLowerCase() === SB_USER.email.toLowerCase(); });
-    if (match) { window.SWANSWAY_USER_ID = match.id; console.log('Auto-detected user:', match.name); }
-  }
-  loadBrandKPIs();
-  loadBrandChannels();
-  syncBrandSitesFromHubSites();
-  renderGroupBrandCards();
-  renderGroupCalendar();
-  var _cvEl2 = document.getElementById('view-channels');
-  if (_cvEl2 && _cvEl2.classList.contains('active')) renderGroupChannels();
-  renderGroupKPIs();
-  // Restore last view from URL hash on page load/refresh
-  (function restoreView() {
-    var hash = window.location.hash.replace('#','').trim();
-    // Don't restore if it's an auth callback hash
-    if (!hash || hash.includes('access_token') || hash.includes('code')) return;
-    var validViews = ['group','audi','vw','vwcv','seat','cupra','landrover','jaguar','honda','peugeot','byd','omoda','motormatch','calendar','channels','kpis','brief','crosscal','budget','autopsy','competitor','training'];
-    if (validViews.indexOf(hash) === -1) return;
-    // Find the matching nav button
-    var navBtn = document.querySelector('[data-view="' + hash + '"]');
-    // Small delay to let everything render first
-    setTimeout(function() { switchView(hash, navBtn); }, 200);
-  })();
-  setTimeout(()=>{
-    renderGroupBudgetChart();
-    renderChannelChart();
-    renderBrandKpiChart();
-  },300);
-  // Init brief builder when view becomes active
-});
-
-/* ════════════════════════════════════════════════════════════════
-   BRIEF BUILDER — Fully namespaced (bb prefix) to avoid conflicts
-════════════════════════════════════════════════════════════════ */
-
+// BB_BRANDS
 const BB_BRANDS = [
   { id:'audi',     name:'Audi',          color:'#BB0A21', segment:'Premium',         sites:6,  tagline:'Vorsprung durch Technik', models:['A3','A5','Q3','Q5','Q8 e-tron','e-tron GT','RS Range'], tone:['Assured','Intelligent','Understated','Prestige','Precise'], cpl:{meta:65,google:48,autotrader:55}, locations:['Chester','Crewe','Stafford','Stoke'] },
   { id:'byd',      name:'BYD',           color:'#E8002A', segment:'Pure EV / PHEV',  sites:3,  tagline:'Build Your Dreams',       models:['Atto 2','Atto 3 EVO','Seal','Seal U DM-i','Sealion 7'], tone:['Bold','Tech-forward','Challenger','Innovative','Accessible'], cpl:{meta:45,google:35,autotrader:42}, locations:['Crewe','Chester'] },
@@ -906,6 +789,7 @@ const BB_BRANDS = [
   { id:'motormatch',name:'Motor Match',  color:'#475569', segment:'Multi-brand Used',sites:5,  tagline:'Real cars. Real prices.',  models:['Approved Used — all brands'], tone:['Honest','Transparent','Straightforward','Local warmth','Value'], cpl:{meta:22,google:16,autotrader:20}, locations:['Crewe','Stockport','Bolton'] },
 ];
 
+// BB_CTYPES
 const BB_CTYPES = [
   { id:'plate',    icon:'🚗', name:'Plate Change',        desc:'Mar/Sep volume surge — reach-led, finance-first, conquest-focused' },
   { id:'launch',   icon:'🚀', name:'Model Launch',        desc:'New/facelifted model — awareness → consideration → test drive' },
@@ -917,6 +801,7 @@ const BB_CTYPES = [
   { id:'event',    icon:'🎪', name:'Event / Experiential', desc:'Test drive events, VIP nights, drive days, showroom activations' },
 ];
 
+// BB_OBJECTIVES
 const BB_OBJECTIVES = [
   { id:'units',   num:'01', text:'Drive new car/van unit registrations',         kpi:'Units sold / enquiry-to-sale ratio',   funnel:'Bottom' },
   { id:'leads',   num:'02', text:'Generate qualified digital leads',              kpi:'CPL / lead quality score / SQL rate',  funnel:'Mid' },
@@ -927,6 +812,7 @@ const BB_OBJECTIVES = [
   { id:'event',    num:'07',text:'Drive event attendance & showroom traffic',      kpi:'RSVPs / show rate / post-event conv',  funnel:'Mid' },
 ];
 
+// BB_AUDIENCES
 const BB_AUDIENCES = {
   default: [
     { id:'intender',  icon:'🎯', name:'Active In-Market Buyers',        desc:'Actively researching now. 3–6 month purchase window. Respond to finance offers, test drive CTAs and comparison content.', tags:['High intent','Short window','Price-sensitive'], size:'~8% of category', cpl_mult:1.0 },
@@ -951,6 +837,7 @@ const BB_AUDIENCES = {
   ],
 };
 
+// BB_PESO
 const BB_PESO = {
   P:{ label:'Paid',   color:'#FF6B35', sub:'You pay for distribution',   channels:[{id:'google',name:'Google Search PPC',base:25,ev:5,fleet:-5,brand:-10},{id:'meta',name:'Meta (Facebook/Instagram)',base:20,ev:5,fleet:-10,brand:5},{id:'autotrader',name:'AutoTrader PPC & Listings',base:15,fleet:-10,brand:-15},{id:'youtube',name:'YouTube Pre-Roll',base:0,ev:8,brand:10,launch:8},{id:'tiktok',name:'TikTok',base:0,seat:12,cupra:8},{id:'linkedin',name:'LinkedIn B2B',base:0,fleet:25}] },
   E:{ label:'Earned', color:'#4ECDC4', sub:'Third-party credibility',    channels:[{id:'pr',name:'PR & Media Relations',base:3,launch:8,brand:6},{id:'reviews',name:'Online Reviews (Google/AT)',base:5},{id:'motpress',name:'Motoring Press Editorial',base:0,launch:6,ev:4},{id:'awards',name:'Awards & Accreditations',base:2}] },
@@ -958,352 +845,13 @@ const BB_PESO = {
   O:{ label:'Owned',  color:'#22C55E', sub:'Your long-term moat',        channels:[{id:'seo',name:'Website & Local SEO',base:8},{id:'crm',name:'CRM & Email Marketing',base:7,aftersales:15},{id:'content',name:'Content Marketing & Blog',base:3,ev:4,brand:5},{id:'events',name:'Events & Showroom Activations',base:2,event:15,fleet:10}] },
 };
 
+// BB_DURATIONS
 const BB_DURATIONS = [{weeks:2,label:'Sprint'},{weeks:4,label:'Standard'},{weeks:8,label:'Extended'},{weeks:13,label:'Quarterly'}];
+
+// BB_PRESETS
 const BB_PRESETS   = [1500,3000,5000,10000,20000,50000];
 
-let BB = {
-  brand:null, ctype:null, objective:null,
-  budget:5000, duration:null, audiences:[],
-  channels:[], step:1,
-  site_id:'', scope:'brand', start_date:'', end_date:'',
-};
-
-/* ── STEP NAVIGATION ── */
-
-/* ── STEP 1: BRANDS ── */
-
-/* ── STEP 2: CAMPAIGN TYPE & OBJECTIVE ── */
-
-/* ── STEP 3: BUDGET ── */
-
-/* ── STEP 4: AUDIENCES ── */
-
-/* ── STEP 5: PESO ── */
-
-/* ── LIVE BRIEF UPDATE ── */
-
-/* ── STEP 6: GENERATE OUTPUT ── */
-
-/* ── BRAND DROPDOWN NAV ── */
-
-/* ── NAV DROPDOWN FUNCTIONS ── */
-var _navOpen = null;
-
-/* ════════════════════════════════════════════════════════════════
-   FEATURE 7 — CROSS-BRAND CAMPAIGN CALENDAR
-════════════════════════════════════════════════════════════════ */
-const CAL_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-// Campaigns loaded from admin config via Supabase — populated in applyAdminConfig
-var BUILT_IN_CAMPAIGNS = [];
-
-// Fallback campaigns used only if admin config not loaded
-var FALLBACK_CAMPAIGNS = []
-const CAL_BRAND_ORDER = ['All brands','Audi','Volkswagen','VW Commercial','SEAT','CUPRA','Land Rover','Jaguar','Honda','Peugeot','BYD','OMODA/JAECOO','Motor Match'];
-
-var CAL_CURRENT_QUARTER = 0;
-
-async function calLoadFromSupabase() {
-  var anon = SUPABASE_ANON_KEY;
-  var base = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
-  var brandColorMap = {'audi':'#BB0A21','vw':'#001E50','vwcv':'#1B4F72','seat':'#E2231A','cupra':'#C8920A','landrover':'#1D4E1D','jaguar':'#1B2631','honda':'#CC0000','peugeot':'#1B3A6B','byd':'#0066CC','omoda':'#6B21A8','motormatch':'#374151'};
-  var brandNameMap = {'audi':'Audi','vw':'Volkswagen','vwcv':'VW Commercial','seat':'SEAT','cupra':'CUPRA','landrover':'Land Rover','jaguar':'Jaguar','honda':'Honda','peugeot':'Peugeot','byd':'BYD','omoda':'OMODA/JAECOO','motormatch':'Motor Match'};
-  try {
-    var rows = await fetch(base + '/campaigns?select=id,title,brand_id,status,start_date,end_date,campaign_type,planned_budget,planned_sites,planned_objective,scope,created_by,brief_id&order=start_date', {
-      headers: getAuthHeaders()
-    }).then(function(r){ return r.json(); });
-    if (!Array.isArray(rows)) return;
-    var fromDB = rows.map(function(r) {
-      var startM = r.start_date ? new Date(r.start_date + 'T00:00:00').getMonth() : 0;
-      var endM   = r.end_date   ? new Date(r.end_date   + 'T00:00:00').getMonth() : (r.start_date ? startM : 11);
-      var brandId = r.brand_id || 'audi';
-      var rawSites = r.planned_sites;
-      var parsedSites = Array.isArray(rawSites) ? rawSites : (typeof rawSites === 'string' && rawSites.startsWith('{')) ? rawSites.slice(1,-1).split(',').filter(Boolean) : [];
-      return { id:r.id, brand:brandNameMap[brandId]||brandId, brand_id:brandId, color:brandColorMap[brandId]||'#374151', name:r.title||'Untitled', start:startM, end:endM, status:r.status||'planned', start_date:r.start_date||'', end_date:r.end_date||'', ctype:r.campaign_type||'', budget:r.planned_budget||0, sites:parsedSites, objective:r.planned_objective||'', scope:r.scope||'brand', created_by:r.created_by||'', brief_id:r.brief_id||'' };
-    });
-    // Backfill start/end dates from briefs for active campaigns missing dates
-    var noDate = fromDB.filter(function(r){ return !r.start_date && r.brief_id; });
-    if (noDate.length > 0) {
-      try {
-        var ids = noDate.map(function(r){ return r.brief_id; }).filter(Boolean).join(',');
-        if (!ids) throw new Error('no brief ids to fetch');
-        var briefs = await fetch(base + '/briefs?id=in.(' + ids + ')&select=id,start_date,end_date,campaign_type,budget', {
-          headers: getAuthHeaders()
-        }).then(function(r){ return r.json(); });
-        if (Array.isArray(briefs)) {
-          briefs.forEach(function(br) {
-            noDate.forEach(function(camp) {
-              if (camp.brief_id === br.id) {
-                if (br.start_date) {
-                  camp.start_date = br.start_date;
-                  camp.end_date   = br.end_date || br.start_date;
-                  camp.start = new Date(br.start_date + 'T00:00:00').getMonth();
-                  camp.end   = br.end_date ? new Date(br.end_date + 'T00:00:00').getMonth() : camp.start;
-                }
-                if (!camp.ctype && br.campaign_type)  camp.ctype  = br.campaign_type;
-                if (!camp.budget && br.budget)         camp.budget = br.budget;
-              }
-            });
-          });
-        }
-      } catch(e) { console.warn('Brief backfill:', e); }
-    }
-
-    // Always use DB — empty DB means empty calendar
-    // Fetch existing brief IDs to filter out orphaned campaigns
-    var existingBriefIds = new Set();
-    try {
-      var briefRows = await fetch(base + '/briefs?select=id', {
-        headers: getAuthHeaders()
-      }).then(function(r){ return r.json(); });
-      if (Array.isArray(briefRows)) briefRows.forEach(function(b){ existingBriefIds.add(b.id); });
-    } catch(e) {}
-    // Filter: keep campaigns that either have no brief link OR whose brief still exists
-    BUILT_IN_CAMPAIGNS = fromDB.filter(function(r) {
-      if (!r.brief_id) return true; // planned campaign, no brief
-      return existingBriefIds.has(r.brief_id); // only show if brief exists
-    });
-    console.log('Calendar: ' + fromDB.length + ' campaigns from DB (' + BUILT_IN_CAMPAIGNS.length + ' valid)');
-  } catch(e) {
-    console.warn('calLoadFromSupabase:', e);
-  }
-}
-
-/* ════════════════════════════════════════════════════════════════
-   FEATURE 8 — BUDGET TRACKER
-════════════════════════════════════════════════════════════════ */
-var BUDGET_BRANDS = [
-  {id:'audi',name:'Audi',color:'#BB0A21',annual:0},
-  {id:'vw',name:'Volkswagen',color:'#001E50',annual:0},
-  {id:'vwcv',name:'VW Commercial',color:'#1B4F72',annual:0},
-  {id:'seat',name:'SEAT',color:'#E2231A',annual:0},
-  {id:'cupra',name:'CUPRA',color:'#C8920A',annual:0},
-  {id:'landrover',name:'Land Rover',color:'#1D4E1D',annual:0},
-  {id:'jaguar',name:'Jaguar',color:'#1B2631',annual:0},
-  {id:'honda',name:'Honda',color:'#CC0000',annual:0},
-  {id:'peugeot',name:'Peugeot',color:'#1B3A6B',annual:0},
-  {id:'byd',name:'BYD',color:'#0066CC',annual:0},
-  {id:'omoda',name:'OMODA/JAECOO',color:'#6B21A8',annual:0},
-  {id:'motormatch',name:'Motor Match',color:'#374151',annual:0},
-]; // Populated from site_budgets table on load
-var BUDGET_ACTUALS = {}; // Loaded from Supabase on init
-
-var budgetChartInst;
-
-/* ════════════════════════════════════════════════════════════════
-   FEATURE 3 — CAMPAIGN AUTOPSY
-════════════════════════════════════════════════════════════════ */
-var AUTOPSY_LIST = []; // Loaded from Supabase on init
-var autopsyScore = 0;
-
-/* ════════════════════════════════════════════════════════════════
-   FEATURE 9 — COMPETITOR MONITOR
-════════════════════════════════════════════════════════════════ */
-var COMP_SCANS = []; // Loaded from Supabase on init
-
-/* ════════════════════════════════════════════════════════════════
-   FEATURE 11 — TRAINING QUIZ
-════════════════════════════════════════════════════════════════ */
-var QUIZ_STATE = {questions:[],current:0,answers:[],score:0,title:''};
-
-/* ════════════════════════════════════════════════════════════════
-   FEATURE 6 — CREATIVE ASSET CHECKLIST
-════════════════════════════════════════════════════════════════ */
-
-var _origBBGenerate = bbGenerateBrief;
-bbGenerateBrief = function() {
-  _origBBGenerate();
-  setTimeout(function() {
-    var outBody = document.querySelector('#bb-output .bb-out-body');
-    if (outBody) {
-      var div = document.createElement('div');
-      div.className = 'bb-out-section';
-      div.innerHTML = renderAssetChecklist();
-      outBody.insertBefore(div, outBody.children[outBody.children.length - 2]);
-    }
-  }, 150);
-};
-
-/* ── HOOK NEW VIEWS INTO switchView ── */
-var _origSVNew = switchView;
-switchView = function(id, el) {
-  _origSVNew(id, el);
-  if (id === 'crosscal')   { calInit(); }
-  if (id === 'kpis') {
-    setTimeout(function() {
-      if (typeof updateGroupKPIsFromSites === 'function') updateGroupKPIsFromSites();
-      if (typeof applyAdminKPITargets === 'function') applyAdminKPITargets();
-      renderGroupKPIs();
-    }, 1000);
-  }
-  if (id === 'budget')     { setTimeout(renderBudgetTracker, 100); }
-  if (id === 'autopsy')    { renderAutopsyList(); }
-  if (id === 'competitor') { updateCompetitorMetrics(); }
-};
-
-/* Brief builder wired into switchView above */
-
-/* ════════════════════════════════════════════════════════════════
-   QUARTERLY PLAN — Upload, process with Claude API, display
-════════════════════════════════════════════════════════════════ */
-
-// ── ANTHROPIC API KEY ─────────────────────────────────────────
-// Set this to your Anthropic API key.
-// Keep this file private / use Vercel env vars for production.
-const ANTHROPIC_API_KEY = ''; // Key removed — all AI calls go via Vercel proxy
-
-// In-memory cache: brandId → latest plan data
-
-/* ════ SITE BUDGETS — HUB ════ */
-var SITE_BUDGETS = {};  // site_id -> row
-var BRIEF_COMMITMENTS = {}; // site_id -> { monthIndex -> amount }
-var HUB_SITES = [{"site_id": "audi-blackburn", "site_name": "Audi Blackburn", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-carlisle", "site_name": "Audi Carlisle", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-crewe", "site_name": "Audi Crewe", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-preston", "site_name": "Audi Preston", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-stafford", "site_name": "Audi Stafford", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-stoke", "site_name": "Audi Stoke", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "vw-wrexham", "site_name": "VW Wrexham", "brand_id": "vw", "brand_name": "Volkswagen"}, {"site_id": "vw-crewe", "site_name": "VW Crewe", "brand_id": "vw", "brand_name": "Volkswagen"}, {"site_id": "vw-oldham", "site_name": "VW Oldham", "brand_id": "vw", "brand_name": "Volkswagen"}, {"site_id": "vwcv-wrexham", "site_name": "VWC Wrexham", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "vwcv-liverpool", "site_name": "VWC Liverpool", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "vwcv-lancashire", "site_name": "VWC Lancashire", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "vwcv-birmingham", "site_name": "VWC Birmingham", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "vwcv-oldham", "site_name": "VWC Oldham", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "seat-crewe", "site_name": "SEAT Crewe", "brand_id": "seat", "brand_name": "SEAT"}, {"site_id": "seat-oldham", "site_name": "SEAT Oldham", "brand_id": "seat", "brand_name": "SEAT"}, {"site_id": "cupra-crewe", "site_name": "CUPRA Crewe", "brand_id": "cupra", "brand_name": "CUPRA"}, {"site_id": "cupra-oldham", "site_name": "CUPRA Oldham", "brand_id": "cupra", "brand_name": "CUPRA"}, {"site_id": "lr-stafford", "site_name": "Land Rover Stafford", "brand_id": "landrover", "brand_name": "Land Rover"}, {"site_id": "jag-crewe", "site_name": "Jaguar Crewe", "brand_id": "jaguar", "brand_name": "Jaguar"}, {"site_id": "honda-stockport", "site_name": "Honda Stockport", "brand_id": "honda", "brand_name": "Honda"}, {"site_id": "honda-bolton", "site_name": "Honda Bolton", "brand_id": "honda", "brand_name": "Honda"}, {"site_id": "peugeot-chester", "site_name": "Peugeot Chester", "brand_id": "peugeot", "brand_name": "Peugeot"}, {"site_id": "peugeot-crewe", "site_name": "Peugeot Crewe", "brand_id": "peugeot", "brand_name": "Peugeot"}, {"site_id": "byd-crewe", "site_name": "BYD Crewe", "brand_id": "byd", "brand_name": "BYD"}, {"site_id": "byd-chester", "site_name": "BYD Chester", "brand_id": "byd", "brand_name": "BYD"}, {"site_id": "byd-stoke", "site_name": "BYD Stoke", "brand_id": "byd", "brand_name": "BYD"}, {"site_id": "omoda-stockport", "site_name": "OMODA/JAECOO Stockport", "brand_id": "omoda", "brand_name": "OMODA/JAECOO"}, {"site_id": "mm-crewe", "site_name": "Motor Match Crewe", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "mm-stockport", "site_name": "Motor Match Stockport", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "mm-bolton", "site_name": "Motor Match Bolton", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "mm-chester", "site_name": "Motor Match Chester", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "mm-stoke", "site_name": "Motor Match Stoke", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "cupra-bolton", "site_name": "CUPRA Bolton Service", "brand_id": "cupra", "brand_name": "CUPRA"}, {"site_id": "seat-bolton", "site_name": "SEAT Bolton Service", "brand_id": "seat", "brand_name": "SEAT"}]
-var HUB_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/* ════ SITE KPIs — HUB ════ */
-var SITE_KPIS = {};  // site_id -> row
-
-/* ════ SITE CONTACTS — HUB ════ */
-var SITE_CONTACTS = {};  // site_id -> row
-
-/* ════ BRAND KPIs — HUB ════ */
-var BRAND_KPIS_DATA = {};  // brand_id -> row
-
-/* ════ BRAND CHANNELS — HUB ════ */
-var BRAND_CHANNELS_DATA = {};  // brand_id -> [{channel, pct, color, note}]
-
-var _updatingGroupChannels = false;
-
-/* ════ CAMPAIGN BUILDER ════ */
-var CB_CAMPAIGNS = [];
-var CB_TASKS = {};
-var CB_TEAM = {};
-var CB_PERMS = {};
-var CB_CURRENT = null;
-var CB_FILTER = 'all';
-var CB_CURRENT_USER = null;
-var CB_API = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
-var CB_STAGE_NAMES = ['Pre-Production','Production','Pre-Live Approval','Go Live','In-Flight','Close & Review'];
-var CB_STAGE_ICONS = ['\uD83D\uDCCB','\u2699\uFE0F','\u2705','\uD83D\uDE80','\uD83D\uDCCA','\uD83C\uDFC1'];
-
-var CB_ALL_BRIEFS=[];
-var CB_BRIEF_FILTER='all';
-
-var CB_ALL_BRIEFS = [];
-var CB_BRIEF_FILTER = 'all';
-var CB_MY_TASKS_FILTER = false;
-
-/* ════ LAUNCH CAMPAIGN FROM BRIEF ════ */
-
-
-/* ── BRIEF STATUS FLOW ── */
-
-
-
-/* ==== MY TASKS ==== */
-var MT_OPEN = false;
-
-document.addEventListener('click', function(e) {
-  if (!MT_OPEN) return;
-  if (e.target.closest && (e.target.closest('#mt-btn') || e.target.closest('#mt-dropdown'))) return;
-  MT_OPEN = false;
-  var dd = document.getElementById('mt-dropdown');
-  if (dd) dd.style.display = 'none';
-});
-
-
-/* ==== PHASE 3: POST-SAVE EXPERIENCE ==== */
-
-/* ==== PHASE 3: BRIEF CAMPAIGN SECTION ==== */
-
-/* ════════════════════════════════
-   SWANSWAY USER INIT - always call this before any user-dependent action
-   ════════════════════════════════ */
-var SW_INIT_DONE = false;
-var SW_INIT_PROMISE = null;
-
-/* ═══ ACTIVE CAMPAIGNS ═══ */
-
-const QPLAN_CACHE = {};
-
-/* ── TRIGGER UPLOAD ── */
-
-/* ── HANDLE FILE INPUT ── */
-
-/* ── PROCESS FILE → CLAUDE API ── */
-
-/* ── READ FILE AS BASE64 ── */
-
-/* ── RENDER PLAN FOR BRAND ── */
-
-/* ── SECTION TOGGLE ── */
-
-/* ── ACTION ITEM TOGGLE ── */
-
-/* ── LOAD FROM DB (previous plans) ── */
-
-/* ── AUTO-LOAD FROM DB ON BRAND VIEW ── */
-
-/* ════════════════════════════════════════════════════════════════
-   SUPABASE — Auth + Brief persistence
-   ▼ Replace these two values with your Supabase project credentials
-   ▼ Find them: Supabase dashboard → Project Settings → API
-════════════════════════════════════════════════════════════════ */
-const SUPABASE_URL      = 'https://humitzrleflxnlnodpde.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1bWl0enJsZWZseG5sbm9kcGRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0Mzk1NTksImV4cCI6MjA5NTAxNTU1OX0.p-i5P0jAj9M6c0V9cLPP06C5I88laufatX1b2WS-1lE';
-
-// Initialise Supabase client
-let SB = null;
-let SB_USER = null;
-let SB_BRIEFS_CACHE = [];
-let SB_ACTIVE_FILTER = 'all';
-
-/* ── UI STATE ── */
-
-/* ── AUTH MODAL ── */
-
-/* ── SAVE BRIEF ── */
-
-/* ── BRAND CONTEXT CARD (Step 1) ── */
-
-/* ── BUDGET INTELLIGENCE CARD (Step 3) ── */
-
-/* ── STEP 2 CONTEXT — Campaign type intelligence ── */
-
-/* ── STEP 4 CONTEXT — Audience intelligence ── */
-
-/* ── STEP 5 CONTEXT — PESO + AutoTrader intel ── */
-
-/* ════════════════════════════════════════════════════════
-   STRATEGIC PRIORITIES — Supabase-backed
-════════════════════════════════════════════════════════ */
-var SP_DATA = [];
-var SP_EDITING_ID = null;
-var SP_BASE = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
-
-/* ════════════════════════════════════════════════════════════════
-   UNIFIED BRIEF → CAMPAIGN MODE
-   Single flow: Brief Builder transforms into Campaign Manager
-════════════════════════════════════════════════════════════════ */
-
-/* ════════════════════════════════════════════════════════════════
-   AVATAR COLOUR SYSTEM — consistent colours per team member
-════════════════════════════════════════════════════════════════ */
-var AVATAR_PALETTE = [
-  '#1A2E4A','#C8102E','#059669','#D97706','#7C3AED',
-  '#0891B2','#DC2626','#065F46','#92400E','#1D4ED8'
-];
-
-/* ════════════════════════════════════════════════════════════════
-   INLINE TASK ACTIONS — Slack-style (no alert/confirm/prompt)
-════════════════════════════════════════════════════════════════ */
-
-/* ════════════════════════════════════════════════════════════════
-   INLINE NOTE FOR BRIEF BUILDER (bbOpenNotesPanel replacement)
-════════════════════════════════════════════════════════════════ */
-
-/* ════════════════════════════════════════════════════════════════
-   PERSONALITY — Marcus-style copy helpers
-════════════════════════════════════════════════════════════════ */
+// BB_COPY
 var BB_COPY = {
   stepTitles: [
     'Who are we talking to?',
@@ -1323,27 +871,71 @@ var BB_COPY = {
   ]
 };
 
+// BUDGET_BRANDS
+var BUDGET_BRANDS = [
+  {id:'audi',name:'Audi',color:'#BB0A21',annual:0},
+  {id:'vw',name:'Volkswagen',color:'#001E50',annual:0},
+  {id:'vwcv',name:'VW Commercial',color:'#1B4F72',annual:0},
+  {id:'seat',name:'SEAT',color:'#E2231A',annual:0},
+  {id:'cupra',name:'CUPRA',color:'#C8920A',annual:0},
+  {id:'landrover',name:'Land Rover',color:'#1D4E1D',annual:0},
+  {id:'jaguar',name:'Jaguar',color:'#1B2631',annual:0},
+  {id:'honda',name:'Honda',color:'#CC0000',annual:0},
+  {id:'peugeot',name:'Peugeot',color:'#1B3A6B',annual:0},
+  {id:'byd',name:'BYD',color:'#0066CC',annual:0},
+  {id:'omoda',name:'OMODA/JAECOO',color:'#6B21A8',annual:0},
+  {id:'motormatch',name:'Motor Match',color:'#374151',annual:0},
+];
 
-/* ════════════════════════════════════════════════════════════════
-   NEW BRIEF + URL STATE
-════════════════════════════════════════════════════════════════ */
+// CAL_MONTHS
+const CAL_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-/* ── BRIEFS PANEL ── */
+// FALLBACK_CAMPAIGNS
+var FALLBACK_CAMPAIGNS = []
+const CAL_BRAND_ORDER = ['All brands','Audi','Volkswagen','VW Commercial','SEAT','CUPRA','Land Rover','Jaguar','Honda','Peugeot','BYD','OMODA/JAECOO','Motor Match'];
 
-/* ── LOAD BRIEF INTO BUILDER ── */
+// CAL_BRAND_ORDER
 
-/* ── BRIEF STATUS / ARCHIVE / DELETE ── */
+// HUB_SITES
+var HUB_SITES = [{"site_id": "audi-blackburn", "site_name": "Audi Blackburn", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-carlisle", "site_name": "Audi Carlisle", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-crewe", "site_name": "Audi Crewe", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-preston", "site_name": "Audi Preston", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-stafford", "site_name": "Audi Stafford", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-stoke", "site_name": "Audi Stoke", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "vw-wrexham", "site_name": "VW Wrexham", "brand_id": "vw", "brand_name": "Volkswagen"}, {"site_id": "vw-crewe", "site_name": "VW Crewe", "brand_id": "vw", "brand_name": "Volkswagen"}, {"site_id": "vw-oldham", "site_name": "VW Oldham", "brand_id": "vw", "brand_name": "Volkswagen"}, {"site_id": "vwcv-wrexham", "site_name": "VWC Wrexham", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "vwcv-liverpool", "site_name": "VWC Liverpool", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "vwcv-lancashire", "site_name": "VWC Lancashire", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "vwcv-birmingham", "site_name": "VWC Birmingham", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "vwcv-oldham", "site_name": "VWC Oldham", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "seat-crewe", "site_name": "SEAT Crewe", "brand_id": "seat", "brand_name": "SEAT"}, {"site_id": "seat-oldham", "site_name": "SEAT Oldham", "brand_id": "seat", "brand_name": "SEAT"}, {"site_id": "cupra-crewe", "site_name": "CUPRA Crewe", "brand_id": "cupra", "brand_name": "CUPRA"}, {"site_id": "cupra-oldham", "site_name": "CUPRA Oldham", "brand_id": "cupra", "brand_name": "CUPRA"}, {"site_id": "lr-stafford", "site_name": "Land Rover Stafford", "brand_id": "landrover", "brand_name": "Land Rover"}, {"site_id": "jag-crewe", "site_name": "Jaguar Crewe", "brand_id": "jaguar", "brand_name": "Jaguar"}, {"site_id": "honda-stockport", "site_name": "Honda Stockport", "brand_id": "honda", "brand_name": "Honda"}, {"site_id": "honda-bolton", "site_name": "Honda Bolton", "brand_id": "honda", "brand_name": "Honda"}, {"site_id": "peugeot-chester", "site_name": "Peugeot Chester", "brand_id": "peugeot", "brand_name": "Peugeot"}, {"site_id": "peugeot-crewe", "site_name": "Peugeot Crewe", "brand_id": "peugeot", "brand_name": "Peugeot"}, {"site_id": "byd-crewe", "site_name": "BYD Crewe", "brand_id": "byd", "brand_name": "BYD"}, {"site_id": "byd-chester", "site_name": "BYD Chester", "brand_id": "byd", "brand_name": "BYD"}, {"site_id": "byd-stoke", "site_name": "BYD Stoke", "brand_id": "byd", "brand_name": "BYD"}, {"site_id": "omoda-stockport", "site_name": "OMODA/JAECOO Stockport", "brand_id": "omoda", "brand_name": "OMODA/JAECOO"}, {"site_id": "mm-crewe", "site_name": "Motor Match Crewe", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "mm-stockport", "site_name": "Motor Match Stockport", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "mm-bolton", "site_name": "Motor Match Bolton", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "mm-chester", "site_name": "Motor Match Chester", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "mm-stoke", "site_name": "Motor Match Stoke", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "cupra-bolton", "site_name": "CUPRA Bolton Service", "brand_id": "cupra", "brand_name": "CUPRA"}, {"site_id": "seat-bolton", "site_name": "SEAT Bolton Service", "brand_id": "seat", "brand_name": "SEAT"}]
+var HUB_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-/* ── INIT ON PAGE LOAD ── */
-document.addEventListener('DOMContentLoaded', () => {
-  // Set year references throughout the UI
-  document.querySelectorAll('.year-ref').forEach(function(el){ el.textContent = PLAN_YEAR; });
-  var tyEl = document.getElementById('topbar-year');
-  if (tyEl) tyEl.textContent = PLAN_YEAR;
-  sbInit();
-});
+// HUB_MONTHS
+var HUB_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-// ── SHARED FUNCTIONS ──
+// AVATAR_PALETTE
+var AVATAR_PALETTE = [
+  '#1A2E4A','#C8102E','#059669','#D97706','#7C3AED',
+  '#0891B2','#DC2626','#065F46','#92400E','#1D4ED8'
+];
+
+// QPLAN_CACHE
+const QPLAN_CACHE = {};
+
+
+
+// Snapshot of original bb-left sidebar HTML — restored on bbNewBrief
+var BB_LEFT_ORIGINAL_HTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div class="bb-panel-eyebrow" style="margin-bottom:0">Live brief</div><button onclick="bbNewBrief()" style="font-family:var(--font-b);font-size:10px;font-weight:700;padding:3px 9px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:rgba(255,255,255,0.8);cursor:pointer">+ New</button></div>
+    <div class="bb-panel-brand" id="bbp-brand">SELECT BRAND</div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Dates</div><div id="bbp-dates" class="bb-brief-empty">—</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Site</div><div id="bbp-site" class="bb-brief-empty">All sites</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Campaign type</div><div id="bbp-type" class="bb-brief-empty">—</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Budget</div><div id="bbp-budget" class="bb-brief-empty">—</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Duration</div><div id="bbp-duration" class="bb-brief-empty">—</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Audiences</div><div id="bbp-audiences" class="bb-brief-empty">—</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Objective</div><div id="bbp-objective" class="bb-brief-empty">—</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Proposition</div><div id="bbp-prop" class="bb-brief-empty">Not written yet</div></div>
+    <div class="bb-brief-row"><div class="bb-brief-label">Primary channel</div><div id="bbp-channel" class="bb-brief-empty">—</div></div>
+    <div class="bb-completeness">
+      <div class="bb-comp-score" id="bb-comp-score">0%</div>
+      <div class="bb-comp-label"><span>Brief completeness</span><span id="bb-comp-label">Incomplete</span></div>
+      <div class="bb-comp-track"><div class="bb-comp-fill" id="bb-comp-fill" style="width:0%"></div></div>
+      <div class="bb-health" id="bb-health"></div>
+    </div>
+
+  <!-- RIGHT: Step content -->`;
+
+
 
 function switchView(id, el) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -1359,8 +951,7 @@ function switchView(id, el) {
     const brand = BRANDS.find(b=>b.id===id);
     if(brand) renderBrand(brand);
   }
-  if(id === 'brief') { window.location = 'brief.html'; return;
-  
+  if(id === 'brief') { window.location = 'brief.html'; return; }
   // Auto-load Q-plan, campaigns and KPIs when a brand page opens
   const brandForQplan = BRANDS.find(b=>b.id===id);
   if(brandForQplan) {
@@ -2045,9 +1636,7 @@ async function loadSiteContacts() {
   } catch(e) { console.warn('loadSiteContacts error:', e); }
 }
 
-// ── INIT ──
 document.addEventListener('DOMContentLoaded', function() {
-  // Year references
   document.querySelectorAll('.year-ref').forEach(function(el){ el.textContent = PLAN_YEAR; });
   var tyEl = document.getElementById('topbar-year');
   if (tyEl) tyEl.textContent = PLAN_YEAR;
