@@ -902,7 +902,8 @@ async function ctSave() {
   perms.is_admin = isAdminEl ? isAdminEl.checked : false;
   CT_PERMISSIONS[id] = perms;
   try {
-    await fetch(SUPA + '/campaign_team?id=eq.'+id, {method:'PATCH',headers:getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),body:JSON.stringify({name:m.name,role:m.role,email:m.email,active:m.active,updated_at:new Date().toISOString()})});
+    m.is_leadership = document.getElementById('ct-leadership') ? document.getElementById('ct-leadership').checked : !!m.is_leadership;
+    await fetch(SUPA + '/campaign_team?id=eq.'+id, {method:'PATCH',headers:getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),body:JSON.stringify({name:m.name,role:m.role,email:m.email,active:m.active,is_leadership:m.is_leadership||false,updated_at:new Date().toISOString()})});
     await fetch(SUPA + '/campaign_permissions', {method:'POST',headers:getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify([perms])});
     showToast(m.name+' saved ✓','success');
     document.getElementById('ct-form').style.display='none';
