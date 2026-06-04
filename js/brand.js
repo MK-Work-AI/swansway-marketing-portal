@@ -69,7 +69,7 @@ function renderBrand(b) {
     </div>
 
     <div class="inner-section" id="${b.id}-campaigns">
-      <div class="sh"><div><div class="sh-title">Priority Campaigns <span class="year-ref"></span></div><div class="sh-sub">From admin calendar and Brief Builder</div></div><div class="action-row"><button class="btn btn-sm btn-accent" onclick="switchView('brief',document.querySelector('[data-view=brief]'))">+ New brief</button></div></div>
+      <div class="sh"><div><div class="sh-title">Priority Campaigns <span class="year-ref"></span></div><div class="sh-sub">From admin calendar and Brief Builder</div></div><div class="action-row"><button class="btn btn-sm btn-accent" onclick="window.location='brief.html'">+ New campaign</button></div></div>
       <div id="${b.id}-campaigns-list"><div style="padding:20px;text-align:center;color:var(--ink-faint);font-size:13px">Loading campaigns...</div></div>
     </div>
 
@@ -287,8 +287,7 @@ function renderBrandCampaigns(brandId) {
 
       if (camp.brief_id) {
         row.onclick = function() {
-          switchView('brief', document.querySelector('[data-view="brief"]'));
-          setTimeout(function() { bbLoadBrief(camp.brief_id); }, 200);
+          window.location = 'brief.html?brief=' + camp.brief_id;
         };
       }
       listEl.appendChild(row);
@@ -319,8 +318,7 @@ function renderBrandCampaigns(brandId) {
         + '</div>'
         + '<span style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 9px;border-radius:10px;background:' + statusCol2 + '20;color:' + statusCol2 + '">' + (brief.status||'draft') + '</span>';
       row.onclick = function() {
-        switchView('brief', document.querySelector('[data-view="brief"]'));
-        setTimeout(function() { bbLoadBrief(brief.id); }, 200);
+        window.location = 'brief.html?brief=' + brief.id;
       };
       listEl.appendChild(row);
     });
