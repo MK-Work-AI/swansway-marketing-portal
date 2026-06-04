@@ -171,17 +171,13 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  switchView('group', document.querySelector('[data-view="group"]'));
-  // Render brand cards and charts once data loads
-  setTimeout(function() {
-    if (typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
-    if (typeof renderGroupBudgetChart === 'function') renderGroupBudgetChart();
-    if (typeof loadSiteBudgets === 'function') loadSiteBudgets();
-    if (typeof loadSiteKPIs === 'function') loadSiteKPIs();
-    if (typeof loadBrandChannels === 'function') loadBrandChannels();
-    if (typeof spLoad === 'function') spLoad();
-    if (typeof calInit === 'function') calInit();
-  }, 1000);
+  // Render brand grid immediately (uses static BRANDS data — no auth needed)
+  if (typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
+  if (typeof renderGroupBudgetChart === 'function') setTimeout(renderGroupBudgetChart, 300);
+  // calInit uses static data too
+  if (typeof calInit === 'function') calInit();
+  if (typeof spLoad === 'function') spLoad();
+  // loadSiteBudgets / loadSiteKPIs / loadBrandChannels need auth — fired by sbHandleSession
 });
 </script>
 </body>
