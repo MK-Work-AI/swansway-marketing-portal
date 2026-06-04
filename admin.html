@@ -7,37 +7,58 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter+Tight:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css?v=2">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js?v=2"></script>
+  <script src="shared4.js"></script>
+  <script src="js/group.js?v=10"></script>
+  <script src="js/admin2.js"></script>
   <style>
-.admin-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.5rem}
-.admin-tab-btn{padding:10px 20px;font-family:var(--font-m);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;color:var(--ink-soft);transition:all .15s}
-.admin-tab-btn:hover{color:var(--ink)}
-.admin-tab-btn.active{color:var(--swansway);border-bottom-color:var(--swansway)}
-.admin-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px;margin-bottom:1rem}
-.admin-table{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--font-b)}
-.admin-table th{background:var(--swansway);color:#fff;padding:9px 12px;font-family:var(--font-m);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;text-align:left;white-space:nowrap}
-.admin-table td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
-.admin-table tr:last-child td{border-bottom:none}
-.admin-table tr:hover td{background:var(--surface)}
-.admin-input{width:100%;padding:5px 8px;border:1.5px solid var(--border);border-radius:4px;font-family:var(--font-b);font-size:12px;color:var(--ink);background:var(--white);outline:none;min-width:60px}
-.admin-input:focus{border-color:var(--swansway)}
-.admin-input-num{width:80px;text-align:right}
-.admin-input-sm{width:56px;text-align:right}
-.admin-actions{display:flex;gap:8px;padding:1rem 0}
-.admin-section-header{margin-bottom:1.5rem}
-.admin-section-header h2{font-family:var(--font-d);font-size:22px;font-weight:800;color:var(--ink);margin-bottom:4px}
-.admin-section-header p{font-size:13px;color:var(--ink-soft)}
-.admin-card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin-bottom:1rem}
-.admin-card-title{font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--ink);margin-bottom:14px}
-.admin-field-label{font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);margin-bottom:4px}
-.brand-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;flex-shrink:0}
-.btn-sm{padding:3px 10px;font-size:11px;font-family:var(--font-b);font-weight:600;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:var(--white);color:var(--ink)}
-.btn-sm:hover{background:var(--surface)}
-.btn-danger{color:#C8102E;border-color:#C8102E}
-.btn-danger:hover{background:#fff0f0}
-#admin-loading{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.8);z-index:900;align-items:center;justify-content:center;font-family:var(--font-d);font-size:16px;font-weight:700;color:var(--ink-soft)}
-</style>
-
+    .admin-layout { display:flex; min-height:calc(100vh - 120px); gap:0; }
+    .admin-sidebar { width:220px; flex-shrink:0; background:var(--white); border-right:1px solid var(--border); padding:1rem 0; }
+    .admin-sidebar-section { margin-bottom:1rem; }
+    .admin-sidebar-label { font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-faint);padding:6px 20px 4px; }
+    .snav { display:block;width:100%;text-align:left;padding:8px 20px;font-family:var(--font-b);font-size:13px;font-weight:500;background:none;border:none;cursor:pointer;color:var(--ink-soft);transition:all .15s; }
+    .snav:hover { background:var(--surface);color:var(--ink); }
+    .snav.active { background:rgba(26,46,74,0.06);color:var(--swansway);font-weight:700;border-left:3px solid var(--swansway); }
+    .admin-main { flex:1;overflow:hidden; }
+    .admin-page { display:none;padding:1.5rem 2rem;max-height:calc(100vh - 120px);overflow-y:auto; }
+    .admin-page-header { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px; }
+    .admin-page-title { font-family:var(--font-d);font-size:22px;font-weight:800;color:var(--ink); }
+    .admin-page-sub { font-size:13px;color:var(--ink-soft);margin-top:2px; }
+    .admin-metric { background:var(--white);border:1px solid var(--border);border-radius:6px;padding:14px 18px;border-top-width:3px; }
+    .admin-metric-label { font-family:var(--font-m);font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px; }
+    .admin-metric-val { font-family:var(--font-d);font-size:24px;font-weight:800; }
+    .admin-metrics-row { display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem; }
+    .admin-card { background:var(--white);border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin-bottom:1rem; }
+    .admin-card-title { font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--ink);margin-bottom:14px; }
+    .admin-field-label { font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);margin-bottom:4px; }
+    .admin-input { padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;font-family:var(--font-b);font-size:13px;color:var(--ink);background:var(--white);outline:none; }
+    .admin-input:focus { border-color:var(--swansway); }
+    .admin-table-wrap { overflow-x:auto;border:1px solid var(--border);border-radius:6px;margin-bottom:1rem; }
+    .admin-table { width:100%;border-collapse:collapse;font-size:12px;font-family:var(--font-b); }
+    .admin-table th { background:var(--swansway);color:#fff;padding:8px 10px;font-family:var(--font-m);font-size:9px;letter-spacing:0.06em;text-transform:uppercase;text-align:left;white-space:nowrap; }
+    .admin-table td { padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:middle; }
+    .admin-table tr:last-child td { border-bottom:none; }
+    .admin-table tr:hover td { background:var(--surface); }
+    .admin-input-sm { width:60px;padding:3px 5px;border:1px solid var(--border);border-radius:2px;font-size:11px;font-family:var(--font-m);text-align:right; }
+    .brand-tabs { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem; }
+    .brand-tab-btn { padding:5px 12px;font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;border:1.5px solid var(--border);border-radius:2px;background:var(--white);color:var(--ink-soft);cursor:pointer;transition:all .15s; }
+    .brand-tab-btn:hover { background:var(--surface);color:var(--ink); }
+    .brand-tab-btn.active { background:var(--swansway);color:#fff;border-color:var(--swansway); }
+    .brand-dot { display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px; }
+    .btn-sm { padding:4px 10px;font-size:11px;font-family:var(--font-b);font-weight:600;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:var(--white);color:var(--ink); }
+    .btn-sm:hover { background:var(--surface); }
+    .btn-danger { color:#C8102E;border-color:#C8102E; }
+    .btn-danger:hover { background:#fff0f0; }
+    .btn-success { background:#059669;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-family:var(--font-b);font-size:12px;font-weight:700;cursor:pointer; }
+    .channel-row { display:flex;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--white); }
+    .channel-row:nth-child(even) { background:var(--surface); }
+    #admin-loading { display:none;position:fixed;inset:0;background:rgba(255,255,255,0.85);z-index:900;align-items:center;justify-content:center;font-family:var(--font-d);font-size:16px;font-weight:700;color:var(--ink-soft); }
+    .form-grid-2 { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+    .form-grid-3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px; }
+  </style>
+</head>
+<body>
 <header class="topbar">
   <div class="topbar-inner">
     <div class="logo-wrap" style="display:flex;align-items:center;gap:14px">
@@ -98,7 +119,7 @@
         <button class="nav-dd-item" onclick="window.location='autopsy.html'">Autopsy</button>
       </div>
     </div>
-    <button class="nav-dd-btn" style="color:var(--swansway);font-weight:700" onclick="window.location='admin.html'">⚙ Admin</button>
+    <button class="nav-dd-btn" style="color:var(--swansway);font-weight:700">⚙ Admin</button>
   </div>
 </nav>
 
@@ -143,25 +164,233 @@
 </div>
 
 
-<main id="main-content" class="main">
-  <div id="admin-loading">Loading…</div>
+<div id="admin-loading">Loading admin data…</div>
 
-  <div class="admin-tabs">
-    <button class="admin-tab-btn" data-tab="kpis" onclick="showTab('kpis')">📊 KPI Targets</button>
-    <button class="admin-tab-btn" data-tab="team" onclick="showTab('team')">👥 Campaign Team</button>
-    <button class="admin-tab-btn" data-tab="budgets" onclick="showTab('budgets')">💷 Site Budgets</button>
-    <button class="admin-tab-btn" data-tab="settings" onclick="showTab('settings')">⚙️ Group Settings</button>
-  </div>
+<div class="admin-layout">
 
-  <div id="tab-kpis" class="admin-tab-panel"></div>
-  <div id="tab-team" class="admin-tab-panel" style="display:none"></div>
-  <div id="tab-budgets" class="admin-tab-panel" style="display:none"></div>
-  <div id="tab-settings" class="admin-tab-panel" style="display:none"></div>
-</main>
+  <!-- ── SIDEBAR ── -->
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-section">
+      <div class="admin-sidebar-label">Overview</div>
+      <button class="snav active" data-page="dashboard" onclick="showPage('dashboard')">📊 Dashboard</button>
+    </div>
+    <div class="admin-sidebar-section">
+      <div class="admin-sidebar-label">Configuration</div>
+      <button class="snav" data-page="group" onclick="showPage('group')">⚙️ Group Settings</button>
+      <button class="snav" data-page="channels" onclick="showPage('channels')">📡 Channel Mix</button>
+      <button class="snav" data-page="brand" onclick="showPage('brand')">🏷 Brand Plans</button>
+    </div>
+    <div class="admin-sidebar-section">
+      <div class="admin-sidebar-label">Site Data</div>
+      <button class="snav" data-page="sitebudgets" onclick="showPage('sitebudgets')">💷 Site Budgets</button>
+      <button class="snav" data-page="sitekpis" onclick="showPage('sitekpis')">📊 Site KPIs</button>
+      <button class="snav" data-page="sitecontacts" onclick="showPage('sitecontacts')">📋 Site Directory</button>
+    </div>
+    <div class="admin-sidebar-section">
+      <div class="admin-sidebar-label">Brand Data</div>
+      <button class="snav" data-page="brandkpis" onclick="showPage('brandkpis')">📈 Brand KPIs</button>
+      <button class="snav" data-page="brandchannels" onclick="showPage('brandchannels')">📡 Brand Channels</button>
+    </div>
+    <div class="admin-sidebar-section">
+      <div class="admin-sidebar-label">Team</div>
+      <button class="snav" data-page="campaignteam" onclick="showPage('campaignteam')">👥 Campaign Team</button>
+    </div>
+    <div class="admin-sidebar-section">
+      <div class="admin-sidebar-label">System</div>
+      <button class="snav" data-page="history" onclick="showPage('history')">🕐 History</button>
+      <button class="snav" data-page="data" onclick="showPage('data')">💾 Data & Export</button>
+    </div>
+    <div style="padding:16px 20px;border-top:1px solid var(--border);margin-top:1rem">
+      <div style="font-size:10px;color:var(--ink-faint);margin-bottom:6px" id="last-saved"></div>
+      <button id="save-all-btn" class="btn btn-accent" style="width:100%;font-size:12px" onclick="saveAll()">Save all</button>
+    </div>
+  </aside>
+
+  <!-- ── CONTENT ── -->
+  <div class="admin-main">
+
+    <!-- DASHBOARD -->
+    <div class="admin-page" id="page-dashboard" style="display:block">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">Dashboard</div><div class="admin-page-sub">Group-wide summary</div></div>
+        <button class="btn" onclick="takeSnapshot()">📸 Snapshot</button>
+      </div>
+      <div class="admin-metrics-row" id="dash-metrics"></div>
+      <div class="admin-table-wrap"><table class="admin-table" id="dash-brand-table"></table></div>
+    </div>
+
+    <!-- GROUP SETTINGS -->
+    <div class="admin-page" id="page-group">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">Group Settings</div><div class="admin-page-sub">Top-level group configuration</div></div>
+        <button class="btn btn-accent" onclick="collectGroupForm();saveAll()">Save settings</button>
+      </div>
+      <div class="admin-card">
+        <h3 class="admin-card-title">Identity</h3>
+        <div class="form-grid-3">
+          <div><div class="admin-field-label">Group name</div><input class="admin-input" id="gs-name" type="text" style="width:100%"></div>
+          <div><div class="admin-field-label">Plan year</div><input class="admin-input" id="gs-year" type="text" style="width:100%"></div>
+          <div><div class="admin-field-label">Description</div><input class="admin-input" id="gs-desc" type="text" style="width:100%"></div>
+        </div>
+      </div>
+      <div class="admin-card">
+        <h3 class="admin-card-title">Group KPI Targets</h3>
+        <div class="form-grid-3">
+          <div><div class="admin-field-label">Group annual budget (£)</div><input class="admin-input" id="gs-budget" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">New car/van units target</div><input class="admin-input" id="gs-units" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">Leads/month target</div><input class="admin-input" id="gs-leads" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">EV sales % target</div><input class="admin-input" id="gs-evSales" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">EV mix % target</div><input class="admin-input" id="gs-evPct" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">Co-op utilisation % target</div><input class="admin-input" id="gs-coopPct" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">Conversion rate % target</div><input class="admin-input" id="gs-conv" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">Retention % target</div><input class="admin-input" id="gs-retention" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">NPS target</div><input class="admin-input" id="gs-nps" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">Group CPL target (£)</div><input class="admin-input" id="gs-cpl" type="number" style="width:100%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHANNEL MIX -->
+    <div class="admin-page" id="page-channels">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">Group Channel Mix</div><div class="admin-page-sub">Default channel allocation across all brands</div></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="channel-total" style="font-family:var(--font-m);font-size:13px;font-weight:700"></span>
+          <button class="btn" onclick="normaliseChannels()">Normalise to 100%</button>
+          <button class="btn" onclick="addChannel()">+ Add channel</button>
+          <button class="btn btn-accent" onclick="collectChannelForm();saveAll()">Save channels</button>
+        </div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+        <div style="display:flex;gap:8px;padding:8px 16px;background:var(--surface);font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em">
+          <div style="width:28px">Colour</div><div style="flex:2">Channel</div><div style="flex:1">Allocation</div><div style="width:60px">£ Value</div><div style="flex:2">Notes</div><div style="width:30px"></div>
+        </div>
+        <div id="channel-editor-rows"></div>
+      </div>
+    </div>
+
+    <!-- BRAND PLANS -->
+    <div class="admin-page" id="page-brand">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">Brand Plans</div><div class="admin-page-sub">Per-brand budget, KPI targets and focus areas</div></div>
+      </div>
+      <div class="brand-tabs" id="brand-tabs-editor">
+<button class="brand-tab-btn active" data-brand-tab="audi" onclick="SelectBrand(this.dataset.brand-tab)">Audi</button><button class="brand-tab-btn" data-brand-tab="vw" onclick="SelectBrand(this.dataset.brand-tab)">Volkswagen</button><button class="brand-tab-btn" data-brand-tab="vwcv" onclick="SelectBrand(this.dataset.brand-tab)">VW Commercial</button><button class="brand-tab-btn" data-brand-tab="seat" onclick="SelectBrand(this.dataset.brand-tab)">SEAT</button><button class="brand-tab-btn" data-brand-tab="cupra" onclick="SelectBrand(this.dataset.brand-tab)">CUPRA</button><button class="brand-tab-btn" data-brand-tab="landrover" onclick="SelectBrand(this.dataset.brand-tab)">Land Rover</button><button class="brand-tab-btn" data-brand-tab="jaguar" onclick="SelectBrand(this.dataset.brand-tab)">Jaguar</button><button class="brand-tab-btn" data-brand-tab="honda" onclick="SelectBrand(this.dataset.brand-tab)">Honda</button><button class="brand-tab-btn" data-brand-tab="peugeot" onclick="SelectBrand(this.dataset.brand-tab)">Peugeot</button><button class="brand-tab-btn" data-brand-tab="byd" onclick="SelectBrand(this.dataset.brand-tab)">BYD</button><button class="brand-tab-btn" data-brand-tab="omoda" onclick="SelectBrand(this.dataset.brand-tab)">OMODA/JAECOO</button><button class="brand-tab-btn" data-brand-tab="motormatch" onclick="SelectBrand(this.dataset.brand-tab)">Motor Match</button>
+      </div>
+      <div id="brand-page-content"></div>
+    </div>
+
+    <!-- SITE BUDGETS -->
+    <div class="admin-page" id="page-sitebudgets">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">Site Budgets</div><div class="admin-page-sub">Planned and actual spend per dealership</div></div>
+        <button id="sb-save-btn" class="btn btn-accent" onclick="sbSave()">Save budgets</button>
+      </div>
+      <div class="brand-tabs" id="sb-brand-tabs"><button class="brand-tab-btn active" data-sb-brand="audi" onclick="sbSelectBrand(this.dataset.sb-brand)">Audi</button><button class="brand-tab-btn" data-sb-brand="vw" onclick="sbSelectBrand(this.dataset.sb-brand)">Volkswagen</button><button class="brand-tab-btn" data-sb-brand="vwcv" onclick="sbSelectBrand(this.dataset.sb-brand)">VW Commercial</button><button class="brand-tab-btn" data-sb-brand="seat" onclick="sbSelectBrand(this.dataset.sb-brand)">SEAT</button><button class="brand-tab-btn" data-sb-brand="cupra" onclick="sbSelectBrand(this.dataset.sb-brand)">CUPRA</button><button class="brand-tab-btn" data-sb-brand="landrover" onclick="sbSelectBrand(this.dataset.sb-brand)">Land Rover</button><button class="brand-tab-btn" data-sb-brand="jaguar" onclick="sbSelectBrand(this.dataset.sb-brand)">Jaguar</button><button class="brand-tab-btn" data-sb-brand="honda" onclick="sbSelectBrand(this.dataset.sb-brand)">Honda</button><button class="brand-tab-btn" data-sb-brand="peugeot" onclick="sbSelectBrand(this.dataset.sb-brand)">Peugeot</button><button class="brand-tab-btn" data-sb-brand="byd" onclick="sbSelectBrand(this.dataset.sb-brand)">BYD</button><button class="brand-tab-btn" data-sb-brand="omoda" onclick="sbSelectBrand(this.dataset.sb-brand)">OMODA/JAECOO</button><button class="brand-tab-btn" data-sb-brand="motormatch" onclick="sbSelectBrand(this.dataset.sb-brand)">Motor Match</button></div>
+      <div class="admin-metrics-row" id="sb-metrics"></div>
+      <div class="admin-table-wrap" style="max-height:60vh;overflow:auto">
+        <table class="admin-table"><thead id="sb-thead"></thead><tbody id="sb-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- SITE KPIs -->
+    <div class="admin-page" id="page-sitekpis">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">Site KPIs</div><div class="admin-page-sub">Per-dealership KPI targets and actuals</div></div>
+        <button id="sk-save-btn" class="btn btn-accent" onclick="skSave()">Save KPIs</button>
+      </div>
+      <div class="brand-tabs" id="sk-brand-tabs"><button class="brand-tab-btn active" data-sk-brand="audi" onclick="skSelectBrand(this.dataset.sk-brand)">Audi</button><button class="brand-tab-btn" data-sk-brand="vw" onclick="skSelectBrand(this.dataset.sk-brand)">Volkswagen</button><button class="brand-tab-btn" data-sk-brand="vwcv" onclick="skSelectBrand(this.dataset.sk-brand)">VW Commercial</button><button class="brand-tab-btn" data-sk-brand="seat" onclick="skSelectBrand(this.dataset.sk-brand)">SEAT</button><button class="brand-tab-btn" data-sk-brand="cupra" onclick="skSelectBrand(this.dataset.sk-brand)">CUPRA</button><button class="brand-tab-btn" data-sk-brand="landrover" onclick="skSelectBrand(this.dataset.sk-brand)">Land Rover</button><button class="brand-tab-btn" data-sk-brand="jaguar" onclick="skSelectBrand(this.dataset.sk-brand)">Jaguar</button><button class="brand-tab-btn" data-sk-brand="honda" onclick="skSelectBrand(this.dataset.sk-brand)">Honda</button><button class="brand-tab-btn" data-sk-brand="peugeot" onclick="skSelectBrand(this.dataset.sk-brand)">Peugeot</button><button class="brand-tab-btn" data-sk-brand="byd" onclick="skSelectBrand(this.dataset.sk-brand)">BYD</button><button class="brand-tab-btn" data-sk-brand="omoda" onclick="skSelectBrand(this.dataset.sk-brand)">OMODA/JAECOO</button><button class="brand-tab-btn" data-sk-brand="motormatch" onclick="skSelectBrand(this.dataset.sk-brand)">Motor Match</button></div>
+      <div id="sk-content" style="background:var(--white);border:1px solid var(--border);border-radius:6px;overflow:hidden"></div>
+    </div>
+
+    <!-- SITE DIRECTORY -->
+    <div class="admin-page" id="page-sitecontacts">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">Site Directory</div><div class="admin-page-sub">Dealership contacts and management team</div></div>
+        <button id="sc-save-btn" class="btn btn-accent" onclick="scSave()">Save directory</button>
+      </div>
+      <div class="brand-tabs" id="sc-brand-tabs"><button class="brand-tab-btn active" data-sc-brand="audi" onclick="scSelectBrand(this.dataset.sc-brand)">Audi</button><button class="brand-tab-btn" data-sc-brand="vw" onclick="scSelectBrand(this.dataset.sc-brand)">Volkswagen</button><button class="brand-tab-btn" data-sc-brand="vwcv" onclick="scSelectBrand(this.dataset.sc-brand)">VW Commercial</button><button class="brand-tab-btn" data-sc-brand="seat" onclick="scSelectBrand(this.dataset.sc-brand)">SEAT</button><button class="brand-tab-btn" data-sc-brand="cupra" onclick="scSelectBrand(this.dataset.sc-brand)">CUPRA</button><button class="brand-tab-btn" data-sc-brand="landrover" onclick="scSelectBrand(this.dataset.sc-brand)">Land Rover</button><button class="brand-tab-btn" data-sc-brand="jaguar" onclick="scSelectBrand(this.dataset.sc-brand)">Jaguar</button><button class="brand-tab-btn" data-sc-brand="honda" onclick="scSelectBrand(this.dataset.sc-brand)">Honda</button><button class="brand-tab-btn" data-sc-brand="peugeot" onclick="scSelectBrand(this.dataset.sc-brand)">Peugeot</button><button class="brand-tab-btn" data-sc-brand="byd" onclick="scSelectBrand(this.dataset.sc-brand)">BYD</button><button class="brand-tab-btn" data-sc-brand="omoda" onclick="scSelectBrand(this.dataset.sc-brand)">OMODA/JAECOO</button><button class="brand-tab-btn" data-sc-brand="motormatch" onclick="scSelectBrand(this.dataset.sc-brand)">Motor Match</button></div>
+      <div id="sc-content" style="background:var(--white);border:1px solid var(--border);border-radius:6px;overflow:hidden"></div>
+    </div>
+
+    <!-- BRAND KPIs -->
+    <div class="admin-page" id="page-brandkpis">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">Brand KPIs</div><div class="admin-page-sub">Co-op, fleet and performance metrics per brand</div></div>
+        <button id="bk-save-btn" class="btn btn-accent" onclick="bkSave()">Save KPIs</button>
+      </div>
+      <div class="brand-tabs" id="bk-brand-tabs"><button class="brand-tab-btn active" data-bk-brand="audi" onclick="bkSelectBrand(this.dataset.bk-brand)">Audi</button><button class="brand-tab-btn" data-bk-brand="vw" onclick="bkSelectBrand(this.dataset.bk-brand)">Volkswagen</button><button class="brand-tab-btn" data-bk-brand="vwcv" onclick="bkSelectBrand(this.dataset.bk-brand)">VW Commercial</button><button class="brand-tab-btn" data-bk-brand="seat" onclick="bkSelectBrand(this.dataset.bk-brand)">SEAT</button><button class="brand-tab-btn" data-bk-brand="cupra" onclick="bkSelectBrand(this.dataset.bk-brand)">CUPRA</button><button class="brand-tab-btn" data-bk-brand="landrover" onclick="bkSelectBrand(this.dataset.bk-brand)">Land Rover</button><button class="brand-tab-btn" data-bk-brand="jaguar" onclick="bkSelectBrand(this.dataset.bk-brand)">Jaguar</button><button class="brand-tab-btn" data-bk-brand="honda" onclick="bkSelectBrand(this.dataset.bk-brand)">Honda</button><button class="brand-tab-btn" data-bk-brand="peugeot" onclick="bkSelectBrand(this.dataset.bk-brand)">Peugeot</button><button class="brand-tab-btn" data-bk-brand="byd" onclick="bkSelectBrand(this.dataset.bk-brand)">BYD</button><button class="brand-tab-btn" data-bk-brand="omoda" onclick="bkSelectBrand(this.dataset.bk-brand)">OMODA/JAECOO</button><button class="brand-tab-btn" data-bk-brand="motormatch" onclick="bkSelectBrand(this.dataset.bk-brand)">Motor Match</button></div>
+      <div id="bk-content" style="background:var(--white);border:1px solid var(--border);border-radius:6px;padding:20px 24px;overflow:hidden"></div>
+    </div>
+
+    <!-- BRAND CHANNELS -->
+    <div class="admin-page" id="page-brandchannels">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">Brand Channels</div><div class="admin-page-sub">Channel mix per brand</div></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="bc-summary" style="font-family:var(--font-m);font-size:13px;font-weight:700"></span>
+          <button class="btn" onclick="bcAddChannel(BC_CURRENT_BRAND)">+ Add channel</button>
+          <button id="bc-save-btn" class="btn btn-accent" onclick="bcSave()">Save channels</button>
+        </div>
+      </div>
+      <div class="brand-tabs" id="bc-brand-tabs"><button class="brand-tab-btn active" data-bc-brand="audi" onclick="bcSelectBrand(this.dataset.bc-brand)">Audi</button><button class="brand-tab-btn" data-bc-brand="vw" onclick="bcSelectBrand(this.dataset.bc-brand)">Volkswagen</button><button class="brand-tab-btn" data-bc-brand="vwcv" onclick="bcSelectBrand(this.dataset.bc-brand)">VW Commercial</button><button class="brand-tab-btn" data-bc-brand="seat" onclick="bcSelectBrand(this.dataset.bc-brand)">SEAT</button><button class="brand-tab-btn" data-bc-brand="cupra" onclick="bcSelectBrand(this.dataset.bc-brand)">CUPRA</button><button class="brand-tab-btn" data-bc-brand="landrover" onclick="bcSelectBrand(this.dataset.bc-brand)">Land Rover</button><button class="brand-tab-btn" data-bc-brand="jaguar" onclick="bcSelectBrand(this.dataset.bc-brand)">Jaguar</button><button class="brand-tab-btn" data-bc-brand="honda" onclick="bcSelectBrand(this.dataset.bc-brand)">Honda</button><button class="brand-tab-btn" data-bc-brand="peugeot" onclick="bcSelectBrand(this.dataset.bc-brand)">Peugeot</button><button class="brand-tab-btn" data-bc-brand="byd" onclick="bcSelectBrand(this.dataset.bc-brand)">BYD</button><button class="brand-tab-btn" data-bc-brand="omoda" onclick="bcSelectBrand(this.dataset.bc-brand)">OMODA/JAECOO</button><button class="brand-tab-btn" data-bc-brand="motormatch" onclick="bcSelectBrand(this.dataset.bc-brand)">Motor Match</button></div>
+      <div id="bc-content" style="background:var(--white);border:1px solid var(--border);border-radius:6px;overflow:hidden"></div>
+    </div>
+
+    <!-- CAMPAIGN TEAM -->
+    <div class="admin-page" id="page-campaignteam">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">Campaign Team</div><div class="admin-page-sub">Team members and permissions</div></div>
+        <button class="btn btn-accent" onclick="ctAddMember()">+ Add member</button>
+      </div>
+      <div id="ct-team-list" style="background:var(--white);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:1rem"></div>
+      <div id="ct-form" style="display:none;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:20px 24px"></div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="admin-page" id="page-history">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">History</div><div class="admin-page-sub">Config snapshots and restore points</div></div>
+        <button class="btn btn-accent" onclick="takeSnapshot()">📸 Take snapshot</button>
+      </div>
+      <div id="history-list"></div>
+    </div>
+
+    <!-- DATA & EXPORT -->
+    <div class="admin-page" id="page-data">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">Data & Export</div><div class="admin-page-sub">Import and export configuration</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem">
+        <div class="admin-card">
+          <h3 class="admin-card-title">Export config</h3>
+          <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px">Download the full admin configuration as JSON.</p>
+          <button class="btn btn-accent" onclick="exportConfig()">Download JSON</button>
+        </div>
+        <div class="admin-card">
+          <h3 class="admin-card-title">Export KPIs</h3>
+          <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px">Export brand KPI targets as a CSV spreadsheet.</p>
+          <button class="btn btn-accent" onclick="exportCSV()">Export KPIs CSV</button>
+        </div>
+        <div class="admin-card">
+          <h3 class="admin-card-title">Import config</h3>
+          <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px">Restore a previously exported JSON config file.</p>
+          <button class="btn" onclick="triggerImport()">Choose JSON file</button>
+          <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImport(event)">
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end admin-main -->
+</div><!-- end admin-layout -->
 
 <script>
 function navBrand(id) { navCloseAll(); window.location = 'brand.html?brand=' + id; }
 function switchView(id) { window.location = 'index.html'; }
+// Wire brand tab clicks to brand editor
+document.querySelectorAll('[data-brand-tab]').forEach(function(btn) {
+  btn.onclick = function() { renderBrandEditor(this.dataset.brandTab); };
+});
 window.addEventListener('load', function() { adminInit(); });
 </script>
 </body>
