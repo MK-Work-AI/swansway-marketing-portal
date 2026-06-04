@@ -391,7 +391,7 @@
   <script src="shared.js?v=11"></script>
   <script src="js/group.js?v=9"></script>
   <script src="js/tasks.js?v=5"></script>
-  <script src="js/brief.js?v=9"></script>
+  <script src="js/brief.js?v=10"></script>
 </head>
 <body>
 
@@ -1082,15 +1082,15 @@
 </main>
 
 <script>
+// Capture brief ID immediately before any auth events can wipe the URL
+window._BRIEF_ID_FROM_URL = new URLSearchParams(window.location.search).get('brief');
+
 document.addEventListener('DOMContentLoaded', function() {
-  // Show brief builder view
   var briefView = document.getElementById('view-brief');
   if (briefView) briefView.classList.add('active');
 
-  // Check URL for brief ID to load
   setTimeout(function() {
-    var params = new URLSearchParams(window.location.search);
-    var briefId = params.get('brief');
+    var briefId = window._BRIEF_ID_FROM_URL;
     if (briefId && typeof bbLoadBrief === 'function') {
       bbLoadBrief(briefId);
     } else if (typeof bbNewBrief === 'function') {
