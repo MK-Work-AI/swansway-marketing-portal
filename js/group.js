@@ -861,7 +861,7 @@ function calShowCampaign(cJson) {
     editBtn.textContent = '✏ Edit campaign';
     editBtn.onclick = function() { overlay.remove(); window.location = 'brief.html?brief=' + c.brief_id; };
   } else {
-    editBtn.textContent = '✏ Build brief';
+    editBtn.textContent = '✏ Build campaign';
     editBtn.onclick = function() { overlay.remove(); calBuildBrief(c.brand, c.name, c); };
   }
 
