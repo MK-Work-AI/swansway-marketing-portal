@@ -1065,7 +1065,7 @@ async function bbRenderCampaignSection(briefData) {
     } else {
       el.innerHTML = '<div class="bb-s6-card" style="border-color:#FCD34D;background:#FFFBEB;display:flex;gap:14px">'
         + '<div style="width:34px;height:34px;background:#FEF3C7;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">&#9203;</div>'
-        + '<div><div class="bb-s6-card-title" style="font-size:16px;margin-bottom:4px">Brief submitted' + (firstName ? ', '+firstName : '') + '!</div>'
+        + '<div><div class="bb-s6-card-title" style="font-size:16px;margin-bottom:4px">Campaign submitted' + (firstName ? ', '+firstName : '') + '!</div>'
         + '<div class="bb-s6-card-sub" style="margin-bottom:0">Anna, Marcus or Beth will review it. You\'ll get your tasks as soon as it goes live.</div></div>'
         + '</div>';
     }
