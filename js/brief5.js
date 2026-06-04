@@ -1612,6 +1612,14 @@ async function bbSaveBrief() {
     feedback.style.display = 'none';
     window._lastSavedBriefId = data ? data.id : null;
     window._lastSavedBriefTitle = title;
+    // Link brief back to calendar campaign if opened from one
+    if (BB && BB._calCampaignId && window._lastSavedBriefId) {
+      fetch('https://humitzrleflxnlnodpde.supabase.co/rest/v1/campaigns?id=eq.'+BB._calCampaignId, {
+        method:'PATCH',
+        headers:getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
+        body:JSON.stringify({brief_id: window._lastSavedBriefId})
+      }).catch(function(e){ console.warn('linkBriefToCalCampaign:', e); });
+    }
     if (data && data.id) bbSetUrlBrief(data.id);
     loadBriefs();
     if (data && data.id && BB.start_date && BB.end_date && BB.budget > 0) { bbSaveBudgetCommitments(data.id, title); }
