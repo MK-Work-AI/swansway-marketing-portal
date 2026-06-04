@@ -163,7 +163,8 @@ function navBrand(id) {
 // On this page, switchView for group/planning/review goes back to index.html
 // Override so renderBrand's "← Group overview" button works
 function switchView(id) {
-  if (id === 'brief') { window.location = 'brief.html'; return; }
+  // 'brief' navigation is handled by bbLoadBrief directly — do nothing here
+  if (id === 'brief') { return; }
   window.location = 'index.html#' + id;
 }
 
