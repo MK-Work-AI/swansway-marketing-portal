@@ -7,9 +7,9 @@ async function mtLoad() {
   var anon = SUPABASE_ANON_KEY;
   var base = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
   var hdrs = getAuthHeaders();
-  // Leadership = anyone with can_approve_all permission — sees shared 'leadership' tasks too
-  var myPerms = CB_PERMS[CB_CURRENT_USER] || {};
-  var isLeadership = !!(myPerms.can_approve_all || myPerms.can_approve_digital);
+  // Leadership group membership stored on campaign_team.is_leadership
+  var myMember = CB_TEAM[CB_CURRENT_USER] || {};
+  var isLeadership = !!myMember.is_leadership;
   var taskFilter = isLeadership
     ? '&or=(assigned_to.eq.'+CB_CURRENT_USER+',assigned_to.eq.leadership)'
     : '&assigned_to=eq.'+CB_CURRENT_USER;
