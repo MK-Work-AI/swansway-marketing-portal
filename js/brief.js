@@ -195,23 +195,45 @@ function bbRenderSiteGrid() {
 function bbOnDateChange() {
   var sd = document.getElementById('bb-start-date');
   var ed = document.getElementById('bb-end-date');
+  var autoLabel = document.getElementById('bb-end-date-auto');
   BB.start_date = sd ? sd.value : '';
   BB.end_date   = ed ? ed.value : '';
+
+  // If start date set and duration chosen but no end date yet — auto-fill end date
+  if (BB.start_date && !BB.end_date && BB.duration && BB.duration.weeks) {
+    var start = new Date(BB.start_date + 'T00:00:00');
+    var end = new Date(start);
+    end.setDate(end.getDate() + (BB.duration.weeks * 7) - 1);
+    BB.end_date = end.toISOString().split('T')[0];
+    if (ed) ed.value = BB.end_date;
+    if (autoLabel) autoLabel.style.display = '';
+  }
+
+  // If end date manually changed, hide auto label
+  if (BB.end_date && ed && ed.value !== '' && autoLabel) {
+    autoLabel.style.display = 'none';
+  }
+
   var durEl = document.getElementById('bb-date-duration');
   if (BB.start_date && BB.end_date && durEl) {
-    var days = Math.round((new Date(BB.end_date) - new Date(BB.start_date)) / 86400000);
+    var days = Math.max(1, Math.round((new Date(BB.end_date + 'T00:00:00') - new Date(BB.start_date + 'T00:00:00')) / 86400000) + 1);
     var weeks = Math.round(days / 7);
     BB.duration_weeks = weeks;
-    durEl.textContent = weeks + ' week' + (weeks !== 1 ? 's' : '') + ' \u00b7 ' + days + ' days';
+    BB.campaign_days = days;
+    durEl.textContent = weeks + ' week' + (weeks !== 1 ? 's' : '') + ' · ' + days + ' days';
+    // Match to a duration card if exact
     var matchDur = BB_DURATIONS.find(function(d){ return d.weeks === weeks; });
-    if (matchDur) {
+    if (matchDur && (!BB.duration || BB.duration.weeks !== weeks)) {
       BB.duration = matchDur;
       document.querySelectorAll('.bb-dur-card').forEach(function(dc){ dc.classList.remove('bb-selected'); });
-      document.querySelectorAll('.bb-dur-card').forEach(function(dc){ if(dc.textContent.indexOf(String(matchDur.weeks)) > -1) dc.classList.add('bb-selected'); });
-      var btn3 = document.getElementById('bb-btn-3-next');
-      if (btn3 && BB.budget) btn3.disabled = false;
+      document.querySelectorAll('.bb-dur-card').forEach(function(dc){
+        if (parseInt(dc.querySelector('.bb-dur-weeks') ? dc.querySelector('.bb-dur-weeks').textContent : 0) === weeks) dc.classList.add('bb-selected');
+      });
     }
+    var btn3 = document.getElementById('bb-btn-3-next');
+    if (btn3) btn3.disabled = false;
   } else if (durEl) { durEl.textContent = ''; }
+  bbOnBudget(BB.budget);
   bbUpdateBrief();
   bbLoadHeadroom();
 }
@@ -343,8 +365,11 @@ function bbOnBudget(v) {
   if(el) el.textContent = '£'+BB.budget.toLocaleString();
   if(slider) slider.value = BB.budget;
   // Subline
-  const weekly = BB.duration ? Math.round(BB.budget/BB.duration.weeks) : Math.round(BB.budget/4);
-  const daily = Math.round(weekly/5);
+  // Use actual campaign days if set, otherwise fall back to duration weeks
+  var totalDays = BB.campaign_days || (BB.duration ? BB.duration.weeks * 7 : 28);
+  var totalWeeks = Math.max(1, Math.round(totalDays / 7));
+  const weekly = Math.round(BB.budget / totalWeeks);
+  const daily = Math.round(BB.budget / totalDays);
   let warn = '';
   if(BB.ctype?.id==='plate' && BB.budget<5000) warn = ' ⚠ Plate change needs £5K+ to cut through';
   else if(BB.ctype?.id==='brand' && BB.budget<3000) warn = ' ⚠ Brand campaigns need £3K+/month minimum';
@@ -386,8 +411,25 @@ function bbSelectDur(weeks, label) {
   BB.duration = {weeks, label};
   document.querySelectorAll('.bb-dur-card').forEach(d=>d.classList.remove('bb-selected'));
   event.currentTarget.classList.add('bb-selected');
+  // Auto-calculate end date from start date + duration
+  var sdEl = document.getElementById('bb-start-date');
+  var edEl = document.getElementById('bb-end-date');
+  var autoLabel = document.getElementById('bb-end-date-auto');
+  if (sdEl && sdEl.value && edEl) {
+    var start = new Date(sdEl.value + 'T00:00:00');
+    var end = new Date(start);
+    end.setDate(end.getDate() + (weeks * 7) - 1);
+    edEl.value = end.toISOString().split('T')[0];
+    BB.start_date = sdEl.value;
+    BB.end_date = edEl.value;
+    var durEl = document.getElementById('bb-date-duration');
+    if (durEl) durEl.textContent = weeks + ' weeks · ' + (weeks * 7) + ' days';
+    if (autoLabel) autoLabel.style.display = '';
+  } else if (autoLabel) {
+    autoLabel.style.display = '';
+  }
   const btn = document.getElementById('bb-btn-3-next');
-  if(btn) btn.disabled = false;
+  if(btn && (BB.start_date || true)) btn.disabled = false;
   bbOnBudget(BB.budget);
   bbUpdateBrief();
 }
