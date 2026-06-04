@@ -1293,6 +1293,7 @@ function sbHandleSession(session) {
   if(typeof loadQplanActions === 'function')   loadQplanActions();
   if(typeof loadAdminConfig === 'function')    loadAdminConfig();
   if(typeof loadBrandChannels === 'function')  loadBrandChannels();
+  if(typeof loadSiteContacts === 'function')   loadSiteContacts();
   if(typeof calInit === 'function')            calInit();
   if(typeof spLoad === 'function')             spLoad();
   // Refresh save bar if brief is open
@@ -1630,12 +1631,9 @@ async function loadSiteContacts() {
     var rows = await resp.json();
     rows.forEach(function(row) { SITE_CONTACTS[row.site_id] = row; });
     console.log('Site contacts loaded: ' + rows.length);
-    // Re-render dealerships if a brand page is open
-    var activeBrand = document.querySelector('.bnav-btn.active');
-    if (activeBrand) {
-      var bid = activeBrand.dataset.view;
-      if (bid && typeof renderBrandCentres === 'function') renderBrandCentres(bid);
-    }
+    // Re-render dealerships if on brand page
+    var _brandParam = new URLSearchParams(window.location.search).get('brand');
+    if (_brandParam && typeof renderBrandCentres === 'function') renderBrandCentres(_brandParam);
   } catch(e) { console.warn('loadSiteContacts error:', e); }
 }
 
