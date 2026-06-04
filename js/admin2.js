@@ -844,7 +844,16 @@ function ctRenderList() {
       +'<div style="font-size:12px;color:var(--ink-soft)">'+(m.email||'—')+'</div>'
       +'<div><span style="font-size:11px;padding:2px 8px;border-radius:10px;background:'+(m.active?'#D1FAE5':'#FEE2E2')+';color:'+(m.active?'#059669':'#DC2626')+'">'+(m.active?'Active':'Inactive')+'</span></div>'
       +'<div>'+permBadge+'</div>'
-      +'<div style="display:flex;gap:4px"><button class="btn-sm" data-id="'+m.id+'" onclick="ctEdit(this.getAttribute(\"data-id\"))">Edit</button> <button class="btn-sm btn-danger" data-id="'+m.id+'" onclick="ctDelete(this.getAttribute(\"data-id\"))">\u2715</button></div>';
+      +'<div style="display:flex;gap:4px"></div>';
+    // Add buttons via DOM to avoid quote escaping issues
+    var actionsDiv = row.lastElementChild;
+    var editBtn = document.createElement('button');
+    editBtn.className = 'btn-sm'; editBtn.textContent = 'Edit';
+    (function(mid){ editBtn.onclick = function(){ ctEdit(mid); }; })(m.id);
+    var delBtn = document.createElement('button');
+    delBtn.className = 'btn-sm btn-danger'; delBtn.textContent = '✕';
+    (function(mid){ delBtn.onclick = function(){ ctDelete(mid); }; })(m.id);
+    actionsDiv.appendChild(editBtn); actionsDiv.appendChild(delBtn);
     el.appendChild(row);
   });
 }
