@@ -1478,6 +1478,16 @@ function filterBriefs(brandId, el) {
 }
 
 
+function openBriefFromPanel(id) {
+  closeBriefsPanel();
+  if (typeof bbLoadBrief === 'function') {
+    bbLoadBrief(id);
+  } else {
+    window.location = 'brief.html?brief=' + id;
+  }
+}
+
+
 function renderBriefsList() {
   const listEl = document.getElementById('briefs-list');
   if(!listEl) return;
