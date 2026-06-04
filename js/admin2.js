@@ -402,7 +402,6 @@ async function sbLoad() {
     SB_SITE_DATA = {};
     rows.forEach(function(row) { SB_SITE_DATA[row.site_id] = row; });
     sbRenderTable(SB_CURRENT_BRAND);
-    sbUpdateMetrics(SB_CURRENT_BRAND);
   } catch(e) {
     console.warn('sbLoad:', e);
     if (el) el.innerHTML = '<tr><td colspan="26" style="padding:20px;color:#C8102E">Error: ' + e.message + '</td></tr>';
