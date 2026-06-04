@@ -1417,14 +1417,16 @@ function makeAvatar(memberId, size) {
 
 
 function closeBriefsPanel() {
-  document.getElementById('briefs-panel').classList.remove('open');
-  document.getElementById('panel-overlay').classList.remove('open');
+  var bp=document.getElementById('briefs-panel'); if(bp) bp.classList.remove('open');
+  var po=document.getElementById('panel-overlay'); if(po) po.classList.remove('open');
 }
 
 
 function openBriefsPanel() {
-  document.getElementById('briefs-panel').classList.add('open');
-  document.getElementById('panel-overlay').classList.add('open');
+  var bp = document.getElementById('briefs-panel');
+  var po = document.getElementById('panel-overlay');
+  if (bp) bp.classList.add('open');
+  if (po) po.classList.add('open');
   loadBriefs();
 }
 
