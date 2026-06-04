@@ -208,20 +208,7 @@ window.addEventListener('load', function() {
   // Render the brand
   if (typeof renderBrand === 'function') {
     renderBrand(b);
-    // Inspect DOM after render
-    setTimeout(function() {
-      var c = document.getElementById(brandId + '-content');
-      var sections = c ? c.querySelectorAll('.inner-section') : [];
-      var active = c ? c.querySelectorAll('.inner-section.active') : [];
-      console.log('brand DOM check: container children=', c ? c.children.length : 'NO CONTAINER',
-        'inner-sections=', sections.length, 'active sections=', active.length,
-        'main display=', getComputedStyle(document.getElementById('main-content')).display,
-        'wrap display=', getComputedStyle(document.getElementById('brand-page-wrap')).display,
-        'container display=', c ? getComputedStyle(c).display : 'n/a');
-      if (sections.length) console.log('first section classes:', sections[0].className, 'computed display:', getComputedStyle(sections[0]).display);
-    }, 300);
-  } else {
-    console.error('renderBrand not defined');
+    window.scrollTo(0, 0);
   }
 
   // Load Supabase-backed data once auth resolves (sbHandleSession fires loadSiteBudgets/KPIs)
