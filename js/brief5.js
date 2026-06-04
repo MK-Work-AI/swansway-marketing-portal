@@ -1277,11 +1277,10 @@ async function bbMarkTaskDone(taskId, campId) {
       body:JSON.stringify({completed:true,approved:true,completed_at:new Date().toISOString(),completed_by:CB_CURRENT_USER,approved_by:CB_CURRENT_USER})
     });
     if (!r.ok) throw new Error(await r.text());
-    // Re-render stage
+    // Re-render stage with fresh data
     var section = document.getElementById('sw-campaign-section-'+campId);
     var camp = CB_CAMPAIGNS ? CB_CAMPAIGNS.find(function(c){return c.id===campId;}) : null;
     if (section && camp && typeof bbRenderStages==='function') {
-      var tasks2 = await fetch(base+'/campaign_tasks?campaign_id=eq.'+campId+'&order=stage,task_order',{headers:getAuthHeaders()}).then(function(r){return r.json();});
       bbRenderStages(section, camp, camp.brief_id||'');
     }
     // Update My Tasks badge
