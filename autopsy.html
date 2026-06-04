@@ -157,6 +157,22 @@
 <div id="autopsy-form" style="display:none;margin-bottom:1.5rem"></div>
 <div id="autopsy-list"></div>
 </main>
+<script>
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    if (typeof autopsyLoad === 'function') { autopsyLoad(); return; }
+    // Fallback - show empty state
+    var el = document.getElementById('autopsy-list');
+    if (el && !el.children.length) {
+      el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink-soft)">'
+        + '<div style="font-size:32px;margin-bottom:10px">🔬</div>'
+        + '<div style="font-family:var(--font-d);font-size:18px;font-weight:700;margin-bottom:6px">No autopsies yet</div>'
+        + '<div style="font-size:13px">Complete a campaign and run a post-campaign analysis.</div>'
+        + '</div>';
+    }
+  }, 1500);
+});
+</script>
 
 <script>
 function navBrand(id) { navCloseAll(); window.location = 'brand.html?brand=' + id; }
