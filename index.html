@@ -10,7 +10,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
   <script src="config.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="shared3.js"></script>
+  <script src="shared4.js"></script>
   <script src="js/group.js?v=5"></script>
   <script src="js/brand.js?v=4"></script>
   <script src="js/tasks.js?v=4"></script>
@@ -43,7 +43,7 @@
         </div>
 
       <button onclick="openAuth()" id="signin-btn" style="display:none;font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 16px;background:#fff;border:none;border-radius:2px;color:var(--swansway);cursor:pointer;transition:all .2s" onmouseover="this.style.background='#f0ede8'" onmouseout="this.style.background='#fff'">Sign in</button>
-      <button id="briefs-btn" onclick="openBriefsPanel()" style="display:none;font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 16px;background:#fff;border:none;border-radius:2px;color:var(--swansway);cursor:pointer;transition:all .2s" onmouseover="this.style.background='#f0ede8'" onmouseout="this.style.background='#fff'">📋 My Briefs</button>
+      <button id="briefs-btn" onclick="openBriefsPanel()" style="display:none;font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 16px;background:#fff;border:none;border-radius:2px;color:var(--swansway);cursor:pointer;transition:all .2s" onmouseover="this.style.background='#f0ede8'" onmouseout="this.style.background='#fff'">📋 My Campaigns</button>
       </div>
     </div>
   </div>
@@ -87,7 +87,7 @@
       </button>
       <div class="nav-dd-panel">
         <button class="nav-dd-item" onclick="window.location='calendar.html'">Campaign Calendar</button>
-        <button class="nav-dd-item nav-item-cta" onclick="window.location='brief.html'">Brief Builder</button>
+        <button class="nav-dd-item nav-item-cta" onclick="window.location='brief.html'">Campaign Builder</button>
       </div>
     </div>
 
@@ -125,17 +125,17 @@
 
 <div class="briefs-panel" id="briefs-panel">
   <div class="briefs-panel-header">
-    <div class="briefs-panel-title">📋 Saved Briefs</div>
-    <div style="display:flex;gap:8px;align-items:center"><button onclick="window.location='brief.html'" style="font-family:var(--font-b);font-size:11px;font-weight:700;padding:5px 12px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer">+ New brief</button><button class="briefs-panel-close" onclick="closeBriefsPanel()">×</button></div>
+    <div class="briefs-panel-title">📋 My Campaigns</div>
+    <div style="display:flex;gap:8px;align-items:center"><button onclick="window.location='brief.html'" style="font-family:var(--font-b);font-size:11px;font-weight:700;padding:5px 12px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer">+ New campaign</button><button class="briefs-panel-close" onclick="closeBriefsPanel()">×</button></div>
   </div>
   <div class="briefs-panel-body">
     <div class="brief-filters" id="brief-filters">
       <div class="brief-filter active" data-brand="all" onclick="filterBriefs('all',this)">All brands</div>
     </div>
-    <div id="briefs-list"><div style="text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:13px">Loading your briefs…</div></div>
+    <div id="briefs-list"><div style="text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:13px">Loading your campaigns…</div></div>
   </div>
   <div class="briefs-panel-footer">
-    <button class="btn btn-accent" style="width:100%" onclick="window.location='brief.html'">✏ New Brief</button>
+    <button class="btn btn-accent" style="width:100%" onclick="window.location='brief.html'">✏ New Campaign</button>
   </div>
 </div>
 
