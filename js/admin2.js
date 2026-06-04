@@ -111,6 +111,15 @@ var BK_CURRENT_BRAND = 'audi';
 var BC_CURRENT_BRAND = 'audi';
 
 /* ══ INIT ══ */
+async function loadSiteBudgetsForDash() {
+  try {
+    var r = await fetch(SUPA + '/site_budgets?select=site_id,annual_planned,brand_id', { headers: getAuthHeaders() });
+    if (!r.ok) return;
+    var rows = await r.json();
+    rows.forEach(function(row) { SB_SITE_DATA[row.site_id] = row; });
+  } catch(e) {}
+}
+
 async function adminInit() {
   var sess = await SB.auth.getSession();
   if (!sess.data.session) { window.location = 'index.html'; return; }
@@ -160,7 +169,7 @@ function showPage(id) {
   var btn = document.querySelector('[data-page="' + id + '"]');
   if (btn) btn.classList.add('active');
   // Lazy-load page data
-  if (id === 'dashboard')    { refreshDashboard(); }
+  if (id === 'dashboard')    { refreshDashboard(); } // async — runs in background
   if (id === 'group')        { populateGroupForm(); }
   if (id === 'channels')     { renderChannelEditor(); }
   if (id === 'brand')        { renderBrandEditor(BRAND_IDS[0]); }
@@ -213,7 +222,9 @@ async function saveAll() {
 }
 
 /* ══ DASHBOARD ══ */
-function refreshDashboard() {
+async function refreshDashboard() {
+  // Load site budgets if not already loaded
+  if (!Object.keys(SB_SITE_DATA).length) await loadSiteBudgetsForDash();
   var totalBudget = 0;
   SB_SITES.forEach(function(site) {
     var d = SB_SITE_DATA[site.site_id] || {};
@@ -375,13 +386,27 @@ function collectChannelForm() { /* channels are updated live via oninput */ }
 
 /* ══ SITE BUDGETS ══ */
 async function sbLoad() {
+  var el = document.getElementById('sb-tbody');
+  if (el) el.innerHTML = '<tr><td colspan="26" style="padding:20px;text-align:center;color:var(--ink-soft)">Loading…</td></tr>';
   try {
     var r = await fetch(SUPA + '/site_budgets?select=*', { headers: getAuthHeaders() });
-    if (!r.ok) return;
+    console.log('sbLoad status:', r.status);
+    if (!r.ok) {
+      var err = await r.text();
+      console.warn('sbLoad error:', err);
+      if (el) el.innerHTML = '<tr><td colspan="26" style="padding:20px;color:#C8102E">Error loading budgets: ' + r.status + '</td></tr>';
+      return;
+    }
     var rows = await r.json();
+    console.log('sbLoad rows:', rows.length);
+    SB_SITE_DATA = {};
     rows.forEach(function(row) { SB_SITE_DATA[row.site_id] = row; });
     sbRenderTable(SB_CURRENT_BRAND);
-  } catch(e) { console.warn('sbLoad:', e); }
+    sbUpdateMetrics(SB_CURRENT_BRAND);
+  } catch(e) {
+    console.warn('sbLoad:', e);
+    if (el) el.innerHTML = '<tr><td colspan="26" style="padding:20px;color:#C8102E">Error: ' + e.message + '</td></tr>';
+  }
 }
 function sbSelectBrand(brandId) {
   SB_CURRENT_BRAND = brandId;
