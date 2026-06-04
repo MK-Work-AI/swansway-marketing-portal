@@ -181,6 +181,9 @@ function renderGroupKPIs() {
 function renderGroupBudgetChart() {
   const ctx = document.getElementById('groupBudgetChart');
   if(!ctx||!window.Chart) return;
+  // Destroy existing chart instance to prevent "canvas already in use" error
+  const existing = Chart.getChart(ctx);
+  if(existing) existing.destroy();
   const data = [
     {label:'Audi',value:19,color:'#CC0000'},
     {label:'VW',value:14,color:'#001E5A'},
@@ -232,6 +235,42 @@ function renderChannelChart() {
       return '<div class="chart-legend-item">'        + '<div class="chart-legend-dot" style="background:' + ch.color + '"></div>'        + '<span style="font-family:var(--font-b);font-size:12px;color:var(--ink)">' + ch.n + '</span>'        + '<span style="font-family:var(--font-m);font-size:12px;color:var(--ink-soft);margin-left:6px">' + ch.pct + '%</span>'        + '</div>';
     }).join('');
   }
+}
+
+
+async function calLoadFromSupabase() {
+  try {
+    var BRAND_COLOR_MAP = {
+      'Audi':'#BB0A21','Volkswagen':'#001E50','VW Commercial':'#1B4F72',
+      'SEAT':'#E2231A','CUPRA':'#C8920A','Land Rover':'#1D4E1D',
+      'Jaguar':'#1B2631','Honda':'#CC0000','Peugeot':'#1B3A6B',
+      'BYD':'#0066CC','OMODA/JAECOO':'#6B21A8','Motor Match':'#374151'
+    };
+    var BRAND_ID_MAP = {
+      'audi':'Audi','vw':'Volkswagen','vwcv':'VW Commercial',
+      'seat':'SEAT','cupra':'CUPRA','landrover':'Land Rover',
+      'jaguar':'Jaguar','honda':'Honda','peugeot':'Peugeot',
+      'byd':'BYD','omoda':'OMODA/JAECOO','motormatch':'Motor Match'
+    };
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/campaigns?select=*&order=start_date.asc', {
+      headers: getAuthHeaders({'Content-Type':'application/json'})
+    });
+    if (!resp.ok) { console.warn('calLoadFromSupabase: fetch failed', resp.status); return; }
+    var rows = await resp.json();
+    BUILT_IN_CAMPAIGNS = rows.map(function(r) {
+      var brandName = BRAND_ID_MAP[r.brand_id] || r.brand_id || 'All brands';
+      var color = BRAND_COLOR_MAP[brandName] || '#374151';
+      var startMonth = r.start_date ? new Date(r.start_date).getMonth() : 0;
+      var endMonth   = r.end_date   ? new Date(r.end_date).getMonth()   : startMonth;
+      return {
+        id: r.id, brand: brandName, name: r.title || 'Untitled',
+        start: startMonth, end: endMonth, color: color,
+        status: r.status || 'planned', budget: r.planned_budget,
+        type: r.campaign_type, objective: r.planned_objective
+      };
+    });
+    console.log('calLoadFromSupabase: loaded ' + BUILT_IN_CAMPAIGNS.length + ' campaigns');
+  } catch(e) { console.warn('calLoadFromSupabase error:', e); }
 }
 
 
@@ -893,7 +932,7 @@ async function loadSiteBudgets() {
     }
     updateBrandBudgetsFromSites();
     syncBrandSitesFromHubSites();
-    await loadBriefCommitmentsForTracker();
+    if (typeof loadBriefCommitmentsForTracker === 'function') await loadBriefCommitmentsForTracker();
     // Now site budgets are loaded — trigger channel aggregation if brand data ready
     if (Object.keys(BRAND_CHANNELS_DATA).length) updateGroupChannelsFromBrands();
     if (typeof renderBudgetTracker === 'function') renderBudgetTracker();
