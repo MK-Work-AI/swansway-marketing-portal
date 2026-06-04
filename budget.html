@@ -163,6 +163,24 @@
   </table>
 </div>
 </main>
+<script>
+window.addEventListener('load', function() {
+  // Budget tracker renders after site budgets load via group.js sbHandleSession
+  // Poll until data is available
+  var tries = 0;
+  var interval = setInterval(function() {
+    tries++;
+    if (typeof renderBudgetTracker === 'function' && Object.keys(SITE_BUDGETS||{}).length > 0) {
+      clearInterval(interval);
+      renderBudgetTracker();
+      if (typeof loadBudgetActuals === 'function') loadBudgetActuals();
+    } else if (tries > 20) {
+      clearInterval(interval);
+      if (typeof renderBudgetTracker === 'function') renderBudgetTracker();
+    }
+  }, 500);
+});
+</script>
 
 <script>
 function navBrand(id) { navCloseAll(); window.location = 'brand.html?brand=' + id; }
