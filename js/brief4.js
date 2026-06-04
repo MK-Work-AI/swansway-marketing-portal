@@ -659,7 +659,7 @@ function bbUpdateCompleteness() {
   if(BB.audiences.length===1) checks.push({i:'💡',t:'Add a 2nd audience — 95% of buyers aren\'t in-market now (Byron Sharp)'});
   if(BB.budget<2000&&BB.ctype?.id==='plate') checks.push({i:'⚠',t:'Plate change budget below recommended minimum (£5K)'});
   if(!smp) checks.push({i:'○',t:'Write your proposition — the most important creative decision'});
-  if(pct===100) checks.push({i:'✓',t:'Campaign complete. Click "Generate full brief" to finish.'});
+  if(pct===100) checks.push({i:'✓',t:'Campaign complete. Click "Generate full summary" to finish.'});
   const hEl = document.getElementById('bb-health');
   if(hEl) hEl.innerHTML = checks.map(c=>`<div class="bb-health-item"><div style="flex-shrink:0">${c.i}</div><div>${c.t}</div></div>`).join('');
 }
@@ -677,7 +677,7 @@ function bbGenerateBrief() {
       if (!SB_USER) {
         saveBtn.textContent = 'Sign in to save';
       } else if (window._lastSavedBriefId) {
-        saveBtn.textContent = 'Update brief';
+        saveBtn.textContent = 'Update campaign';
         const _ti = document.getElementById('bb-brief-title');
         if (_ti && window._lastSavedBriefTitle) _ti.value = window._lastSavedBriefTitle;
       } else {
@@ -923,7 +923,7 @@ async function bbSubmitBrief() {
     var _campSec = document.getElementById('bb-campaign-section');
     if (_campSec) _campSec.style.display = 'block';
     await bbRenderCampaignSection(_submitBrief);
-    showToast('Brief submitted ✓ The team has been notified.', 'success');
+    showToast('Campaign submitted ✓ The team has been notified.', 'success');
     // Refresh My Tasks badge
     setTimeout(mtLoad, 500);
   } catch(e) { alert('Error: ' + e.message); }
@@ -935,7 +935,7 @@ async function bbApproveBriefAndLaunch(briefId) {
   if (!_briefId) { showToast('Brief ID missing \u2014 try reloading', 'error'); return; }
   if (!CB_CURRENT_USER) { showToast('Pick your name first', 'error'); return; }
   var perms = CB_PERMS[CB_CURRENT_USER] || {};
-  if (!perms.can_approve_all && !perms.can_approve_digital) { showToast('You do not have permission to approve briefs', 'error'); return; }
+  if (!perms.can_approve_all && !perms.can_approve_digital) { showToast('You do not have permission to launch campaigns', 'error'); return; }
   window._lastSavedBriefId = _briefId;
   var anon = SUPABASE_ANON_KEY;
   var base = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
@@ -1087,7 +1087,7 @@ async function bbRenderCampaignSection(briefData) {
     if (canLaunch) {
       el.innerHTML = '<div class="bb-s6-card">'
         + '<div class="bb-s6-card-pill" style="background:var(--accent)">Ready to launch</div>'
-        + '<div class="bb-s6-card-title">' + (firstName ? firstName + ', this brief is waiting for you.' : 'Ready to launch.') + '</div>'
+        + '<div class="bb-s6-card-title">' + (firstName ? firstName + ', this campaign is waiting for you.' : 'Ready to launch.') + '</div>'
         + '<div class="bb-s6-card-sub">Approve it and the team will get their tasks automatically.</div>'
         + '<button class="bb-s6-launch" onclick="bbApproveBriefAndLaunch()">APPROVE & LAUNCH</button>'
         + '<div class="bb-s6-launch-hint">Approves, creates all 58 tasks and assigns them to the team</div>'
@@ -1541,7 +1541,7 @@ async function bbSaveBrief() {
     return;
   }
   const title = (document.getElementById('bb-brief-title')?.value || '').trim();
-  if(!title) { alert('Please give this brief a title first.'); return; }
+  if(!title) { alert('Please give this campaign a title first.'); return; }
 
   const btn      = document.getElementById('bb-save-btn');
   const feedback = document.getElementById('bb-save-feedback');
@@ -1607,7 +1607,7 @@ async function bbSaveBrief() {
     const res = await SB.from('briefs').insert([record]).select().single();
     data = res.data; error = res.error;
   }
-  btn.disabled = false; btn.textContent = window._lastSavedBriefId ? 'Update brief' : 'Save campaign';
+  btn.disabled = false; btn.textContent = window._lastSavedBriefId ? 'Update campaign' : 'Save campaign';
 
   if(error) {
     feedback.style.display='block';
@@ -1646,7 +1646,7 @@ async function bbSaveBrief() {
       // Show feedback based on brief status
       var _savedStatus = data ? data.status : 'draft';
       if (_savedStatus === 'campaigned') {
-        showToast('Brief updated ✓ Refreshing campaign view…', 'success');
+        showToast('Campaign updated ✓ Refreshing…', 'success');
         setTimeout(function() { bbEnterCampaignMode(data); }, 800);
       } else {
         // Re-render campaign section with fresh status (resets any stuck button states)
@@ -1658,7 +1658,7 @@ async function bbSaveBrief() {
         } else {
           bbShowPostSave(data ? data.id : null, _savedStatus);
         }
-        showToast('Brief updated ✓', 'success');
+        showToast('Campaign updated ✓', 'success');
       }
     });
   }
@@ -2319,7 +2319,7 @@ function bbNewBrief() {
   bbGoStep(1);
   bbUpdateBrief();
   closeBriefsPanel();
-  showToast('Fresh brief started 🚀', 'success');
+  showToast('New campaign started 🚀', 'success');
 }
 
 
@@ -2501,13 +2501,13 @@ async function bbSetStatus(id, status) {
 
 
 async function bbArchiveBrief(id) {
-  if(!confirm('Archive this brief? You can still view it later.')) return;
+  if(!confirm('Archive this campaign? You can still view it later.')) return;
   await bbSetStatus(id, 'archived');
 }
 
 
 async function bbDeleteBrief(id) {
-  if(!confirm('Permanently delete this brief? This cannot be undone.')) return;
+  if(!confirm('Permanently delete this campaign? This cannot be undone.')) return;
   if(!SB) return;
   var anon = SUPABASE_ANON_KEY;
   var base = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
