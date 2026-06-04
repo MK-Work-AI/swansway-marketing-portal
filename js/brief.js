@@ -2307,8 +2307,19 @@ function bbCheckUrlOnLoad() {
 
 
 async function bbLoadBrief(id) {
-  const brief = SB_BRIEFS_CACHE.find(b=>b.id===id);
-  if(!brief) return;
+  let brief = SB_BRIEFS_CACHE.find(b=>b.id===id);
+  if (!brief) {
+    try {
+      var resp = await fetch(SUPABASE_URL + '/rest/v1/briefs?id=eq.' + id + '&select=*&limit=1', {
+        headers: getAuthHeaders({'Content-Type':'application/json'})
+      });
+      if (resp.ok) {
+        var rows = await resp.json();
+        if (rows && rows.length) { brief = rows[0]; SB_BRIEFS_CACHE.unshift(brief); }
+      }
+    } catch(e) { console.warn('bbLoadBrief fetch:', e); }
+    if (!brief) { console.warn('bbLoadBrief: not found', id); return; }
+  }
 
   // Switch to brief builder view — set flag so switchView doesn't reset to new brief
   window._bbLoadingBrief = true;
