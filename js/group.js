@@ -417,13 +417,16 @@ function saveBudgetActuals() {
 
 
 async function loadBudgetActuals() {
-  if (!SB || !SB_USER) return;
+  if (!SB_USER) return;
   try {
-    var r = await SB.from('budget_actuals').select('data').eq('user_id', SB_USER.id).maybeSingle();
-    if (r.error) { console.error('Budget load error:', r.error); return; }
-    if (r.data && r.data.data) {
-      BUDGET_ACTUALS = r.data.data;
-      renderBudgetTracker();
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/budget_actuals?select=data&limit=1', {
+      headers: getAuthHeaders({'Content-Type': 'application/json', 'Accept': 'application/json'})
+    });
+    if (!resp.ok) return;
+    var rows = await resp.json();
+    if (rows && rows.length && rows[0].data) {
+      BUDGET_ACTUALS = rows[0].data;
+      if (typeof renderBudgetTracker === 'function') renderBudgetTracker();
     }
   } catch(e) { console.error('Budget load exception:', e); }
 }
@@ -938,6 +941,7 @@ async function loadSiteBudgets() {
     if (typeof renderBudgetTracker === 'function') renderBudgetTracker();
     var _cvEl = document.getElementById('view-channels');
     if (_cvEl && _cvEl.classList.contains('active') && typeof renderGroupChannels === 'function') renderGroupChannels();
+    if (typeof renderBudgetTracker === 'function') renderBudgetTracker();
     console.log('Site budgets loaded: ' + rows.length + ' sites, £' + groupTotal.toLocaleString());
   } catch(e) { console.warn('loadSiteBudgets exception:', e); }
 }
