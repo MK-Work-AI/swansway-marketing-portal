@@ -1,4 +1,4 @@
-// Swansway Marketing Portal — Group page functions
+// Swansway Marketing Portal — Group page functions // v8-cache-bust
 
 var _channelChartInst = null;
 
