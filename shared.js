@@ -1292,6 +1292,7 @@ function sbHandleSession(session) {
   if(typeof loadCompetitorScans === 'function') loadCompetitorScans();
   if(typeof loadQplanActions === 'function')   loadQplanActions();
   if(typeof loadAdminConfig === 'function')    loadAdminConfig();
+  if(typeof loadBrandChannels === 'function')  loadBrandChannels();
   // Refresh save bar if brief is open
   const saveBar = document.getElementById('bb-save-bar');
   const saveBtn = document.getElementById('bb-save-btn');
