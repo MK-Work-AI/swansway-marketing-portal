@@ -1006,7 +1006,7 @@ async function bbLaunchCampaignFromBrief(briefId, briefTitle, btnEl) {
   } catch(e) {
     showToast('Launch failed: ' + e.message, 'error');
     console.error('bbLaunchCampaignFromBrief:', e);
-    if (btn) { btn.textContent = '🚀 LAUNCH CAMPAIGN'; btn.disabled = false; }
+    if (btn) { btn.textContent = 'LAUNCH CAMPAIGN'; btn.disabled = false; }
   }
 }
 
@@ -1077,7 +1077,7 @@ async function bbRenderCampaignSection(briefData) {
       + '<div class="bb-s6-card-pill" style="background:#059669">Campaign approved</div>'
       + '<div class="bb-s6-card-title">' + (firstName ? 'Go for it, '+firstName+'.' : 'Ready to launch.') + '</div>'
       + '<div class="bb-s6-card-sub">Approved and ready. Create the campaign and assign all tasks to the team.</div>'
-      + '<button class="bb-s6-launch" onclick="bbLaunchCampaignFromBrief(\'' + brief.id + '\',\'' + safeTitle + '\', this)">🚀 LAUNCH CAMPAIGN</button>'
+      + '<button class="bb-s6-launch" onclick="bbLaunchCampaignFromBrief(\'' + brief.id + '\',\'' + safeTitle + '\', this)">LAUNCH CAMPAIGN</button>'
       + '<div class="bb-s6-launch-hint">Creates all 58 tasks and assigns them to the team</div>'
       + '</div>';
   }
