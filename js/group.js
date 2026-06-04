@@ -942,6 +942,10 @@ async function loadSiteBudgets() {
     var _cvEl = document.getElementById('view-channels');
     if (_cvEl && _cvEl.classList.contains('active') && typeof renderGroupChannels === 'function') renderGroupChannels();
     if (typeof renderBudgetTracker === 'function') renderBudgetTracker();
+    // Re-render brand site budget tab if on brand.html
+    var urlParams = new URLSearchParams(window.location.search);
+    var activeBrandId = urlParams.get('brand');
+    if (activeBrandId && typeof renderBrandSites === 'function') renderBrandSites(activeBrandId);
     console.log('Site budgets loaded: ' + rows.length + ' sites, £' + groupTotal.toLocaleString());
   } catch(e) { console.warn('loadSiteBudgets exception:', e); }
 }
