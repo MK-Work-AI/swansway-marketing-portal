@@ -116,7 +116,7 @@ async function adminInit() {
   if (!sess.data.session) { window.location = 'index.html'; return; }
   document.getElementById('admin-user').textContent = sess.data.session.user.email;
   showLoading(true);
-  await Promise.all([loadAdminCfg(), ctLoad()]);
+  await loadAdminCfg();
   showLoading(false);
   showPage('dashboard');
 }
@@ -145,7 +145,7 @@ function showPage(id) {
   if (id === 'sitecontacts') { scLoad(); }
   if (id === 'brandkpis')    { bkLoad(); }
   if (id === 'brandchannels'){ bcLoad(); }
-  if (id === 'campaignteam') { ctRenderList(); }
+  if (id === 'campaignteam') { ctLoad().then(function(){ ctRenderList(); }); }
   if (id === 'history')      { historyLoad(); }
   if (id === 'data')         { renderDataPage(); }
 }
