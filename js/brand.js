@@ -639,13 +639,15 @@ function updateGroupKPIsFromBrands() {
 
 async function loadBrandChannels() {
   if (window._brandChannelsLoaded) { updateGroupChannelsFromBrands(); return; }
-  console.log('loadBrandChannels: SUPABASE_URL=', SUPABASE_URL ? 'set' : 'MISSING', 'ANON_KEY=', SUPABASE_ANON_KEY ? 'set' : 'MISSING');
+  if (window._brandChannelsLoading) return; // prevent concurrent double-load
+  window._brandChannelsLoading = true;
   try {
     var resp = await fetch(SUPABASE_URL + '/rest/v1/brand_channels?select=*&order=brand_id,sort_order', {
       headers: getAuthHeaders()
     });
-    if (!resp.ok) return;
+    if (!resp.ok) { window._brandChannelsLoading = false; return; }
     var rows = await resp.json();
+    BRAND_CHANNELS_DATA = {}; // clear before populating to avoid duplicates
     rows.forEach(function(row) {
       if (!BRAND_CHANNELS_DATA[row.brand_id]) BRAND_CHANNELS_DATA[row.brand_id] = [];
       BRAND_CHANNELS_DATA[row.brand_id].push(row);
@@ -655,11 +657,11 @@ async function loadBrandChannels() {
       var el = document.getElementById(bid + '-budget');
       if (el && typeof renderBrandChannelMix === 'function') renderBrandChannelMix(bid);
     });
-    // updateGroupChannelsFromBrands handles group render + view-gate
     updateGroupChannelsFromBrands();
     window._brandChannelsLoaded = true;
+    window._brandChannelsLoading = false;
     console.log('Brand channels loaded: ' + rows.length + ' rows');
-  } catch(e) { console.warn('loadBrandChannels error:', e); }
+  } catch(e) { window._brandChannelsLoading = false; console.warn('loadBrandChannels error:', e); }
 }
 
 
