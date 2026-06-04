@@ -713,9 +713,10 @@ function updateGroupChannelsFromBrands() {
   // Also store which brands have contributed
   GROUP_CHANNELS._contributing_brands = Object.keys(BRAND_CHANNELS_DATA).length;
   _updatingGroupChannels = false;
-  // Render group channels if that view is active
+  // Render group channels — on standalone channels.html OR if view is active on index
   var chanView = document.getElementById('view-channels');
-  if (chanView && chanView.classList.contains('active')) {
+  var onChannelsPage = !document.getElementById('view-group'); // standalone page has no view-group
+  if (onChannelsPage || (chanView && chanView.classList.contains('active'))) {
     if (typeof renderGroupChannels === 'function') renderGroupChannels();
   }
 
