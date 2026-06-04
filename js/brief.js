@@ -2208,9 +2208,8 @@ function bbExitCampaignMode() {
 
 
 function bbNewBrief() {
-  // Skip if a brief is currently being loaded from panel or URL
-  if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; console.log('bbNewBrief: suppressed'); return; }
-  console.log('bbNewBrief: CALLED from:', new Error().stack.split('\n')[2]);
+  // Skip if a brief is currently being loaded
+  if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; return; }
   // Restore sidebar to original brief panel HTML (campaign mode overwrites it)
   var _left = document.getElementById('bb-left');
   if (_left && typeof BB_LEFT_ORIGINAL_HTML !== 'undefined') {
@@ -2507,8 +2506,11 @@ document.addEventListener('DOMContentLoaded', function() {
   var briefView = document.getElementById('view-brief');
   if (briefView) briefView.classList.add('active');
   setTimeout(function() {
-    // Skip if a brief is already being loaded from the panel
+    // Skip if a brief is already loaded or being loaded
+    if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; return; }
     if (window._bbLoadingBriefFromPanel) { window._bbLoadingBriefFromPanel = false; return; }
+    // Skip if BB already has content (brief was loaded before this timeout fired)
+    if (typeof BB !== 'undefined' && BB.brand) { return; }
     var briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.search).get('brief');
     if (briefId && typeof bbLoadBrief === 'function') {
       bbLoadBrief(briefId);
