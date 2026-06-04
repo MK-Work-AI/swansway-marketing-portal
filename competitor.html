@@ -10,8 +10,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js?v=2"></script>
-  <script src="shared.js?v=5"></script>
-  <script src="js/intel.js?v=1"></script>
+  <script src="shared.js?v=6"></script>
+  <script src="js/intel.js?v=2"></script>
 </head>
 <body>
 
@@ -151,10 +151,15 @@
 </div>
 <div style="display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap;align-items:flex-end">
   <div style="flex:1;min-width:220px">
-    <div style="font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-soft);margin-bottom:5px">Competitor URL or brand name</div>
-    <input id="comp-url" type="text" placeholder="e.g. arnold-clark.com or Arnold Clark" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:13px;color:var(--ink);outline:none">
+    <div style="font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-soft);margin-bottom:5px">Competitor group or brand name</div>
+    <input id="comp-url" type="text" placeholder="e.g. Arnold Clark, Lookers, Evans Halshaw" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:13px;color:var(--ink);outline:none">
   </div>
-  <button class="btn btn-accent" onclick="if(typeof competitorScan==='function')competitorScan()">Scan competitor</button>
+  <button id="competitor-scan-btn" class="btn btn-accent" onclick="if(typeof competitorScan==='function')competitorScan()">Scan competitors</button>
+</div>
+<div id="competitor-scan-status" style="display:none;padding:20px;text-align:center;border:1px solid var(--border);border-radius:8px;margin-bottom:1rem;background:var(--surface)">
+  <div style="font-size:24px;margin-bottom:8px">🔍</div>
+  <div id="comp-scan-msg" style="font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px">Analysing competitors…</div>
+  <div id="comp-scan-sub" style="font-size:12px;color:var(--ink-soft)">competitor intelligence</div>
 </div>
 <div id="competitor-results"></div>
 </main>
