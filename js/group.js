@@ -934,8 +934,8 @@ async function loadSiteBudgets() {
       var el = document.getElementById('group-budget-val');
       if (el) el.textContent = '£' + (groupTotal / 1000000).toFixed(2) + 'M';
     }
-    updateBrandBudgetsFromSites();
-    syncBrandSitesFromHubSites();
+    if(typeof updateBrandBudgetsFromSites==='function') updateBrandBudgetsFromSites();
+    if(typeof syncBrandSitesFromHubSites==='function') syncBrandSitesFromHubSites();
     if (typeof loadBriefCommitmentsForTracker === 'function') await loadBriefCommitmentsForTracker();
     // Now site budgets are loaded — trigger channel aggregation if brand data ready
     if (Object.keys(BRAND_CHANNELS_DATA).length) updateGroupChannelsFromBrands();
