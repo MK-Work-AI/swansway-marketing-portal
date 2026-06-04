@@ -1,3 +1,2 @@
 // Swansway Marketing Portal — Configuration
-var SUPABASE_URL = 'https://humitzrleflxnlnodpde.supabase.co';
-var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1bWl0enJsZWZseG5sbm9kcGRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0Mzk1NTksImV4cCI6MjA5NTAxNTU1OX0.p-i5P0jAj9M6c0V9cLPP06C5I88laufatX1b2WS-1lE';
+// SUPABASE_URL and SUPABASE_ANON_KEY are declared in shared.js
