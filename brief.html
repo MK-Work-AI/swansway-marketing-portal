@@ -989,18 +989,23 @@
       <input type="range" class="bb-slider" id="bb-slider" min="1000" max="100000" step="500" value="5000" oninput="bbOnBudget(this.value)">
       <div class="bb-presets" id="bb-presets"></div>
       <div class="bb-section-label">Campaign duration</div>
-      <div class="bb-dur-grid" id="bb-dur-grid"></div>
-      <div class="bb-section-label" style="margin-top:1.5rem">Campaign dates</div>
+      <div id="bb-duration-display" style="display:flex;align-items:baseline;gap:16px;margin-bottom:1.5rem;padding:20px 24px;background:var(--white);border:1.5px solid var(--border);border-radius:8px;min-height:72px">
+        <div id="bb-dur-weeks-big" style="font-family:var(--font-d);font-size:52px;font-weight:800;color:var(--swansway);line-height:1">—</div>
+        <div>
+          <div id="bb-dur-label-big" style="font-family:var(--font-d);font-size:20px;font-weight:700;color:var(--ink);line-height:1.2">Set dates below</div>
+          <div id="bb-dur-days-big" style="font-family:var(--font-b);font-size:13px;color:var(--ink-soft);margin-top:3px"></div>
+        </div>
+      </div>
+      <div class="bb-section-label">Campaign dates</div>
       <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem">
         <div>
           <div style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px">Start date</div>
           <input type="date" id="bb-start-date" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:13px;color:var(--ink);background:var(--white);outline:none" onchange="bbOnDateChange()">
         </div>
         <div>
-          <div style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px">End date <span id="bb-end-date-auto" style="font-weight:400;color:var(--ink-faint)">(auto from duration)</span></div>
+          <div style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px">End date</div>
           <input type="date" id="bb-end-date" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:13px;color:var(--ink);background:var(--white);outline:none" onchange="bbOnDateChange()">
         </div>
-        <div id="bb-date-duration" style="font-size:13px;font-weight:600;color:var(--swansway);padding-bottom:10px"></div>
       </div>
       <div id="bb-headroom-bar" style="display:none;margin-top:4px;margin-bottom:1rem"></div>
 
