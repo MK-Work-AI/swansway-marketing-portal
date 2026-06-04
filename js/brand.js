@@ -1,5 +1,6 @@
 // Swansway Marketing Portal — Brand page functions
 
+
 function renderBrand(b) {
   const container = document.getElementById(b.id+'-content');
   if(!container) return;
@@ -131,7 +132,7 @@ function renderBrand(b) {
 function renderGroupBrandCards() {
   const g = document.getElementById('group-brand-grid');
   g.innerHTML = BRANDS.map(b=>`
-    <div class="brand-card" style="--brand-color:${b.color}" onclick="switchView('${b.id}',document.querySelector('[data-view=${b.id}]'))">
+    <div class="brand-card" style="--brand-color:${b.color}" onclick="window.location='brand.html?brand=${b.id}'">
       <div class="brand-card-name">${b.name}</div>
       <div class="brand-card-seg">${b.segment}</div>
       <div class="brand-card-sites">${b.sites} site${b.sites>1?'s':''} · Budget ${b.budget}</div>
