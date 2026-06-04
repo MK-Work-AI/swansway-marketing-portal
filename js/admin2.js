@@ -721,20 +721,36 @@ function bcRenderContent(brandId) {
   var channels = BC_DATA[brandId];
   el.innerHTML = '';
   var hdr = document.createElement('div');
-  hdr.style.cssText = 'display:grid;grid-template-columns:32px 1fr 100px 1fr 40px;gap:8px;padding:8px 20px;background:var(--surface);font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em';
-  ['Colour','Channel','%','Notes',''].forEach(function(h){var d=document.createElement('div');d.textContent=h;hdr.appendChild(d);});
+  hdr.style.cssText = 'display:grid;grid-template-columns:36px 1fr 160px 1fr 36px;gap:12px;padding:10px 16px;background:var(--surface);font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border)';
+  ['','Channel','Allocation','Notes',''].forEach(function(h){var d=document.createElement('div');d.textContent=h;hdr.appendChild(d);});
   el.appendChild(hdr);
   var totalPct = 0;
   channels.forEach(function(ch, idx) {
     totalPct += parseFloat(ch.pct)||0;
     var row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:32px 1fr 100px 1fr 40px;gap:8px;padding:8px 20px;align-items:center;border-bottom:1px solid var(--border);background:'+(idx%2===0?'var(--white)':'var(--surface)');
+    row.style.cssText = 'display:grid;grid-template-columns:36px 1fr 160px 1fr 36px;gap:12px;padding:8px 16px;align-items:center;border-bottom:1px solid var(--border);background:'+(idx%2===0?'var(--white)':'var(--surface)');
     var sw=document.createElement('input'); sw.type='color'; sw.value=ch.color||'#333'; sw.style.cssText='width:28px;height:28px;border:none;border-radius:3px;cursor:pointer;padding:0'; sw.dataset.idx=idx; sw.dataset.brand=brandId; sw.dataset.field='color'; sw.addEventListener('input',function(){bcSetVal(this.dataset.brand,parseInt(this.dataset.idx),this.dataset.field,this.value);}); row.appendChild(sw);
     var ni=document.createElement('input'); ni.type='text'; ni.value=ch.channel||''; ni.style.cssText='width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:3px;font-size:12px'; ni.dataset.idx=idx; ni.dataset.brand=brandId; ni.dataset.field='channel'; ni.addEventListener('input',function(){bcSetVal(this.dataset.brand,parseInt(this.dataset.idx),this.dataset.field,this.value);}); row.appendChild(ni);
-    var pi=document.createElement('div'); pi.style.cssText='display:flex;align-items:center;gap:4px';
-    var range=document.createElement('input'); range.type='range'; range.min='0'; range.max='60'; range.value=ch.pct||0; range.style='flex:1'; range.dataset.idx=idx; range.dataset.brand=brandId;
-    var pSpan=document.createElement('span'); pSpan.style.cssText='font-family:var(--font-m);font-size:11px;font-weight:700;min-width:32px'; pSpan.textContent=(ch.pct||0)+'%';
-    range.addEventListener('input',function(){bcSetVal(this.dataset.brand,parseInt(this.dataset.idx),'pct',parseInt(this.value));this.nextElementSibling.textContent=this.value+'%';bcUpdateTotal(this.dataset.brand);}); pi.appendChild(range); pi.appendChild(pSpan); row.appendChild(pi);
+    var pi=document.createElement('div'); pi.style.cssText='display:flex;align-items:center;gap:8px;min-width:0';
+    var numInp=document.createElement('input'); numInp.type='number'; numInp.min='0'; numInp.max='100'; numInp.value=ch.pct||0;
+    numInp.style.cssText='width:56px;padding:5px 7px;border:1px solid var(--border);border-radius:3px;font-family:var(--font-m);font-size:13px;font-weight:700;text-align:right;flex-shrink:0';
+    numInp.dataset.idx=idx; numInp.dataset.brand=brandId;
+    var pLabel=document.createElement('span'); pLabel.style.cssText='font-family:var(--font-m);font-size:12px;color:var(--ink-soft)'; pLabel.textContent='%';
+    var range=document.createElement('input'); range.type='range'; range.min='0'; range.max='100'; range.value=ch.pct||0; range.style.cssText='flex:1;min-width:0';
+    range.dataset.idx=idx; range.dataset.brand=brandId;
+    range.addEventListener('input',function(){
+      var v=parseInt(this.value);
+      bcSetVal(this.dataset.brand,parseInt(this.dataset.idx),'pct',v);
+      this.parentElement.querySelector('input[type=number]').value=v;
+      bcUpdateTotal(this.dataset.brand);
+    });
+    numInp.addEventListener('change',function(){
+      var v=parseFloat(this.value)||0;
+      bcSetVal(this.dataset.brand,parseInt(this.dataset.idx),'pct',v);
+      this.parentElement.querySelector('input[type=range]').value=v;
+      bcUpdateTotal(this.dataset.brand);
+    });
+    pi.appendChild(numInp); pi.appendChild(pLabel); pi.appendChild(range); row.appendChild(pi);
     var no=document.createElement('input'); no.type='text'; no.value=ch.note||''; no.style.cssText='width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:3px;font-size:12px'; no.dataset.idx=idx; no.dataset.brand=brandId; no.dataset.field='note'; no.addEventListener('input',function(){bcSetVal(this.dataset.brand,parseInt(this.dataset.idx),this.dataset.field,this.value);}); row.appendChild(no);
     var del=document.createElement('button'); del.className='btn-sm btn-danger'; del.textContent='✕'; del.onclick=(function(i,bid){return function(){BC_DATA[bid].splice(i,1);bcRenderContent(bid);};})(idx,brandId); row.appendChild(del);
     el.appendChild(row);
