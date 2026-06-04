@@ -80,7 +80,7 @@ html{overflow-y:scroll}body{font-family:var(--font-b);background:var(--surface);
 
 /* ── METRICS GRID ── */
 .metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.75rem}
-.metric{background:var(--white);border:1px solid var(--border);border-top:3px solid currentColor;padding:16px 18px;border-radius:3px}
+.metric{background:var(--white);border:1px solid var(--border);border-top:4px solid currentColor;padding:18px 20px;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
 .metric-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px}
 .metric-val{font-family:var(--font-d);font-size:26px;font-weight:700;line-height:1;margin-bottom:3px;letter-spacing:-0.02em}
 .metric-sub{font-size:11px;color:var(--ink-faint)}
