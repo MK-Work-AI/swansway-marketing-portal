@@ -2309,8 +2309,8 @@ function bbCheckUrlOnLoad() {
 
 
 async function bbLoadBrief(id) {
-  console.log('bbLoadBrief called with id:', id);
   window._bbSuppressNewBrief = true;
+  window._bbBriefLoading = true; // set synchronously before any await
   let brief = SB_BRIEFS_CACHE.find(b=>b.id===id);
   console.log('brief in cache:', !!brief, 'cache size:', SB_BRIEFS_CACHE.length);
   if (!brief) {
@@ -2512,11 +2512,10 @@ document.addEventListener('DOMContentLoaded', function() {
   var briefView = document.getElementById('view-brief');
   if (briefView) briefView.classList.add('active');
   setTimeout(function() {
-    // Skip if a brief is already loaded or being loaded
+    // Skip if a brief is being loaded
+    if (window._bbBriefLoading) { return; }
     if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; return; }
     if (window._bbLoadingBriefFromPanel) { window._bbLoadingBriefFromPanel = false; return; }
-    // Skip if BB already has content (brief was loaded before this timeout fired)
-    if (typeof BB !== 'undefined' && BB.brand) { return; }
     var briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.search).get('brief');
     if (briefId && typeof bbLoadBrief === 'function') {
       bbLoadBrief(briefId);
