@@ -2503,6 +2503,8 @@ document.addEventListener('DOMContentLoaded', function() {
   var briefView = document.getElementById('view-brief');
   if (briefView) briefView.classList.add('active');
   setTimeout(function() {
+    // Skip if a brief is already being loaded from the panel
+    if (window._bbLoadingBriefFromPanel) { window._bbLoadingBriefFromPanel = false; return; }
     var briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.search).get('brief');
     if (briefId && typeof bbLoadBrief === 'function') {
       bbLoadBrief(briefId);
