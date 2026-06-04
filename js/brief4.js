@@ -1007,7 +1007,7 @@ async function bbLaunchCampaignFromBrief(briefId, briefTitle, btnEl) {
   } catch(e) {
     showToast('Launch failed: ' + e.message, 'error');
     console.error('bbLaunchCampaignFromBrief:', e);
-    if (btn) { btn.textContent = 'LAUNCH CAMPAIGN'; btn.disabled = false; }
+    if (btn) { btn.textContent = btn.dataset.origText || 'LAUNCH CAMPAIGN'; btn.disabled = false; }
   }
 }
 
@@ -1060,8 +1060,8 @@ async function bbRenderCampaignSection(briefData) {
         + '<div class="bb-s6-card-pill" style="background:var(--accent)">Ready to launch</div>'
         + '<div class="bb-s6-card-title">' + (firstName ? firstName + ', this brief is waiting for you.' : 'Ready to launch.') + '</div>'
         + '<div class="bb-s6-card-sub">Approve it and the team will get their tasks automatically.</div>'
-        + '<button class="bb-s6-launch" onclick="bbApproveBriefAndLaunch()">LAUNCH CAMPAIGN</button>'
-        + '<div class="bb-s6-launch-hint">Creates all 58 tasks and assigns them to the team</div>'
+        + '<button class="bb-s6-launch" onclick="bbApproveBriefAndLaunch()">APPROVE & LAUNCH</button>'
+        + '<div class="bb-s6-launch-hint">Approves, creates all 58 tasks and assigns them to the team</div>'
         + '</div>';
     } else {
       el.innerHTML = '<div class="bb-s6-card" style="border-color:#FCD34D;background:#FFFBEB;display:flex;gap:14px">'
