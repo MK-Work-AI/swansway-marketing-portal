@@ -206,10 +206,12 @@ window.addEventListener('load', function() {
   wrap.innerHTML = '<div id="' + b.id + '-content"></div>';
 
   // Render the brand
+  console.log('brand init: brandId=', brandId, 'b=', b ? b.name : 'NOT FOUND', 'renderBrand=', typeof renderBrand, 'container=', document.getElementById(brandId+'-content'));
   if (typeof renderBrand === 'function') {
     renderBrand(b);
+    console.log('brand init: renderBrand called, container now=', document.getElementById(brandId+'-content'));
   } else {
-    document.getElementById('brand-loading').textContent = 'renderBrand not loaded.';
+    console.error('renderBrand not defined');
   }
 
   // Load Supabase-backed data once auth resolves (sbHandleSession fires loadSiteBudgets/KPIs)
