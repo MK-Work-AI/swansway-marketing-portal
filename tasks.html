@@ -267,7 +267,7 @@
 
         var card = document.createElement('div');
         card.className = 'task-card';
-        card.innerHTML = '<div class="task-card-header" onclick="this.parentElement.classList.toggle('open')">'
+        card.innerHTML = '<div class="task-card-header" onclick="taskToggleCard(this)">'
           + '<div style="flex:1">'
           + '<div style="font-family:var(--font-d);font-size:16px;font-weight:800;color:var(--ink);margin-bottom:4px">'+camp.title+'</div>'
           + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
@@ -341,6 +341,7 @@
       } catch(e) { el.classList.remove('done'); el.textContent = ''; }
     }
 
+    function taskToggleCard(el) { el.parentElement.classList.toggle('open'); }
     window.addEventListener('load', function() { tasksPageLoad(); });
   </script>
 
