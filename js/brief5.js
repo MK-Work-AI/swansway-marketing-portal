@@ -217,8 +217,9 @@ function bbRenderSiteGrid() {
         this.style.background  = '';
         this.querySelector('.bb-site-check').style.display = 'none';
       }
-      BB.site_id     = BB.site_ids[0] || '';
-      BB.site_splits = {};
+      BB.site_id = BB.site_ids[0] || '';
+      // Remove split only for deselected site; preserve others
+      if (idx !== -1) delete BB.site_splits[sid];
       bbUpdateSiteCount();
       bbUpdateBrief();
       bbLoadHeadroom();
