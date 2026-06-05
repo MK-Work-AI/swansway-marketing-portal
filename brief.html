@@ -950,13 +950,19 @@
       <div id="bb-scope-section" style="display:none;margin-top:1.5rem">
         <div class="bb-section-label">Campaign scope</div>
         <div style="display:flex;gap:8px;margin-bottom:1rem">
-          <button class="bb-scope-btn bb-selected" id="scope-brand" onclick="bbSetScope('brand',this)">Brand-wide</button>
-          <button class="bb-scope-btn" id="scope-site" onclick="bbSetScope('site',this)">Specific site</button>
+          <button class="bb-scope-btn bb-selected" id="scope-brand" onclick="bbSetScope('brand',this)">All sites</button>
+          <button class="bb-scope-btn" id="scope-site" onclick="bbSetScope('sites',this)">Specific sites</button>
         </div>
         <div id="bb-site-picker" style="display:none">
-          <div class="bb-section-label" style="margin-top:0">Select site</div>
-          <div id="bb-site-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px"></div>
+          <div id="bb-site-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px"></div>
+          <div id="bb-site-count" style="font-size:11px;font-family:var(--font-m);color:var(--ink-faint);margin-top:8px">No sites selected</div>
         </div>
+      </div>
+
+      <!-- Budget split step — shown after budget slider when multiple sites selected -->
+      <div id="bb-split-step" style="display:none;margin-top:1.5rem;padding:16px 20px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px">
+        <div class="bb-section-label" style="margin-bottom:2px">Budget split by site</div>
+        <div id="bb-split-body"></div>
       </div>
 
 
@@ -994,7 +1000,7 @@
       <div class="bb-section-label">Set campaign budget</div>
       <div class="bb-budget-display" id="bb-budget-display">£5,000</div>
       <div class="bb-budget-sub" id="bb-budget-sub">—</div>
-      <input type="range" class="bb-slider" id="bb-slider" min="1000" max="100000" step="500" value="5000" oninput="bbOnBudget(this.value)">
+      <input type="range" class="bb-slider" id="bb-slider" min="1000" max="100000" step="500" value="5000" oninput="bbOnBudget(this.value);bbShowSplitStep()">
       <div class="bb-presets" id="bb-presets"></div>
       <div class="bb-section-label">Campaign duration</div>
       <div id="bb-duration-display" style="display:flex;align-items:baseline;gap:16px;margin-bottom:1.5rem;padding:20px 24px;background:var(--white);border:1.5px solid var(--border);border-radius:8px;min-height:72px">
