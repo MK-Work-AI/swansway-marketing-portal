@@ -428,11 +428,14 @@ function sbRenderTable(brandId) {
   if (!tbody) return;
   var sites = SB_SITES.filter(function(s){return s.brand_id===brandId;});
   var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var thStyle = 'background:var(--swansway);color:#fff;font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:10px 8px;text-align:right;white-space:nowrap;border:none';
+  var th1Style = thStyle.replace('text-align:right','text-align:left');
 
   if (thead) {
-    thead.innerHTML = '<tr><th>Site</th><th>Annual</th>'
-      + months.map(function(m){return '<th>'+m+' Plan</th>';}).join('')
-      + months.map(function(m){return '<th style="background:rgba(26,46,74,0.06)">'+m+' Act</th>';}).join('')
+    thead.innerHTML = '<tr>'
+      + '<th style="'+th1Style+'">Site</th>'
+      + '<th style="'+thStyle+'">Annual</th>'
+      + months.map(function(m){return '<th style="'+thStyle+'">'+m+'</th>';}).join('')
       + '</tr>';
   }
   tbody.innerHTML = '';
@@ -446,13 +449,11 @@ function sbRenderTable(brandId) {
     totalPlan += d.annual_planned||0;
     for (var i=0;i<12;i++) totalActual += (d['m'+i+'_actual']||0);
 
-    tr.innerHTML = '<td style="font-weight:600;white-space:nowrap">'+site.site_name+'</td>'
-      + '<td style="font-family:var(--font-m);font-weight:700;color:var(--swansway);white-space:nowrap">£'+(d.annual_planned||0).toLocaleString()+'</td>'
+    tr.style.cssText = 'border-bottom:1px solid var(--border)';
+    tr.innerHTML = '<td style="font-family:var(--font-b);font-size:13px;font-weight:600;padding:8px 10px;white-space:nowrap;color:var(--ink)">'+site.site_name+'</td>'
+      + '<td style="font-family:var(--font-m);font-size:13px;font-weight:700;color:var(--swansway);padding:8px 10px;text-align:right;white-space:nowrap">£'+(d.annual_planned||0).toLocaleString()+'</td>'
       + months.map(function(m,i){
-          return '<td><input class="admin-input admin-input-sm" type="number" value="'+(d['m'+i+'_planned']||0)+'" data-site="'+site.site_id+'" data-field="m'+i+'_planned" onchange="sbSetVal(this)"></td>';
-        }).join('')
-      + months.map(function(m,i){
-          return '<td style="background:rgba(26,46,74,0.03)"><input class="admin-input admin-input-sm" type="number" value="'+(d['m'+i+'_actual']||0)+'" data-site="'+site.site_id+'" data-field="m'+i+'_actual" onchange="sbSetVal(this)"></td>';
+          return '<td style="padding:4px 6px;text-align:right"><input class="admin-input admin-input-sm" type="number" value="'+(d['m'+i+'_planned']||0)+'" data-site="'+site.site_id+'" data-field="m'+i+'_planned" onchange="sbSetVal(this)" style="width:58px;text-align:right;font-family:var(--font-m);font-size:12px"></td>';
         }).join('');
     tbody.appendChild(tr);
   });
