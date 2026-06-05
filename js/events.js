@@ -1169,13 +1169,25 @@ function evBuildPayload(d, siteId, saveAsConfirmed, isNew) {
 }
 
 async function evSaveVehicles(eventId, brandId) {
-  await fetch(SUPA + '/event_vehicles?event_id=eq.' + eventId, { method: 'DELETE', headers: getAuthHeaders() });
-  if (brandId === 'motormatch') return;
+  // Use pre-collected _vehicles if step 3 was not rendered in this save session
   var rows = [];
-  document.querySelectorAll('#ef-vehicles-list input[type=checkbox]:checked').forEach(function(cb) {
-    var qtyInput = document.querySelector('[data-qty-for="' + cb.id + '"]');
-    rows.push({ event_id: eventId, brand_id: brandId, model_name: cb.getAttribute('data-model'), quantity: parseInt(qtyInput ? qtyInput.value : 1) || 1 });
-  });
+  if (brandId !== 'motormatch') {
+    var vehicleCheckboxes = document.querySelectorAll('#ef-vehicles-list input[type=checkbox]:checked');
+    if (vehicleCheckboxes.length > 0) {
+      // Step 3 was rendered — read from DOM
+      vehicleCheckboxes.forEach(function(cb) {
+        var qtyInput = document.querySelector('[data-qty-for="' + cb.id + '"]');
+        rows.push({ event_id: eventId, brand_id: brandId, model_name: cb.getAttribute('data-model'), quantity: parseInt(qtyInput ? qtyInput.value : 1) || 1 });
+      });
+    } else if (EV_FORM_DATA._vehicles && EV_FORM_DATA._vehicles.length) {
+      // Step 3 was skipped — use pre-collected data
+      rows = EV_FORM_DATA._vehicles.map(function(v){ return Object.assign({ event_id: eventId }, v); });
+    } else if (EV_FORM_DATA._vehicles === null) {
+      // _vehicles null means step 3 never visited — don't delete existing records
+      return;
+    }
+  }
+  await fetch(SUPA + '/event_vehicles?event_id=eq.' + eventId, { method: 'DELETE', headers: getAuthHeaders() });
   if (!rows.length) return;
   await fetch(SUPA + '/event_vehicles', {
     method: 'POST',
@@ -1185,6 +1197,8 @@ async function evSaveVehicles(eventId, brandId) {
 }
 
 async function evSavePOS(eventId) {
+  // If _pos is null, step 4 was never visited — don't delete existing POS records
+  if (EV_FORM_DATA._pos === null) return;
   await fetch(SUPA + '/event_pos?event_id=eq.' + eventId, { method: 'DELETE', headers: getAuthHeaders() });
   var rows = (EV_FORM_DATA._pos || []).map(function(r){ return Object.assign({ event_id: eventId }, r); });
   if (!rows.length) return;
