@@ -86,16 +86,7 @@
     .ev-modal-field-val { font-family:var(--font-b); font-size:13px; color:var(--ink); font-weight:500; }
     .ev-modal-field-val a { color:var(--swansway); }
 
-    /* ── Slide-in form panel ── */
-    .ev-form-panel { position:fixed; top:0; right:0; bottom:0; width:580px; max-width:100vw; background:var(--white); border-left:1px solid var(--border); box-shadow:-8px 0 32px rgba(0,0,0,0.12); z-index:700; transform:translateX(100%); transition:transform .3s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; }
-    .ev-form-panel.open { transform:translateX(0); }
-    .ev-form-header { padding:18px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:var(--swansway); }
-    .ev-form-header-title { font-family:var(--font-d); font-size:17px; font-weight:700; color:#fff; }
-    .ev-form-close { background:none; border:none; font-size:24px; cursor:pointer; color:rgba(255,255,255,0.7); padding:0; line-height:1; }
-    .ev-form-close:hover { color:#fff; }
-    .ev-form-body { flex:1; overflow-y:auto; padding:20px 24px; }
-    .ev-form-footer { padding:14px 24px; border-top:1px solid var(--border); display:flex; gap:8px; background:var(--surface); }
-    .ev-form-section-title { font-family:var(--font-m); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-faint); margin:16px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+
 
     /* ── Toast ── */
     #ev-toast { position:fixed; bottom:24px; right:24px; padding:12px 20px; border-radius:6px; font-family:var(--font-b); font-size:13px; font-weight:600; color:#fff; z-index:9999; display:none; opacity:0; transition:opacity .4s; box-shadow:0 4px 20px rgba(0,0,0,0.2); }
@@ -280,21 +271,7 @@
 <!-- Modal root -->
 <div id="ev-modal-root"></div>
 
-<!-- Form panel -->
-<div class="ev-form-panel" id="ev-form-panel">
-  <div class="ev-form-header">
-    <div class="ev-form-header-title" id="ev-form-title">Add Event</div>
-    <button class="ev-form-close" onclick="evCloseForm()">×</button>
-  </div>
-  <div class="ev-form-body" id="ev-form-body"></div>
-  <div class="ev-form-footer">
-    <button class="btn" onclick="evCloseForm()">Cancel</button>
-    <button class="btn btn-accent" onclick="evSave(false)">Save as Draft</button>
-    <div id="ev-form-confirm-btn-wrap">
-      <!-- Leadership-only: Save & Confirm button added by JS if applicable -->
-    </div>
-  </div>
-</div>
+
 
 <!-- Toast -->
 <div id="ev-toast"></div>
@@ -305,28 +282,8 @@ function navBrand(id) {
   navCloseAll();
   window.location = 'brand.html?brand=' + id;
 }
-
 window.addEventListener('load', function() {
-  if (typeof evInit === 'function') evInit().then(function() {
-    // Add confirm button for leadership after init
-    var isLeadership = CB_TEAM[CB_CURRENT_USER] && CB_TEAM[CB_CURRENT_USER].is_leadership;
-    var wrap = document.getElementById('ev-form-confirm-btn-wrap');
-    if (wrap && isLeadership) {
-      var btn = document.createElement('button');
-      btn.className = 'btn';
-      btn.style.cssText = 'background:#1A2E4A;color:#fff;border-color:#1A2E4A';
-      btn.textContent = 'Save & Confirm';
-      btn.onclick = function(){ evSave(true); };
-      wrap.appendChild(btn);
-    }
-    // Update form title based on edit vs new
-    var origOpen = evOpenForm;
-    window.evOpenForm = function(id) {
-      var titleEl = document.getElementById('ev-form-title');
-      if (titleEl) titleEl.textContent = id ? 'Edit Event' : 'Add Event';
-      origOpen(id);
-    };
-  });
+  if (typeof evInit === 'function') evInit();
 });
 </script>
 </body>
