@@ -188,7 +188,7 @@ async function competitorScan() {
   try {
     var prompt = 'You are a UK automotive dealer marketing analyst. Analyse the competitor dealership group or brand "' + name + '" for Swansway Motor Group, a UK dealership group selling Audi, VW, SEAT, CUPRA, Land Rover, Jaguar, Honda, Peugeot, BYD, OMODA/JAECOO and VW Commercial. Return ONLY a JSON object (no markdown, no preamble) with these exact keys: { "name": string, "overview": string (2-3 sentences), "strengths": [string] (3-4 items), "weaknesses": [string] (3-4 items), "digital": { "seo": string, "ppc": string, "social": string }, "threats": [string] (2-3 items), "opportunities": [string] (2-3 items), "verdict": string (1 punchy sentence) }';
 
-    var r = await fetch('https://api.anthropic.com/v1/messages', {
+    var r = await fetch('https://swansway-marketing-hub.vercel.app/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
