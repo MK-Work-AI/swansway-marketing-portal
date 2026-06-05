@@ -241,7 +241,14 @@ function bbShowSplitStep() {
   var el = document.getElementById('bb-split-step');
   if (!el) return;
   el.style.display = 'block';
-  bbRenderSplitStep();
+  // If panel already rendered (has rows), just refresh totals — don't wipe user edits
+  var existingRows = document.getElementById('bb-split-rows');
+  if (existingRows && existingRows.children.length === BB.site_ids.length) {
+    bbSplitRefreshTotal();
+    bbSplitRefreshDescription();
+  } else {
+    bbRenderSplitStep();
+  }
 }
 
 function bbRenderSplitStep() {
@@ -249,15 +256,13 @@ function bbRenderSplitStep() {
   if (!el || !BB.brand) return;
   var total = BB.budget || 0;
   var n = BB.site_ids.length;
-  // Pre-fill splits: use existing BB.site_splits or equal division
-  if (!Object.keys(BB.site_splits).length) {
-    var equal = Math.round(total / n);
-    BB.site_ids.forEach(function(sid, i) {
-      BB.site_splits[sid] = (i === n - 1) ? (total - equal * (n - 1)) : equal; // last gets remainder
-    });
-  }
-  var html = '<div style="font-size:12px;font-family:var(--font-b);color:var(--ink-soft);margin-bottom:14px">'
-    + 'Total campaign budget: <strong>£' + total.toLocaleString() + '</strong>. Set how much each site gets.</div>';
+  // Always reset splits to equal on full re-render (sites changed)
+  var equal = Math.round(total / n);
+  BB.site_ids.forEach(function(sid, i) {
+    BB.site_splits[sid] = (i === n - 1) ? (total - equal * (n - 1)) : equal;
+  });
+  var html = '<div id="bb-split-desc" style="font-size:12px;font-family:var(--font-b);color:var(--ink-soft);margin-bottom:14px">'
+    + 'Total campaign budget: <strong>\xA3' + total.toLocaleString() + '</strong>. Set how much each site gets.</div>';
   html += '<div id="bb-split-rows">';
   BB.site_ids.forEach(function(sid) {
     var site = (typeof HUB_SITES !== 'undefined') ? HUB_SITES.find(function(s){ return s.site_id === sid; }) : null;
@@ -266,51 +271,58 @@ function bbRenderSplitStep() {
     html += '<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">'
       + '<div style="flex:1;font-family:var(--font-b);font-size:13px;font-weight:600">' + name + '</div>'
       + '<div style="display:flex;align-items:center;gap:4px">'
-      + '<span style="font-family:var(--font-m);font-size:13px;color:var(--ink-soft)">£</span>'
+      + '<span style="font-family:var(--font-m);font-size:13px;color:var(--ink-soft)">\xA3</span>'
       + '<input type="number" min="0" step="100" value="' + val + '" data-sid="' + sid + '" '
       + 'style="width:100px;padding:6px 8px;border:1.5px solid var(--border);border-radius:5px;font-family:var(--font-m);font-size:13px;text-align:right" '
       + 'oninput="bbSplitInput(this)">'
-      + '</div>'
-      + '</div>';
+      + '</div></div>';
   });
   html += '</div>';
-  // Running total
-  var sum = BB.site_ids.reduce(function(s,sid){ return s + (BB.site_splits[sid] || 0); }, 0);
+  var sum = BB.site_ids.reduce(function(s, sid){ return s + (BB.site_splits[sid] || 0); }, 0);
   var diff = total - sum;
   var totalColor = Math.abs(diff) < 1 ? '#059669' : '#DC2626';
   html += '<div id="bb-split-total" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:2px solid var(--border)">'
     + '<div style="font-family:var(--font-m);font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-soft)">Total allocated</div>'
-    + '<div style="font-family:var(--font-m);font-size:14px;font-weight:700;color:' + totalColor + '">£' + sum.toLocaleString()
-    + (Math.abs(diff) > 0 ? ' <span style="font-size:11px;font-weight:400">(' + (diff > 0 ? '£' + diff.toLocaleString() + ' unallocated' : '£' + Math.abs(diff).toLocaleString() + ' over') + ')</span>' : ' ✓')
-    + '</div>'
-    + '</div>';
+    + '<div style="font-family:var(--font-m);font-size:14px;font-weight:700;color:' + totalColor + '">\xA3' + sum.toLocaleString()
+    + (Math.abs(diff) > 0 ? ' <span style="font-size:11px;font-weight:400">(' + (diff > 0 ? '\xA3' + diff.toLocaleString() + ' unallocated' : '\xA3' + Math.abs(diff).toLocaleString() + ' over') + ')</span>' : ' \u2713')
+    + '</div></div>';
   html += '<div style="margin-top:10px"><button class="bb-btn-secondary" onclick="bbSplitEqual()">Split equally</button></div>';
   el.innerHTML = html;
+}
+
+function bbSplitRefreshDescription() {
+  // Update the budget total text without re-rendering the whole panel
+  var desc = document.getElementById('bb-split-desc');
+  if (desc) desc.innerHTML = 'Total campaign budget: <strong>\xA3' + (BB.budget || 0).toLocaleString() + '</strong>. Set how much each site gets.';
+}
+
+function bbSplitRefreshTotal() {
+  // Recalculate total from current input values and update display
+  var total = BB.budget || 0;
+  var sum = 0;
+  document.querySelectorAll('#bb-split-rows input[data-sid]').forEach(function(inp) {
+    var v = parseInt(inp.value) || 0;
+    BB.site_splits[inp.getAttribute('data-sid')] = v;
+    sum += v;
+  });
+  var diff = total - sum;
+  var totalColor = Math.abs(diff) < 1 ? '#059669' : '#DC2626';
+  var el = document.getElementById('bb-split-total');
+  if (el) el.innerHTML = '<div style="font-family:var(--font-m);font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-soft)">Total allocated</div>'
+    + '<div style="font-family:var(--font-m);font-size:14px;font-weight:700;color:' + totalColor + '">\xA3' + sum.toLocaleString()
+    + (Math.abs(diff) > 0 ? ' <span style="font-size:11px;font-weight:400">(' + (diff > 0 ? '\xA3' + diff.toLocaleString() + ' unallocated' : '\xA3' + Math.abs(diff).toLocaleString() + ' over') + ')</span>' : ' \u2713')
+    + '</div>';
 }
 
 function bbSplitInput(input) {
   var sid = input.getAttribute('data-sid');
   BB.site_splits[sid] = parseInt(input.value) || 0;
-  // Recompute total display only
-  var total = BB.budget || 0;
-  var sum = BB.site_ids.reduce(function(s,id){ return s + (BB.site_splits[id] || 0); }, 0);
-  var diff = total - sum;
-  var totalColor = Math.abs(diff) < 1 ? '#059669' : '#DC2626';
-  var el = document.getElementById('bb-split-total');
-  if (el) el.innerHTML = '<div style="font-family:var(--font-m);font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-soft)">Total allocated</div>'
-    + '<div style="font-family:var(--font-m);font-size:14px;font-weight:700;color:' + totalColor + '">£' + sum.toLocaleString()
-    + (Math.abs(diff) > 0 ? ' <span style="font-size:11px;font-weight:400">(' + (diff > 0 ? '£' + diff.toLocaleString() + ' unallocated' : '£' + Math.abs(diff).toLocaleString() + ' over') + ')</span>' : ' ✓')
-    + '</div>';
+  bbSplitRefreshTotal();
 }
 
 function bbSplitEqual() {
   BB.site_splits = {};
-  var n = BB.site_ids.length;
-  var total = BB.budget || 0;
-  var equal = Math.round(total / n);
-  BB.site_ids.forEach(function(sid, i) {
-    BB.site_splits[sid] = (i === n - 1) ? (total - equal * (n - 1)) : equal;
-  });
+  // Full re-render with equal split from current budget
   bbRenderSplitStep();
 }
 
