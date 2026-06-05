@@ -165,7 +165,10 @@ function bbRenderSiteGrid() {
   var el = document.getElementById('bb-site-grid');
   if (!el) return;
   var brandId = BB.brand && BB.brand.id;
-  if (!brandId) { el.innerHTML = '<div style="font-size:12px;color:var(--ink-soft);padding:8px">Select a brand first</div>'; return; }
+  if (!brandId) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--ink-soft);padding:8px">Select a brand first</div>';
+    return;
+  }
   var sites = (typeof HUB_SITES !== 'undefined' && Array.isArray(HUB_SITES))
     ? HUB_SITES.filter(function(s){ return s.brand_id === brandId; })
     : [];
@@ -174,30 +177,29 @@ function bbRenderSiteGrid() {
       el.innerHTML = '<div style="font-size:12px;color:var(--ink-soft);padding:8px">Loading…</div>';
       setTimeout(bbRenderSiteGrid, 600); return;
     }
-    el.innerHTML = '<div style="font-size:12px;color:var(--ink-soft);padding:8px">No sites for ' + (BB.brand ? BB.brand.name : 'this brand') + '</div>'; return;
+    el.innerHTML = '<div style="font-size:12px;color:var(--ink-soft);padding:8px">No sites for ' + (BB.brand ? BB.brand.name : 'this brand') + '</div>';
+    return;
   }
-  // Multi-select hint
-  el.innerHTML = '';
-  var hint = document.createElement('div');
-  hint.style.cssText = 'font-size:11px;color:var(--ink-faint);font-family:var(--font-b);margin-bottom:8px';
-  hint.textContent = 'Select all sites this campaign will run across';
-  el.parentNode.insertBefore(hint, el);
   var brandColor = (typeof BRAND_COLORS !== 'undefined' && brandId) ? (BRAND_COLORS[brandId] || '#1A2E4A') : '#1A2E4A';
+  // Build entirely as HTML to avoid stale DOM / duplicate hint issues
+  var html = '';
   sites.forEach(function(s) {
     var isSel = BB.site_ids.indexOf(s.site_id) !== -1;
-    var d = document.createElement('div');
-    d.className = 'bb-site-tile' + (isSel ? ' bb-selected' : '');
-    d.dataset.sid = s.site_id;
-    if (isSel) { d.style.borderColor = brandColor; d.style.background = brandColor + '12'; }
-    d.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center">'
+    html += '<div class="bb-site-tile' + (isSel ? ' bb-selected' : '') + '" data-sid="' + s.site_id + '" '
+      + 'style="' + (isSel ? 'border-color:' + brandColor + ';background:' + brandColor + '12' : '') + '">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center">'
       + '<div style="font-weight:600">' + s.site_name + '</div>'
       + '<div class="bb-site-check" style="' + (isSel ? '' : 'display:none') + ';color:' + brandColor + ';font-weight:700;font-size:14px">✓</div>'
       + '</div>'
-      + (s.town ? '<div style="font-size:10px;color:var(--ink-faint)">' + s.town + '</div>' : '');
-    d.onclick = function() {
-      var sid = this.dataset.sid;
-      var idx = BB.site_ids.indexOf(sid);
+      + '</div>';
+  });
+  el.innerHTML = html;
+  // Bind clicks after render
+  el.querySelectorAll('.bb-site-tile').forEach(function(tile) {
+    tile.addEventListener('click', function() {
+      var sid = this.getAttribute('data-sid');
       var bc  = (typeof BRAND_COLORS !== 'undefined') ? (BRAND_COLORS[BB.brand.id] || '#1A2E4A') : '#1A2E4A';
+      var idx = BB.site_ids.indexOf(sid);
       if (idx === -1) {
         BB.site_ids.push(sid);
         this.classList.add('bb-selected');
@@ -211,16 +213,18 @@ function bbRenderSiteGrid() {
         this.style.background  = '';
         this.querySelector('.bb-site-check').style.display = 'none';
       }
-      BB.site_id = BB.site_ids[0] || '';
-      BB.site_splits = {}; // reset splits when selection changes
+      BB.site_id     = BB.site_ids[0] || '';
+      BB.site_splits = {};
       bbUpdateSiteCount();
       bbUpdateBrief();
       bbLoadHeadroom();
       bbShowSplitStep();
-    };
-    el.appendChild(d);
+    });
   });
+  // Update count display after render
+  bbUpdateSiteCount();
 }
+
 
 function bbUpdateSiteCount() {
   var el = document.getElementById('bb-site-count');
