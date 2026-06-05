@@ -189,6 +189,8 @@ function showPage(id) {
   if (id === 'campaignteam') { ctLoad().then(function(){ ctRenderList(); }); }
   if (id === 'history')      { historyLoad(); }
   if (id === 'data')         { renderDataPage(); }
+  if (id === 'eventtypes')   { etLoad(); }
+  if (id === 'positems')     { piLoad(); }
 }
 
 /* ══ ADMIN CONFIG (brands + group + channels) ══ */
@@ -1033,4 +1035,204 @@ function buildBrandTabs(prefix, currentBrand, dataAttr) {
   return BRAND_IDS.map(function(id){
     return '<button class="brand-tab-btn'+(id===currentBrand?' active':'')+' " data-'+dataAttr+'="'+id+'" onclick="'+fn+'(this.dataset.'+dataAttr+')">'+BRAND_NAMES[id]+'</button>';
   }).join('');
+}
+
+
+/* ══ EVENT TYPES ADMIN ══ */
+var ET_SUPA = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
+var ET_ITEMS = [];
+
+async function etLoad() {
+  var tbody = document.getElementById('et-tbody');
+  if (!tbody) return;
+  try {
+    var r = await fetch(ET_SUPA + '/event_types?select=*&order=sort_order', { headers: getAuthHeaders() });
+    if (!r.ok) throw new Error(await r.text());
+    ET_ITEMS = await r.json();
+    etRender();
+  } catch(e) { if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="color:#DC2626;text-align:center;padding:20px">Error: ' + e.message + '</td></tr>'; }
+}
+
+function etRender() {
+  var tbody = document.getElementById('et-tbody');
+  if (!tbody) return;
+  if (!ET_ITEMS.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--ink-faint)">No event types found.</td></tr>'; return; }
+  tbody.innerHTML = ET_ITEMS.map(function(t) {
+    return '<tr>'
+      + '<td><strong>' + evAdminEsc(t.name) + '</strong></td>'
+      + '<td><span style="display:inline-block;width:20px;height:20px;border-radius:3px;background:' + evAdminEsc(t.color) + ';vertical-align:middle;margin-right:6px"></span>' + evAdminEsc(t.color) + '</td>'
+      + '<td><input type="number" class="admin-input-sm" value="' + t.sort_order + '" onchange="etUpdateSort(\'' + t.id + '\',this.value)"></td>'
+      + '<td><input type="checkbox"' + (t.active ? ' checked' : '') + ' onchange="etToggleActive(\'' + t.id + '\',this.checked)" style="cursor:pointer"></td>'
+      + '<td style="text-align:right"><button class="btn-sm btn-danger" onclick="etDelete(\'' + t.id + '\')">Delete</button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+function etOpenAdd() { document.getElementById('et-add-form').style.display = ''; }
+function etCloseAdd() { document.getElementById('et-add-form').style.display = 'none'; }
+
+async function etSaveNew() {
+  var name  = document.getElementById('et-new-name').value.trim();
+  var color = document.getElementById('et-new-color').value;
+  var sort  = parseInt(document.getElementById('et-new-sort').value) || 99;
+  if (!name) { alert('Please enter a name.'); return; }
+  try {
+    var r = await fetch(ET_SUPA + '/event_types', {
+      method: 'POST',
+      headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
+      body: JSON.stringify([{ name: name, color: color, sort_order: sort, active: true }])
+    });
+    if (!r.ok) throw new Error(await r.text());
+    etCloseAdd();
+    document.getElementById('et-new-name').value = '';
+    showToast('Event type added \u2713', 'success');
+    await etLoad();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function etUpdateSort(id, val) {
+  try {
+    await fetch(ET_SUPA + '/event_types?id=eq.' + id, {
+      method: 'PATCH',
+      headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
+      body: JSON.stringify({ sort_order: parseInt(val) || 0 })
+    });
+    showToast('Saved \u2713', 'success');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function etToggleActive(id, active) {
+  try {
+    await fetch(ET_SUPA + '/event_types?id=eq.' + id, {
+      method: 'PATCH',
+      headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
+      body: JSON.stringify({ active: active })
+    });
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function etDelete(id) {
+  if (!confirm('Delete this event type? This cannot be undone.')) return;
+  try {
+    var r = await fetch(ET_SUPA + '/event_types?id=eq.' + id, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    if (!r.ok) throw new Error(await r.text());
+    showToast('Deleted \u2713', 'success');
+    await etLoad();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+/* ══ POS ITEMS ADMIN ══ */
+var PI_ITEMS = [];
+
+async function piLoad() {
+  var el = document.getElementById('pi-content');
+  if (!el) return;
+  try {
+    var r = await fetch(ET_SUPA + '/pos_items?select=*&order=sort_order', { headers: getAuthHeaders() });
+    if (!r.ok) throw new Error(await r.text());
+    PI_ITEMS = await r.json();
+    piRender();
+    piPopulateCatList();
+  } catch(e) { if (el) el.innerHTML = '<div style="color:#DC2626;padding:20px">Error: ' + e.message + '</div>'; }
+}
+
+function piPopulateCatList() {
+  var dl = document.getElementById('pi-cat-list');
+  if (!dl) return;
+  var cats = {};
+  PI_ITEMS.forEach(function(i){ if (i.category) cats[i.category] = 1; });
+  dl.innerHTML = Object.keys(cats).sort().map(function(c){ return '<option value="' + evAdminEsc(c) + '">'; }).join('');
+}
+
+function piRender() {
+  var el = document.getElementById('pi-content');
+  if (!el) return;
+  if (!PI_ITEMS.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-faint)">No POS items found.</div>'; return; }
+  var byCat = {};
+  PI_ITEMS.forEach(function(item) {
+    var cat = item.category || 'Other';
+    if (!byCat[cat]) byCat[cat] = [];
+    byCat[cat].push(item);
+  });
+  var html = '';
+  Object.keys(byCat).sort().forEach(function(cat) {
+    html += '<div style="margin-bottom:1rem"><div style="font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-faint);padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:4px">' + evAdminEsc(cat) + '</div>';
+    html += '<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Name</th><th>Category</th><th>Default unit cost</th><th>Active</th><th></th></tr></thead><tbody>';
+    byCat[cat].forEach(function(item) {
+      html += '<tr>'
+        + '<td><strong>' + evAdminEsc(item.name) + '</strong></td>'
+        + '<td>' + evAdminEsc(item.category || '') + '</td>'
+        + '<td><input type="number" class="admin-input-sm" style="width:80px" value="' + (item.default_unit_cost || 0) + '" step="0.01" onchange="piUpdateCost(\'' + item.id + '\',this.value)"></td>'
+        + '<td><input type="checkbox"' + (item.active ? ' checked' : '') + ' onchange="piToggleActive(\'' + item.id + '\',this.checked)" style="cursor:pointer"></td>'
+        + '<td style="text-align:right"><button class="btn-sm btn-danger" onclick="piDelete(\'' + item.id + '\')">Delete</button></td>'
+        + '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function piOpenAdd() { document.getElementById('pi-add-form').style.display = ''; }
+function piCloseAdd() { document.getElementById('pi-add-form').style.display = 'none'; }
+
+async function piSaveNew() {
+  var name = document.getElementById('pi-new-name').value.trim();
+  var cat  = document.getElementById('pi-new-cat').value.trim();
+  var cost = parseFloat(document.getElementById('pi-new-cost').value) || 0;
+  if (!name) { alert('Please enter an item name.'); return; }
+  if (!cat)  { alert('Please enter a category.'); return; }
+  try {
+    var r = await fetch(ET_SUPA + '/pos_items', {
+      method: 'POST',
+      headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
+      body: JSON.stringify([{ name: name, category: cat, default_unit_cost: cost, active: true, sort_order: 99 }])
+    });
+    if (!r.ok) throw new Error(await r.text());
+    piCloseAdd();
+    document.getElementById('pi-new-name').value = '';
+    showToast('POS item added \u2713', 'success');
+    await piLoad();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function piUpdateCost(id, val) {
+  try {
+    await fetch(ET_SUPA + '/pos_items?id=eq.' + id, {
+      method: 'PATCH',
+      headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
+      body: JSON.stringify({ default_unit_cost: parseFloat(val) || 0 })
+    });
+    showToast('Saved \u2713', 'success');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function piToggleActive(id, active) {
+  try {
+    await fetch(ET_SUPA + '/pos_items?id=eq.' + id, {
+      method: 'PATCH',
+      headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
+      body: JSON.stringify({ active: active })
+    });
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function piDelete(id) {
+  if (!confirm('Delete this POS item? This cannot be undone.')) return;
+  try {
+    var r = await fetch(ET_SUPA + '/pos_items?id=eq.' + id, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    if (!r.ok) throw new Error(await r.text());
+    showToast('Deleted \u2713', 'success');
+    await piLoad();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function evAdminEsc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
