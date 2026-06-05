@@ -3,27 +3,33 @@
    Swansway Marketing Portal v2
    ══════════════════════════════════════════════════════════ */
 
-
 /* ── State ── */
 var EV_EVENTS       = [];
 var EV_TYPES        = [];
 var EV_POS_ITEMS    = [];
-var EV_VEHICLES     = {}; // keyed by event_id: [{brand_id,model_name,quantity}]
-var EV_EVENT_POS    = {}; // keyed by event_id: [{pos_item_id,pos_item_name,quantity,unit_cost,total_cost}]
-var EV_VM           = {}; // vehicle_models keyed by brand_id → [{model_name,id}]
+var EV_VEHICLES     = {};
+var EV_EVENT_POS    = {};
+var EV_VM           = {};
 
-var EV_VIEW         = 'calendar'; // 'calendar' | 'list'
-var EV_MONTH        = new Date().getMonth();  // 0-11
+var EV_VIEW         = 'calendar';
+var EV_MONTH        = new Date().getMonth();
 var EV_YEAR         = new Date().getFullYear();
 var EV_FILTER       = { brand: '', site: '', type: '', status: '' };
-var EV_EDITING_ID   = null; // null = new, string = editing existing
-
+var EV_EDITING_ID   = null;
+var EV_FORM_STEP    = 1; // 1-4
+var EV_FORM_DATA    = {}; // accumulates across steps
 
 var STATUS_COLORS = {
   draft:     '#6B7280',
   confirmed: '#2563EB',
   completed: '#059669',
   cancelled: '#DC2626'
+};
+
+var BRAND_DISPLAY = {
+  audi:'Audi', vw:'Volkswagen', vwcv:'VW Commercial', seat:'SEAT',
+  cupra:'CUPRA', landrover:'Land Rover', jaguar:'Jaguar', honda:'Honda',
+  peugeot:'Peugeot', byd:'BYD', omoda:'OMODA / JAECOO', motormatch:'Motor Match'
 };
 
 var MONTH_NAMES = ['January','February','March','April','May','June',
@@ -38,6 +44,7 @@ async function evInit() {
   evRenderFilters();
   evRender();
   evBindFilters();
+  evInjectStyles();
 }
 
 async function evLoadAll() {
@@ -76,8 +83,6 @@ async function evLoadEvents() {
     var r = await fetch(SUPA + '/events?select=*&order=start_date', { headers: getAuthHeaders() });
     if (!r.ok) return;
     EV_EVENTS = await r.json();
-
-    // Load related vehicles and pos for all events
     if (EV_EVENTS.length) {
       var ids = EV_EVENTS.map(function(e){ return e.id; });
       var [vr, pr] = await Promise.all([
@@ -116,41 +121,20 @@ function evGetFilteredEvents() {
 }
 
 function evRenderFilters() {
-  // Brand dropdown
   var brandSel = document.getElementById('ev-filter-brand');
   if (brandSel) {
     brandSel.innerHTML = '<option value="">All brands</option>';
     Object.keys(BRAND_COLORS).forEach(function(b) {
-      var label = b.charAt(0).toUpperCase() + b.slice(1);
-      if (b === 'vw') label = 'Volkswagen';
-      if (b === 'vwcv') label = 'VW Commercial';
-      if (b === 'landrover') label = 'Land Rover';
-      if (b === 'motormatch') label = 'Motor Match';
-      if (b === 'omoda') label = 'OMODA / JAECOO';
-      brandSel.innerHTML += '<option value="' + b + '">' + label + '</option>';
+      brandSel.innerHTML += '<option value="' + b + '">' + (BRAND_DISPLAY[b] || b) + '</option>';
     });
   }
-
-  // Site dropdown — populated after brand selected or show all
   evPopulateSiteFilter('');
-
-  // Type dropdown
   var typeSel = document.getElementById('ev-filter-type');
   if (typeSel) {
     typeSel.innerHTML = '<option value="">All types</option>';
     EV_TYPES.forEach(function(t) {
       typeSel.innerHTML += '<option value="' + t.id + '">' + t.name + '</option>';
     });
-  }
-
-  // Status dropdown — static
-  var statusSel = document.getElementById('ev-filter-status');
-  if (statusSel) {
-    statusSel.innerHTML = '<option value="">All statuses</option>'
-      + '<option value="draft">Draft</option>'
-      + '<option value="confirmed">Confirmed</option>'
-      + '<option value="completed">Completed</option>'
-      + '<option value="cancelled">Cancelled</option>';
   }
 }
 
@@ -174,28 +158,17 @@ function evBindFilters() {
     evRender();
   });
   var siteSel = document.getElementById('ev-filter-site');
-  if (siteSel) siteSel.addEventListener('change', function() {
-    EV_FILTER.site = this.value;
-    evRender();
-  });
+  if (siteSel) siteSel.addEventListener('change', function() { EV_FILTER.site = this.value; evRender(); });
   var typeSel = document.getElementById('ev-filter-type');
-  if (typeSel) typeSel.addEventListener('change', function() {
-    EV_FILTER.type = this.value;
-    evRender();
-  });
+  if (typeSel) typeSel.addEventListener('change', function() { EV_FILTER.type = this.value; evRender(); });
   var statusSel = document.getElementById('ev-filter-status');
-  if (statusSel) statusSel.addEventListener('change', function() {
-    EV_FILTER.status = this.value;
-    evRender();
-  });
+  if (statusSel) statusSel.addEventListener('change', function() { EV_FILTER.status = this.value; evRender(); });
 }
 
 /* ══ MAIN RENDER ══ */
 function evRender() {
-  // Update month heading
   var mh = document.getElementById('ev-month-heading');
   if (mh) mh.textContent = MONTH_NAMES[EV_MONTH] + ' ' + EV_YEAR;
-
   if (EV_VIEW === 'calendar') {
     document.getElementById('ev-calendar-view').style.display = '';
     document.getElementById('ev-list-view').style.display = 'none';
@@ -230,69 +203,45 @@ function evNextMonth() {
 function evRenderCalendar() {
   var grid = document.getElementById('ev-cal-grid');
   if (!grid) return;
-
   var today = new Date();
   var firstDay = new Date(EV_YEAR, EV_MONTH, 1);
   var lastDay  = new Date(EV_YEAR, EV_MONTH + 1, 0);
-  var startDow = firstDay.getDay(); // 0=Sun
+  var startDow = firstDay.getDay();
   var totalDays = lastDay.getDate();
-
-  // Filter events that overlap this month
   var filtered = evGetFilteredEvents().filter(function(ev) {
     var s = new Date(ev.start_date + 'T00:00:00');
     var e = ev.end_date ? new Date(ev.end_date + 'T00:00:00') : s;
-    var mStart = new Date(EV_YEAR, EV_MONTH, 1);
-    var mEnd   = new Date(EV_YEAR, EV_MONTH + 1, 0);
-    return s <= mEnd && e >= mStart;
+    return s <= new Date(EV_YEAR, EV_MONTH + 1, 0) && e >= new Date(EV_YEAR, EV_MONTH, 1);
   });
-
   var html = '';
-
-  // Day headers
   ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(function(d) {
     html += '<div class="ev-cal-dow">' + d + '</div>';
   });
-
-  // Blank cells before month start (Mon=0 offset)
   var offset = (startDow === 0) ? 6 : startDow - 1;
   for (var i = 0; i < offset; i++) html += '<div class="ev-cal-cell ev-cal-cell--other"></div>';
-
   for (var day = 1; day <= totalDays; day++) {
     var isToday = (today.getDate() === day && today.getMonth() === EV_MONTH && today.getFullYear() === EV_YEAR);
-    var cellClass = 'ev-cal-cell' + (isToday ? ' ev-cal-cell--today' : '');
-    html += '<div class="' + cellClass + '">';
+    html += '<div class="ev-cal-cell' + (isToday ? ' ev-cal-cell--today' : '') + '">';
     html += '<div class="ev-cal-day-num">' + (isToday ? '<span class="ev-cal-today-badge">' + day + '</span>' : day) + '</div>';
-
-    // Events on this day (start or spanning)
     var dayDate = new Date(EV_YEAR, EV_MONTH, day);
     var dayEvents = filtered.filter(function(ev) {
       var s = new Date(ev.start_date + 'T00:00:00');
       var e = ev.end_date ? new Date(ev.end_date + 'T00:00:00') : s;
       return s <= dayDate && e >= dayDate;
     });
-
     dayEvents.slice(0, 3).forEach(function(ev) {
       var type = EV_TYPES.find(function(t){ return t.id === ev.event_type_id; });
       var color = type ? type.color : '#6B7280';
-      var siteName = (SB_SITES.find(function(s){ return s.site_id === ev.site_id; }) || {}).site_name || ev.site_id || '';
+      var siteName = (SB_SITES.find(function(s){ return s.site_id === ev.site_id; }) || {}).site_name || '';
       html += '<div class="ev-cal-bar" style="background:' + color + '" onclick="evOpenDetail(\'' + ev.id + '\')" title="' + evEsc(ev.title) + '">'
             + '<span class="ev-cal-bar-text">' + evEsc(ev.title) + (siteName ? ' · ' + siteName : '') + '</span>'
             + '</div>';
     });
-    if (dayEvents.length > 3) {
-      html += '<div class="ev-cal-more">+' + (dayEvents.length - 3) + ' more</div>';
-    }
-
+    if (dayEvents.length > 3) html += '<div class="ev-cal-more">+' + (dayEvents.length - 3) + ' more</div>';
     html += '</div>';
   }
-
-  // Trailing blank cells to complete grid
-  var totalCells = offset + totalDays;
-  var remainder = totalCells % 7;
-  if (remainder) {
-    for (var j = 0; j < (7 - remainder); j++) html += '<div class="ev-cal-cell ev-cal-cell--other"></div>';
-  }
-
+  var remainder = (offset + totalDays) % 7;
+  if (remainder) for (var j = 0; j < (7 - remainder); j++) html += '<div class="ev-cal-cell ev-cal-cell--other"></div>';
   grid.innerHTML = html;
 }
 
@@ -300,40 +249,29 @@ function evRenderCalendar() {
 function evRenderList() {
   var container = document.getElementById('ev-list-container');
   if (!container) return;
-
   var filtered = evGetFilteredEvents();
-
   if (!filtered.length) {
     container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--ink-soft);font-family:var(--font-b);font-size:14px">No events found matching your filters.</div>';
     return;
   }
-
-  // Group by site
   var bySite = {};
   filtered.forEach(function(ev) {
     if (!bySite[ev.site_id]) bySite[ev.site_id] = [];
     bySite[ev.site_id].push(ev);
   });
-
   var html = '';
   Object.keys(bySite).sort().forEach(function(siteId) {
     var site = SB_SITES.find(function(s){ return s.site_id === siteId; }) || { site_name: siteId, brand_id: '' };
     var brandColor = BRAND_COLORS[site.brand_id] || '#374151';
     var events = bySite[siteId].sort(function(a,b){ return a.start_date < b.start_date ? -1 : 1; });
-
     html += '<div class="ev-site-group">';
     html += '<div class="ev-site-header" style="border-left:4px solid ' + brandColor + '">'
           + '<span class="ev-site-name">' + evEsc(site.site_name) + '</span>'
           + '<span class="ev-site-count">' + events.length + ' event' + (events.length !== 1 ? 's' : '') + '</span>'
           + '</div>';
-
-    events.forEach(function(ev) {
-      html += evRenderCard(ev);
-    });
-
+    events.forEach(function(ev) { html += evRenderCard(ev); });
     html += '</div>';
   });
-
   container.innerHTML = html;
 }
 
@@ -343,12 +281,9 @@ function evRenderCard(ev) {
   var typeName   = type ? type.name  : 'Event';
   var statusColor = STATUS_COLORS[ev.status] || '#6B7280';
   var vehicles = EV_VEHICLES[ev.id] || [];
-  var pos      = EV_EVENT_POS[ev.id] || [];
-
   var dateStr = evFormatDateRange(ev.start_date, ev.end_date);
   var budget  = ev.planned_budget ? '£' + Number(ev.planned_budget).toLocaleString('en-GB') + ' planned' : '';
   if (ev.actual_spend) budget += ' / £' + Number(ev.actual_spend).toLocaleString('en-GB') + ' actual';
-
   return '<div class="ev-card" onclick="evOpenDetail(\'' + ev.id + '\')">'
     + '<div class="ev-card-header">'
     + '<span class="ev-badge" style="background:' + typeColor + '">' + evEsc(typeName) + '</span>'
@@ -361,7 +296,7 @@ function evRenderCard(ev) {
     + (ev.location ? '<span class="ev-card-meta-item">📍 ' + evEsc(ev.location) + '</span>' : '')
     + (budget ? '<span class="ev-card-meta-item">💷 ' + budget + '</span>' : '')
     + (ev.expected_footfall ? '<span class="ev-card-meta-item">👥 ' + Number(ev.expected_footfall).toLocaleString() + ' expected</span>' : '')
-    + (vehicles.length ? '<span class="ev-card-meta-item">🚗 ' + vehicles.reduce(function(s,v){ return s + v.quantity; }, 0) + ' vehicle' + (vehicles.reduce(function(s,v){ return s + v.quantity; }, 0) !== 1 ? 's' : '') + '</span>' : '')
+    + (vehicles.length ? '<span class="ev-card-meta-item">🚗 ' + vehicles.reduce(function(s,v){ return s + v.quantity; }, 0) + ' vehicles</span>' : '')
     + '</div>'
     + '</div>';
 }
@@ -372,7 +307,6 @@ function evFormatDate(d) {
   var dt = new Date(d + 'T00:00:00');
   return DAY_SHORT[dt.getDay()] + ' ' + dt.getDate() + ' ' + MONTH_SHORT[dt.getMonth()] + ' ' + dt.getFullYear();
 }
-
 function evFormatDateRange(start, end) {
   if (!start) return '';
   if (!end || end === start) return evFormatDate(start);
@@ -383,18 +317,15 @@ function evFormatDateRange(start, end) {
 function evOpenDetail(id) {
   var ev = EV_EVENTS.find(function(e){ return e.id === id; });
   if (!ev) return;
-
   var type = EV_TYPES.find(function(t){ return t.id === ev.event_type_id; });
   var site = SB_SITES.find(function(s){ return s.site_id === ev.site_id; });
   var vehicles = EV_VEHICLES[ev.id] || [];
   var pos = EV_EVENT_POS[ev.id] || [];
   var isLeadership = CB_TEAM[CB_CURRENT_USER] && CB_TEAM[CB_CURRENT_USER].is_leadership;
-
   var typeColor   = type ? type.color : '#6B7280';
   var typeName    = type ? type.name  : 'Event';
   var statusColor = STATUS_COLORS[ev.status] || '#6B7280';
   var brandColor  = site ? (BRAND_COLORS[site.brand_id] || '#374151') : '#374151';
-
   var posTotalCost = pos.reduce(function(s,p){ return s + (p.total_cost || 0); }, 0);
 
   var html = '<div class="ev-modal-overlay" id="ev-modal-overlay" onclick="if(event.target===this)evCloseDetail()">'
@@ -411,108 +342,58 @@ function evOpenDetail(id) {
     + '</div>'
     + '<button class="ev-modal-close" onclick="evCloseDetail()">×</button>'
     + '</div>'
-
     + '<div class="ev-modal-body">'
-
-    // Dates & Times
-    + evModalSection('📅 Dates & Times',
-        evModalGrid([
-          { label: 'Start', val: evFormatDate(ev.start_date) + (ev.start_time ? ' at ' + ev.start_time : '') },
-          { label: 'End',   val: ev.end_date ? evFormatDate(ev.end_date) + (ev.end_time ? ' at ' + ev.end_time : '') : '—' }
-        ])
-      )
-
-    // Location
-    + (ev.location || ev.location_address ? evModalSection('📍 Location',
-        evModalGrid([
-          ev.location         ? { label: 'Venue', val: ev.location, full: true } : null,
-          ev.location_address ? { label: 'Address', val: ev.location_address, full: true } : null
-        ].filter(Boolean))
-      ) : '')
-
-    // Contact
-    + (ev.contact_name || ev.contact_email || ev.contact_phone ? evModalSection('👤 Contact',
-        evModalGrid([
-          ev.contact_name  ? { label: 'Name',  val: ev.contact_name  } : null,
-          ev.contact_email ? { label: 'Email', val: '<a href="mailto:' + evEsc(ev.contact_email) + '">' + evEsc(ev.contact_email) + '</a>' } : null,
-          ev.contact_phone ? { label: 'Phone', val: '<a href="tel:' + evEsc(ev.contact_phone) + '">' + evEsc(ev.contact_phone) + '</a>' } : null
-        ].filter(Boolean))
-      ) : '')
-
-    // Budget
-    + evModalSection('💷 Budget',
-        evModalGrid([
-          { label: 'Planned budget', val: ev.planned_budget ? '£' + Number(ev.planned_budget).toLocaleString('en-GB') : '—' },
-          { label: 'Actual spend',   val: ev.actual_spend   ? '£' + Number(ev.actual_spend).toLocaleString('en-GB')   : '—' },
-          ev.coop_funded ? { label: 'Co-op amount', val: ev.coop_amount ? '£' + Number(ev.coop_amount).toLocaleString('en-GB') : 'Yes (amount TBC)' } : null
-        ].filter(Boolean))
-      )
-
-    // Vehicles
+    + evModalSection('📅 Dates & Times', evModalGrid([
+        { label: 'Start', val: evFormatDate(ev.start_date) + (ev.start_time ? ' at ' + ev.start_time : '') },
+        { label: 'End',   val: ev.end_date ? evFormatDate(ev.end_date) + (ev.end_time ? ' at ' + ev.end_time : '') : '—' }
+      ]))
+    + (ev.location || ev.location_address ? evModalSection('📍 Location', evModalGrid([
+        ev.location         ? { label: 'Venue',   val: ev.location,         full: true } : null,
+        ev.location_address ? { label: 'Address', val: ev.location_address, full: true } : null
+      ].filter(Boolean))) : '')
+    + (ev.contact_name || ev.contact_email || ev.contact_phone ? evModalSection('👤 Contact', evModalGrid([
+        ev.contact_name  ? { label: 'Name',  val: ev.contact_name } : null,
+        ev.contact_email ? { label: 'Email', val: '<a href="mailto:' + evEsc(ev.contact_email) + '">' + evEsc(ev.contact_email) + '</a>' } : null,
+        ev.contact_phone ? { label: 'Phone', val: '<a href="tel:' + evEsc(ev.contact_phone) + '">' + evEsc(ev.contact_phone) + '</a>' } : null
+      ].filter(Boolean))) : '')
+    + evModalSection('💷 Budget', evModalGrid([
+        { label: 'Planned budget', val: ev.planned_budget ? '£' + Number(ev.planned_budget).toLocaleString('en-GB') : '—' },
+        { label: 'Actual spend',   val: ev.actual_spend   ? '£' + Number(ev.actual_spend).toLocaleString('en-GB')   : '—' },
+        ev.coop_funded ? { label: 'Co-op amount', val: ev.coop_amount ? '£' + Number(ev.coop_amount).toLocaleString('en-GB') : 'Yes (TBC)' } : null
+      ].filter(Boolean)))
     + (vehicles.length ? evModalSection('🚗 Vehicles',
         '<div style="display:flex;flex-wrap:wrap;gap:8px">'
-        + vehicles.map(function(v) {
-            return '<span style="padding:4px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-family:var(--font-b);font-size:12px">'
-              + evEsc(v.model_name) + ' × ' + v.quantity + '</span>';
-          }).join('')
-        + '</div>'
-      ) : '')
-
-    // POS Items
+        + vehicles.map(function(v){ return '<span style="padding:4px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-family:var(--font-b);font-size:12px">' + evEsc(v.model_name) + ' × ' + v.quantity + '</span>'; }).join('')
+        + '</div>') : '')
     + (pos.length ? evModalSection('📦 POS Items',
-        '<table style="width:100%;border-collapse:collapse;font-size:12px;font-family:var(--font-b)">'
-        + '<thead><tr style="border-bottom:1px solid var(--border)">'
+        '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:1px solid var(--border)">'
         + '<th style="text-align:left;padding:4px 8px;font-family:var(--font-m);font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft)">Item</th>'
         + '<th style="text-align:right;padding:4px 8px;font-family:var(--font-m);font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft)">Qty</th>'
         + '<th style="text-align:right;padding:4px 8px;font-family:var(--font-m);font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft)">Unit</th>'
         + '<th style="text-align:right;padding:4px 8px;font-family:var(--font-m);font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft)">Total</th>'
         + '</tr></thead><tbody>'
-        + pos.map(function(p) {
-            return '<tr style="border-bottom:1px solid var(--border)">'
-              + '<td style="padding:5px 8px">' + evEsc(p.pos_item_name) + '</td>'
-              + '<td style="padding:5px 8px;text-align:right;font-family:var(--font-m)">' + p.quantity + '</td>'
-              + '<td style="padding:5px 8px;text-align:right;font-family:var(--font-m)">' + (p.unit_cost ? '£' + Number(p.unit_cost).toLocaleString('en-GB') : '—') + '</td>'
-              + '<td style="padding:5px 8px;text-align:right;font-family:var(--font-m)">' + (p.total_cost ? '£' + Number(p.total_cost).toLocaleString('en-GB') : '—') + '</td>'
-              + '</tr>';
-          }).join('')
-        + '<tr style="border-top:2px solid var(--border);font-weight:700">'
-        + '<td colspan="3" style="padding:6px 8px;font-family:var(--font-m);font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft)">Total POS cost</td>'
-        + '<td style="padding:6px 8px;text-align:right;font-family:var(--font-m);color:var(--swansway)">£' + Number(posTotalCost).toLocaleString('en-GB') + '</td>'
-        + '</tr>'
-        + '</tbody></table>'
-      ) : '')
-
-    // Attendance
-    + (ev.expected_footfall || ev.actual_footfall || ev.staff_required ? evModalSection('👥 Attendance',
-        evModalGrid([
-          ev.expected_footfall ? { label: 'Expected footfall', val: Number(ev.expected_footfall).toLocaleString() } : null,
-          ev.actual_footfall   ? { label: 'Actual footfall',   val: Number(ev.actual_footfall).toLocaleString()   } : null,
-          ev.staff_required    ? { label: 'Staff required',    val: ev.staff_required                             } : null
-        ].filter(Boolean))
-      ) : '')
-
-    // Notes
+        + pos.map(function(p){ return '<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px">' + evEsc(p.pos_item_name) + '</td><td style="padding:5px 8px;text-align:right;font-family:var(--font-m)">' + p.quantity + '</td><td style="padding:5px 8px;text-align:right;font-family:var(--font-m)">' + (p.unit_cost ? '£' + Number(p.unit_cost).toLocaleString('en-GB') : '—') + '</td><td style="padding:5px 8px;text-align:right;font-family:var(--font-m)">' + (p.total_cost ? '£' + Number(p.total_cost).toLocaleString('en-GB') : '—') + '</td></tr>'; }).join('')
+        + '<tr style="border-top:2px solid var(--border)"><td colspan="3" style="padding:6px 8px;font-family:var(--font-m);font-size:10px;text-transform:uppercase;color:var(--ink-soft)">Total POS cost</td><td style="padding:6px 8px;text-align:right;font-family:var(--font-m);color:var(--swansway)">£' + Number(posTotalCost).toLocaleString('en-GB') + '</td></tr>'
+        + '</tbody></table>') : '')
+    + (ev.expected_footfall || ev.actual_footfall || ev.staff_required ? evModalSection('👥 Attendance', evModalGrid([
+        ev.expected_footfall ? { label: 'Expected footfall', val: Number(ev.expected_footfall).toLocaleString() } : null,
+        ev.actual_footfall   ? { label: 'Actual footfall',   val: Number(ev.actual_footfall).toLocaleString()   } : null,
+        ev.staff_required    ? { label: 'Staff required',    val: ev.staff_required } : null
+      ].filter(Boolean))) : '')
     + (ev.notes ? evModalSection('📝 Notes', '<p style="font-family:var(--font-b);font-size:13px;color:var(--ink-soft);white-space:pre-wrap;margin:0">' + evEsc(ev.notes) + '</p>') : '')
-
-    // Debrief (only when completed)
     + (ev.status === 'completed' ? evModalSection('📊 Debrief', ev.debrief
         ? '<p style="font-family:var(--font-b);font-size:13px;color:var(--ink-soft);white-space:pre-wrap;margin:0">' + evEsc(ev.debrief) + '</p>'
-        : '<p style="font-family:var(--font-b);font-size:13px;color:var(--ink-faint);margin:0">No debrief added yet.</p>'
-      ) : '')
-
-    + '</div>' // ev-modal-body
-
-    // Actions
+        : '<p style="font-family:var(--font-b);font-size:13px;color:var(--ink-faint);margin:0">No debrief added yet.</p>') : '')
+    + '</div>'
     + '<div class="ev-modal-footer">'
     + '<button class="btn" onclick="evOpenForm(\'' + ev.id + '\')">✏ Edit</button>'
-    + (isLeadership && ev.status === 'draft'      ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'confirmed\')">✓ Confirm</button>' : '')
-    + (isLeadership && ev.status === 'confirmed'  ? '<button class="btn" onclick="evChangeStatus(\'' + ev.id + '\',\'draft\')">↩ Unconfirm</button>' : '')
-    + (isLeadership && ev.status === 'confirmed'  ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'completed\')">✅ Mark Complete</button>' : '')
+    + (isLeadership && ev.status === 'draft'     ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'confirmed\')">✓ Confirm</button>' : '')
+    + (isLeadership && ev.status === 'confirmed' ? '<button class="btn" onclick="evChangeStatus(\'' + ev.id + '\',\'draft\')">↩ Unconfirm</button>' : '')
+    + (isLeadership && ev.status === 'confirmed' ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'completed\')">✅ Mark Complete</button>' : '')
     + (isLeadership && ev.status !== 'cancelled' && ev.status !== 'completed' ? '<button class="btn" style="color:#DC2626;border-color:#DC2626" onclick="evChangeStatus(\'' + ev.id + '\',\'cancelled\')">✕ Cancel</button>' : '')
     + (isLeadership ? '<button class="btn" style="color:#DC2626;border-color:#DC2626;margin-left:auto" onclick="evDelete(\'' + ev.id + '\')">🗑 Delete</button>' : '')
     + '</div>'
-
-    + '</div></div>'; // ev-modal, ev-modal-overlay
+    + '</div></div>';
 
   document.getElementById('ev-modal-root').innerHTML = html;
 }
@@ -523,15 +404,12 @@ function evCloseDetail() {
 }
 
 function evModalSection(title, bodyHtml) {
-  return '<div class="ev-modal-section">'
-    + '<div class="ev-modal-section-title">' + title + '</div>'
-    + bodyHtml
-    + '</div>';
+  return '<div class="ev-modal-section"><div class="ev-modal-section-title">' + title + '</div>' + bodyHtml + '</div>';
 }
 
 function evModalGrid(items) {
   return '<div class="ev-modal-grid">'
-    + items.map(function(item) {
+    + items.map(function(item){
         return '<div class="ev-modal-field' + (item.full ? ' ev-modal-field--full' : '') + '">'
           + '<div class="ev-modal-field-label">' + item.label + '</div>'
           + '<div class="ev-modal-field-val">' + item.val + '</div>'
@@ -553,7 +431,7 @@ async function evChangeStatus(id, newStatus) {
     evCloseDetail();
     await evLoadEvents();
     evRender();
-    showToast('Status updated ✓', 'success');
+    showToast('Status updated \u2713', 'success');
   } catch(e) { showToast('Error: ' + e.message, 'error'); }
 }
 
@@ -561,16 +439,12 @@ async function evChangeStatus(id, newStatus) {
 async function evDelete(id) {
   if (!confirm('Delete this event? This cannot be undone.')) return;
   try {
-    // Reverse budget contribution before deleting
     var ev = EV_EVENTS.find(function(e){ return e.id === id; });
     if (ev) {
       if (ev.planned_budget) await evUpdateBudget(ev, -ev.planned_budget, null);
       if (ev.actual_spend)   await evUpdateBudget(ev, null, -ev.actual_spend);
     }
-    var r = await fetch(SUPA + '/events?id=eq.' + id, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    });
+    var r = await fetch(SUPA + '/events?id=eq.' + id, { method: 'DELETE', headers: getAuthHeaders() });
     if (!r.ok) throw new Error(await r.text());
     evCloseDetail();
     await evLoadEvents();
@@ -582,29 +456,18 @@ async function evDelete(id) {
 /* ══ BUDGET INTEGRATION ══ */
 async function evUpdateBudget(ev, plannedDelta, actualDelta) {
   if (!ev.site_id || !ev.start_date) return;
-  var month = new Date(ev.start_date + 'T00:00:00').getMonth(); // 0-11
+  var month = new Date(ev.start_date + 'T00:00:00').getMonth();
   var mN = 'm' + month;
-
   try {
-    // Fetch current site_budgets row for this site
-    var r = await fetch(SUPA + '/site_budgets?site_id=eq.' + encodeURIComponent(ev.site_id) + '&limit=1', {
-      headers: getAuthHeaders()
-    });
+    var r = await fetch(SUPA + '/site_budgets?site_id=eq.' + encodeURIComponent(ev.site_id) + '&limit=1', { headers: getAuthHeaders() });
     if (!r.ok) return;
     var rows = await r.json();
     if (!rows || !rows.length) return;
     var row = rows[0];
-
     var patch = {};
-    if (plannedDelta !== null && plannedDelta !== undefined) {
-      patch[mN + '_planned'] = (row[mN + '_planned'] || 0) + plannedDelta;
-    }
-    if (actualDelta !== null && actualDelta !== undefined) {
-      patch[mN + '_actual'] = (row[mN + '_actual'] || 0) + actualDelta;
-    }
-
+    if (plannedDelta !== null && plannedDelta !== undefined) patch[mN + '_planned'] = (row[mN + '_planned'] || 0) + plannedDelta;
+    if (actualDelta  !== null && actualDelta  !== undefined) patch[mN + '_actual']  = (row[mN + '_actual']  || 0) + actualDelta;
     if (!Object.keys(patch).length) return;
-
     await fetch(SUPA + '/site_budgets?site_id=eq.' + encodeURIComponent(ev.site_id), {
       method: 'PATCH',
       headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
@@ -613,263 +476,545 @@ async function evUpdateBudget(ev, plannedDelta, actualDelta) {
   } catch(e) { console.warn('evUpdateBudget:', e); }
 }
 
-/* ══ ADD / EDIT FORM ══ */
+/* ══════════════════════════════════════════════════════════
+   STEPPED MODAL FORM
+   Step 1 — Brand, Site, Event type, Title
+   Step 2 — Dates & Location & Contact
+   Step 3 — Budget & Footfall & Vehicles
+   Step 4 — POS Items & Notes
+   ══════════════════════════════════════════════════════════ */
+
 function evOpenForm(id) {
   EV_EDITING_ID = id || null;
+  EV_FORM_STEP  = 1;
   var ev = id ? EV_EVENTS.find(function(e){ return e.id === id; }) : null;
+  // Pre-populate form data from existing event
+  EV_FORM_DATA = ev ? {
+    title:            ev.title || '',
+    brand_id:         ev.brand_id || '',
+    site_id:          ev.site_id || '',
+    event_type_id:    ev.event_type_id || '',
+    start_date:       ev.start_date || '',
+    end_date:         ev.end_date || '',
+    start_time:       ev.start_time || '',
+    end_time:         ev.end_time || '',
+    location:         ev.location || '',
+    location_address: ev.location_address || '',
+    contact_name:     ev.contact_name || '',
+    contact_email:    ev.contact_email || '',
+    contact_phone:    ev.contact_phone || '',
+    planned_budget:   ev.planned_budget || '',
+    actual_spend:     ev.actual_spend || '',
+    coop_funded:      ev.coop_funded || false,
+    coop_amount:      ev.coop_amount || '',
+    expected_footfall:ev.expected_footfall || '',
+    actual_footfall:  ev.actual_footfall || '',
+    staff_required:   ev.staff_required || '',
+    vehicle_notes:    ev.vehicle_notes || '',
+    notes:            ev.notes || ''
+  } : {
+    title:'', brand_id:'', site_id:'', event_type_id:'',
+    start_date:'', end_date:'', start_time:'', end_time:'',
+    location:'', location_address:'',
+    contact_name:'', contact_email:'', contact_phone:'',
+    planned_budget:'', actual_spend:'', coop_funded:false, coop_amount:'',
+    expected_footfall:'', actual_footfall:'', staff_required:'',
+    vehicle_notes:'', notes:''
+  };
   evCloseDetail();
-  evBuildForm(ev);
-  document.getElementById('ev-form-panel').classList.add('open');
+  evRenderFormModal();
 }
 
 function evCloseForm() {
-  document.getElementById('ev-form-panel').classList.remove('open');
+  var root = document.getElementById('ev-modal-root');
+  if (root) root.innerHTML = '';
   EV_EDITING_ID = null;
 }
 
-function evBuildForm(ev) {
-  var isLeadership = CB_TEAM[CB_CURRENT_USER] && CB_TEAM[CB_CURRENT_USER].is_leadership;
-  var f = document.getElementById('ev-form-body');
-  if (!f) return;
-
-  // Form fields
-  var brandId  = ev ? ev.brand_id : '';
-  var sites    = brandId ? SB_SITES.filter(function(s){ return s.brand_id === brandId; }) : SB_SITES;
-  var brandName = function(b) {
-    var map = { vw:'Volkswagen', vwcv:'VW Commercial', landrover:'Land Rover', motormatch:'Motor Match', omoda:'OMODA / JAECOO' };
-    return map[b] || (b.charAt(0).toUpperCase() + b.slice(1));
-  };
-
-  var html = '';
-
-  // Title
-  html += evField('Title', '<input class="admin-input" id="ef-title" type="text" placeholder="Event title" style="width:100%" value="' + (ev ? evEscAttr(ev.title) : '') + '">');
-
-  // Brand + Site
-  html += '<div class="form-grid-2">';
-  html += '<div>' + evLabel('Brand')
-    + '<select class="admin-input" id="ef-brand" onchange="evFormBrandChange()" style="width:100%">'
-    + '<option value="">Select brand</option>'
-    + Object.keys(BRAND_COLORS).map(function(b) {
-        return '<option value="' + b + '"' + (brandId === b ? ' selected' : '') + '>' + brandName(b) + '</option>';
-      }).join('')
-    + '</select></div>';
-  html += '<div>' + evLabel('Site')
-    + '<select class="admin-input" id="ef-site" style="width:100%">'
-    + '<option value="">Select site</option>'
-    + sites.map(function(s) {
-        return '<option value="' + s.site_id + '"' + (ev && ev.site_id === s.site_id ? ' selected' : '') + '>' + s.site_name + '</option>';
-      }).join('')
-    + '</select></div>';
-  html += '</div>';
-
-  // Event type
-  html += evField('Event type',
-    '<select class="admin-input" id="ef-type" style="width:100%">'
-    + '<option value="">Select type</option>'
-    + EV_TYPES.map(function(t) {
-        return '<option value="' + t.id + '"' + (ev && ev.event_type_id === t.id ? ' selected' : '') + '>' + t.name + '</option>';
-      }).join('')
-    + '</select>'
-  );
-
-  // Dates
-  html += '<div class="form-grid-2">';
-  html += '<div>' + evLabel('Start date') + '<input class="admin-input" id="ef-start-date" type="date" style="width:100%" value="' + (ev ? (ev.start_date||'') : '') + '"></div>';
-  html += '<div>' + evLabel('Start time') + '<input class="admin-input" id="ef-start-time" type="time" style="width:100%" value="' + (ev ? (ev.start_time||'') : '') + '"></div>';
-  html += '</div>';
-  html += '<div class="form-grid-2">';
-  html += '<div>' + evLabel('End date') + '<input class="admin-input" id="ef-end-date" type="date" style="width:100%" value="' + (ev ? (ev.end_date||'') : '') + '"></div>';
-  html += '<div>' + evLabel('End time') + '<input class="admin-input" id="ef-end-time" type="time" style="width:100%" value="' + (ev ? (ev.end_time||'') : '') + '"></div>';
-  html += '</div>';
-
-  // Location
-  html += evField('Venue / Location name', '<input class="admin-input" id="ef-location" type="text" style="width:100%" value="' + (ev ? evEscAttr(ev.location||'') : '') + '">');
-  html += evField('Location address', '<textarea class="admin-input" id="ef-location-addr" rows="2" style="width:100%;resize:vertical">' + (ev ? evEsc(ev.location_address||'') : '') + '</textarea>');
-
-  // Contact
-  html += '<div class="form-grid-3">';
-  html += '<div>' + evLabel('Contact name')  + '<input class="admin-input" id="ef-contact-name"  type="text"  style="width:100%" value="' + (ev ? evEscAttr(ev.contact_name||'')  : '') + '"></div>';
-  html += '<div>' + evLabel('Contact email') + '<input class="admin-input" id="ef-contact-email" type="email" style="width:100%" value="' + (ev ? evEscAttr(ev.contact_email||'') : '') + '"></div>';
-  html += '<div>' + evLabel('Contact phone') + '<input class="admin-input" id="ef-contact-phone" type="tel"   style="width:100%" value="' + (ev ? evEscAttr(ev.contact_phone||'') : '') + '"></div>';
-  html += '</div>';
-
-  // Budget
-  html += '<div class="form-grid-2">';
-  html += '<div>' + evLabel('Planned budget (£)') + '<input class="admin-input" id="ef-planned-budget" type="number" min="0" style="width:100%" value="' + (ev && ev.planned_budget ? ev.planned_budget : '') + '"></div>';
-  html += '<div>' + evLabel('Actual spend (£)') + '<input class="admin-input" id="ef-actual-spend" type="number" min="0" style="width:100%" value="' + (ev && ev.actual_spend ? ev.actual_spend : '') + '"></div>';
-  html += '</div>';
-  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'
-    + '<input type="checkbox" id="ef-coop" style="width:16px;height:16px;cursor:pointer"' + (ev && ev.coop_funded ? ' checked' : '') + ' onchange="document.getElementById(\'ef-coop-amount-wrap\').style.display=this.checked?\'block\':\'none\'">'
-    + '<label for="ef-coop" style="font-family:var(--font-b);font-size:13px;cursor:pointer">Co-op funded</label>'
-    + '</div>';
-  html += '<div id="ef-coop-amount-wrap" style="' + (ev && ev.coop_funded ? '' : 'display:none') + 'margin-bottom:14px">'
-    + evLabel('Co-op amount (£)')
-    + '<input class="admin-input" id="ef-coop-amount" type="number" min="0" style="width:100%" value="' + (ev && ev.coop_amount ? ev.coop_amount : '') + '">'
-    + '</div>';
-
-  // Attendance
-  html += '<div class="form-grid-2">';
-  html += '<div>' + evLabel('Expected footfall') + '<input class="admin-input" id="ef-expected-footfall" type="number" min="0" style="width:100%" value="' + (ev && ev.expected_footfall ? ev.expected_footfall : '') + '"></div>';
-  html += '<div>' + evLabel('Staff required')    + '<input class="admin-input" id="ef-staff-required"    type="number" min="0" style="width:100%" value="' + (ev && ev.staff_required    ? ev.staff_required    : '') + '"></div>';
-  html += '</div>';
-
-  // Vehicles
-  var isMotorMatch = (brandId === 'motormatch');
-  html += '<div class="ev-form-section-title">🚗 Vehicles</div>';
-  if (isMotorMatch) {
-    html += evField('Vehicle notes (free text)', '<textarea class="admin-input" id="ef-vehicle-notes" rows="3" style="width:100%;resize:vertical">' + (ev ? evEsc(ev.vehicle_notes||'') : '') + '</textarea>');
-  } else {
-    html += '<div id="ef-vehicles-wrap">' + evBuildVehiclesWidget(brandId, ev) + '</div>';
-  }
-
-  // POS Items
-  html += '<div class="ev-form-section-title">📦 POS Items</div>';
-  html += '<div id="ef-pos-wrap">' + evBuildPosWidget(ev) + '</div>';
-
-  // Notes
-  html += evField('Notes', '<textarea class="admin-input" id="ef-notes" rows="4" style="width:100%;resize:vertical">' + (ev ? evEsc(ev.notes||'') : '') + '</textarea>');
-
-  f.innerHTML = html;
-}
-
-function evBuildVehiclesWidget(brandId, ev) {
-  if (!brandId) return '<p style="font-size:12px;color:var(--ink-faint);font-family:var(--font-b)">Select a brand first to choose vehicles.</p>';
-  var models = EV_VM[brandId] || [];
-  var existing = ev ? (EV_VEHICLES[ev.id] || []) : [];
-
-  if (!models.length) return '<p style="font-size:12px;color:var(--ink-faint);font-family:var(--font-b)">No vehicle models found for this brand.</p>';
-
-  return '<div id="ef-vehicles-list">'
-    + models.map(function(m) {
-        var found = existing.find(function(v){ return v.model_name === m.model_name; });
-        return '<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)">'
-          + '<input type="checkbox" id="efv-' + evEscAttr(m.id) + '" data-model="' + evEscAttr(m.model_name) + '" data-brand="' + evEscAttr(brandId) + '"'
-          + (found ? ' checked' : '')
-          + ' style="width:15px;height:15px;cursor:pointer">'
-          + '<label for="efv-' + evEscAttr(m.id) + '" style="flex:1;font-family:var(--font-b);font-size:13px;cursor:pointer">' + evEsc(m.model_name) + '</label>'
-          + '<input type="number" min="1" value="' + (found ? found.quantity : 1) + '" style="width:60px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;font-family:var(--font-m);font-size:12px" data-qty-for="efv-' + evEscAttr(m.id) + '">'
-          + '</div>';
-      }).join('')
-    + '</div>';
-}
-
-function evBuildPosWidget(ev) {
-  var existing = ev ? (EV_EVENT_POS[ev.id] || []) : [];
-
-  if (!EV_POS_ITEMS.length) return '<p style="font-size:12px;color:var(--ink-faint);font-family:var(--font-b)">No POS items found.</p>';
-
-  // Group by category
-  var byCategory = {};
-  EV_POS_ITEMS.forEach(function(item) {
-    var cat = item.category || 'Other';
-    if (!byCategory[cat]) byCategory[cat] = [];
-    byCategory[cat].push(item);
-  });
-
-  var html = '';
-  Object.keys(byCategory).sort().forEach(function(cat) {
-    html += '<div style="margin-bottom:8px"><div style="font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:4px">' + evEsc(cat) + '</div>';
-    byCategory[cat].forEach(function(item) {
-      var found = existing.find(function(p){ return p.pos_item_id === item.id; });
-      html += '<div style="display:grid;grid-template-columns:24px 1fr 70px 80px;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">'
-        + '<input type="checkbox" id="efp-' + item.id + '" data-pos-id="' + item.id + '" data-pos-name="' + evEscAttr(item.name) + '" data-default-cost="' + (item.default_unit_cost || 0) + '"'
-        + (found ? ' checked' : '')
-        + ' style="width:15px;height:15px;cursor:pointer">'
-        + '<label for="efp-' + item.id + '" style="font-family:var(--font-b);font-size:12px;cursor:pointer">' + evEsc(item.name) + '</label>'
-        + '<input type="number" min="0" value="' + (found ? found.quantity : 1) + '" placeholder="Qty" style="padding:3px 5px;border:1px solid var(--border);border-radius:3px;font-family:var(--font-m);font-size:12px" data-qty-for="efp-' + item.id + '">'
-        + '<input type="number" min="0" step="0.01" value="' + (found ? found.unit_cost : (item.default_unit_cost || 0)) + '" placeholder="£/unit" style="padding:3px 5px;border:1px solid var(--border);border-radius:3px;font-family:var(--font-m);font-size:12px" data-cost-for="efp-' + item.id + '">'
-        + '</div>';
+function evFormCollectStep(step) {
+  // Collect current step's field values into EV_FORM_DATA
+  if (step === 1) {
+    EV_FORM_DATA.title         = (document.getElementById('ef-title')    || {}).value || '';
+    EV_FORM_DATA.brand_id      = (document.getElementById('ef-brand')    || {}).value || '';
+    EV_FORM_DATA.site_id       = (document.getElementById('ef-site')     || {}).value || '';
+    EV_FORM_DATA.event_type_id = (document.getElementById('ef-type')     || {}).value || '';
+  } else if (step === 2) {
+    EV_FORM_DATA.start_date       = (document.getElementById('ef-start-date')    || {}).value || '';
+    EV_FORM_DATA.end_date         = (document.getElementById('ef-end-date')      || {}).value || '';
+    EV_FORM_DATA.start_time       = (document.getElementById('ef-start-time')    || {}).value || '';
+    EV_FORM_DATA.end_time         = (document.getElementById('ef-end-time')      || {}).value || '';
+    EV_FORM_DATA.location         = (document.getElementById('ef-location')      || {}).value || '';
+    EV_FORM_DATA.location_address = (document.getElementById('ef-location-addr') || {}).value || '';
+    EV_FORM_DATA.contact_name     = (document.getElementById('ef-contact-name')  || {}).value || '';
+    EV_FORM_DATA.contact_email    = (document.getElementById('ef-contact-email') || {}).value || '';
+    EV_FORM_DATA.contact_phone    = (document.getElementById('ef-contact-phone') || {}).value || '';
+  } else if (step === 3) {
+    EV_FORM_DATA.planned_budget   = (document.getElementById('ef-planned-budget')    || {}).value || '';
+    EV_FORM_DATA.actual_spend     = (document.getElementById('ef-actual-spend')      || {}).value || '';
+    EV_FORM_DATA.coop_funded      = !!(document.getElementById('ef-coop') || {}).checked;
+    EV_FORM_DATA.coop_amount      = (document.getElementById('ef-coop-amount')       || {}).value || '';
+    EV_FORM_DATA.expected_footfall= (document.getElementById('ef-expected-footfall') || {}).value || '';
+    EV_FORM_DATA.actual_footfall  = (document.getElementById('ef-actual-footfall')   || {}).value || '';
+    EV_FORM_DATA.staff_required   = (document.getElementById('ef-staff-required')    || {}).value || '';
+    EV_FORM_DATA.vehicle_notes    = (document.getElementById('ef-vehicle-notes')     || {}).value || '';
+    // Collect vehicle checkboxes
+    EV_FORM_DATA._vehicles = [];
+    document.querySelectorAll('#ef-vehicles-list input[type=checkbox]:checked').forEach(function(cb) {
+      var qtyInput = document.querySelector('[data-qty-for="' + cb.id + '"]');
+      EV_FORM_DATA._vehicles.push({ model_name: cb.getAttribute('data-model'), brand_id: EV_FORM_DATA.brand_id, quantity: parseInt(qtyInput ? qtyInput.value : 1) || 1 });
     });
-    html += '</div>';
+  } else if (step === 4) {
+    EV_FORM_DATA.notes = (document.getElementById('ef-notes') || {}).value || '';
+    // Collect POS checkboxes
+    EV_FORM_DATA._pos = [];
+    document.querySelectorAll('#ef-pos-wrap input[type=checkbox]:checked').forEach(function(cb) {
+      var posId   = cb.getAttribute('data-pos-id');
+      var posName = cb.getAttribute('data-pos-name');
+      var qtyInput  = document.querySelector('[data-qty-for="efp-' + posId + '"]');
+      var costInput = document.querySelector('[data-cost-for="efp-' + posId + '"]');
+      var qty  = parseInt(qtyInput   ? qtyInput.value   : 1) || 1;
+      var cost = parseFloat(costInput ? costInput.value : 0) || 0;
+      EV_FORM_DATA._pos.push({ pos_item_id: posId, pos_item_name: posName, quantity: qty, unit_cost: cost, total_cost: Math.round(qty * cost * 100) / 100 });
+    });
+  }
+}
+
+function evFormValidateStep(step) {
+  if (step === 1) {
+    if (!EV_FORM_DATA.title.trim())      { evFormError('Please enter an event title.'); return false; }
+    if (!EV_FORM_DATA.brand_id)          { evFormError('Please select a brand.'); return false; }
+    if (!EV_FORM_DATA.site_id)           { evFormError('Please select a site.'); return false; }
+    if (!EV_FORM_DATA.event_type_id)     { evFormError('Please select an event type.'); return false; }
+  }
+  if (step === 2) {
+    if (!EV_FORM_DATA.start_date)        { evFormError('Please set a start date.'); return false; }
+  }
+  return true;
+}
+
+function evFormError(msg) {
+  var el = document.getElementById('ef-error');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+function evFormClearError() {
+  var el = document.getElementById('ef-error');
+  if (el) { el.textContent = ''; el.style.display = 'none'; }
+}
+
+function evFormNext() {
+  evFormCollectStep(EV_FORM_STEP);
+  if (!evFormValidateStep(EV_FORM_STEP)) return;
+  evFormClearError();
+  EV_FORM_STEP++;
+  evRenderFormModal();
+}
+
+function evFormBack() {
+  evFormCollectStep(EV_FORM_STEP);
+  evFormClearError();
+  EV_FORM_STEP--;
+  evRenderFormModal();
+}
+
+function evRenderFormModal() {
+  var isEdit = !!EV_EDITING_ID;
+  var isLeadership = CB_TEAM[CB_CURRENT_USER] && CB_TEAM[CB_CURRENT_USER].is_leadership;
+  var brandColor = EV_FORM_DATA.brand_id ? (BRAND_COLORS[EV_FORM_DATA.brand_id] || '#1A2E4A') : '#1A2E4A';
+  var brandName  = EV_FORM_DATA.brand_id ? (BRAND_DISPLAY[EV_FORM_DATA.brand_id] || EV_FORM_DATA.brand_id) : '';
+
+  var steps = ['Event', 'Dates & Location', 'Budget & Vehicles', 'POS & Notes'];
+
+  // Step indicator
+  var stepHtml = '<div class="efm-steps">';
+  steps.forEach(function(s, i) {
+    var n = i + 1;
+    var cls = n < EV_FORM_STEP ? 'efm-step efm-step--done' : (n === EV_FORM_STEP ? 'efm-step efm-step--active' : 'efm-step');
+    stepHtml += '<div class="' + cls + '">'
+      + '<div class="efm-step-num">' + (n < EV_FORM_STEP ? '✓' : n) + '</div>'
+      + '<div class="efm-step-label">' + s + '</div>'
+      + '</div>';
+    if (i < steps.length - 1) stepHtml += '<div class="efm-step-line' + (n < EV_FORM_STEP ? ' efm-step-line--done' : '') + '"></div>';
   });
+  stepHtml += '</div>';
+
+  // Body per step
+  var body = '';
+  if (EV_FORM_STEP === 1) body = evFormStep1();
+  if (EV_FORM_STEP === 2) body = evFormStep2();
+  if (EV_FORM_STEP === 3) body = evFormStep3();
+  if (EV_FORM_STEP === 4) body = evFormStep4();
+
+  // Footer buttons
+  var footer = '<div class="efm-footer">';
+  footer += '<button class="btn" onclick="evCloseForm()">Cancel</button>';
+  footer += '<div style="display:flex;gap:8px;margin-left:auto;align-items:center">';
+  if (EV_FORM_STEP > 1) footer += '<button class="btn" onclick="evFormBack()">← Back</button>';
+  if (EV_FORM_STEP < 4) {
+    footer += '<button class="btn btn-accent" onclick="evFormNext()">Continue →</button>';
+  } else {
+    footer += '<button class="btn" onclick="evSave(false)" id="ef-save-draft-btn">Save as Draft</button>';
+    if (isLeadership) footer += '<button class="btn" style="background:var(--swansway);color:#fff;border-color:var(--swansway)" onclick="evSave(true)" id="ef-save-confirm-btn">Save &amp; Confirm</button>';
+  }
+  footer += '</div></div>';
+
+  var html = '<div class="ev-modal-overlay" id="ev-modal-overlay" onclick="if(event.target===this)evCloseForm()">'
+    + '<div class="efm-modal">'
+    + '<div class="efm-header" style="background:' + brandColor + '">'
+    + '<div>'
+    + '<div class="efm-header-title">' + (isEdit ? 'Edit Event' : 'New Event') + (brandName ? ' — ' + brandName : '') + '</div>'
+    + '<div class="efm-header-sub">' + steps[EV_FORM_STEP - 1] + '</div>'
+    + '</div>'
+    + '<button class="ev-modal-close" style="color:rgba(255,255,255,0.7)" onclick="evCloseForm()">×</button>'
+    + '</div>'
+    + stepHtml
+    + '<div class="efm-body" id="efm-body">'
+    + '<div id="ef-error" style="display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:4px;padding:8px 12px;font-family:var(--font-b);font-size:12px;color:#DC2626;margin-bottom:14px"></div>'
+    + body
+    + '</div>'
+    + footer
+    + '</div></div>';
+
+  document.getElementById('ev-modal-root').innerHTML = html;
+}
+
+/* ── STEP 1: Event basics ── */
+function evFormStep1() {
+  var sites = EV_FORM_DATA.brand_id
+    ? SB_SITES.filter(function(s){ return s.brand_id === EV_FORM_DATA.brand_id; })
+    : [];
+
+  var html = '';
+
+  // Title — large, prominent
+  html += '<div class="efm-field efm-field--title">'
+    + '<label class="efm-label" for="ef-title">Event title</label>'
+    + '<input class="efm-input efm-input--large" id="ef-title" type="text" placeholder="e.g. Land Rover Discovery Launch Weekend" autocomplete="off" value="' + evEscAttr(EV_FORM_DATA.title) + '">'
+    + '</div>';
+
+  // Brand — visual brand selector grid
+  html += '<div class="efm-field">'
+    + '<label class="efm-label">Brand</label>'
+    + '<div class="efm-brand-grid" id="ef-brand-grid">';
+  Object.keys(BRAND_COLORS).forEach(function(b) {
+    var selected = (EV_FORM_DATA.brand_id === b);
+    var color = BRAND_COLORS[b];
+    html += '<button type="button" class="efm-brand-btn' + (selected ? ' efm-brand-btn--selected' : '') + '" '
+      + 'style="' + (selected ? 'border-color:' + color + ';box-shadow:0 0 0 3px ' + color + '33' : '') + '" '
+      + 'onclick="efSelectBrand(\'' + b + '\')" data-brand="' + b + '">'
+      + '<span class="efm-brand-dot" style="background:' + color + '"></span>'
+      + BRAND_DISPLAY[b]
+      + '</button>';
+  });
+  html += '</div></div>';
+
+  // Site — shown only once brand is selected, filtered
+  html += '<div class="efm-field" id="ef-site-wrap" style="' + (EV_FORM_DATA.brand_id ? '' : 'display:none') + '">'
+    + '<label class="efm-label" for="ef-site">Site</label>'
+    + '<div class="efm-site-grid" id="ef-site-grid">';
+  if (sites.length) {
+    sites.forEach(function(s) {
+      var sel = EV_FORM_DATA.site_id === s.site_id;
+      var color = BRAND_COLORS[s.brand_id] || '#374151';
+      html += '<button type="button" class="efm-site-btn' + (sel ? ' efm-site-btn--selected' : '') + '" '
+        + 'style="' + (sel ? 'border-color:' + color + ';background:' + color + '0D' : '') + '" '
+        + 'onclick="efSelectSite(\'' + s.site_id + '\')" data-site="' + s.site_id + '">'
+        + s.site_name
+        + '</button>';
+    });
+  }
+  html += '</div></div>';
+
+  // Event type — coloured pill selector
+  html += '<div class="efm-field">'
+    + '<label class="efm-label">Event type</label>'
+    + '<div class="efm-type-row" id="ef-type-row">';
+  EV_TYPES.forEach(function(t) {
+    var sel = EV_FORM_DATA.event_type_id === t.id;
+    html += '<button type="button" class="efm-type-btn' + (sel ? ' efm-type-btn--selected' : '') + '" '
+      + 'style="' + (sel ? 'background:' + t.color + ';color:#fff;border-color:' + t.color : 'border-color:' + t.color + ';color:' + t.color) + '" '
+      + 'onclick="efSelectType(\'' + t.id + '\')" data-type="' + t.id + '">'
+      + t.name
+      + '</button>';
+  });
+  html += '</div></div>';
+
+  // Hidden inputs to hold selections (read by collect)
+  html += '<input type="hidden" id="ef-brand" value="' + evEscAttr(EV_FORM_DATA.brand_id) + '">';
+  html += '<input type="hidden" id="ef-site"  value="' + evEscAttr(EV_FORM_DATA.site_id)  + '">';
+  html += '<input type="hidden" id="ef-type"  value="' + evEscAttr(EV_FORM_DATA.event_type_id) + '">';
 
   return html;
 }
 
-function evFormBrandChange() {
-  var brandId = document.getElementById('ef-brand').value;
-  // Repopulate site dropdown
-  var siteSel = document.getElementById('ef-site');
-  if (siteSel) {
-    var sites = brandId ? SB_SITES.filter(function(s){ return s.brand_id === brandId; }) : SB_SITES;
-    siteSel.innerHTML = '<option value="">Select site</option>'
-      + sites.map(function(s) { return '<option value="' + s.site_id + '">' + s.site_name + '</option>'; }).join('');
+function efSelectBrand(brandId) {
+  EV_FORM_DATA.brand_id = brandId;
+  EV_FORM_DATA.site_id  = ''; // reset site when brand changes
+  // Update brand button styles
+  document.querySelectorAll('.efm-brand-btn').forEach(function(btn) {
+    var b = btn.getAttribute('data-brand');
+    var color = BRAND_COLORS[b];
+    if (b === brandId) {
+      btn.classList.add('efm-brand-btn--selected');
+      btn.style.borderColor = color;
+      btn.style.boxShadow   = '0 0 0 3px ' + color + '33';
+    } else {
+      btn.classList.remove('efm-brand-btn--selected');
+      btn.style.borderColor = '';
+      btn.style.boxShadow   = '';
+    }
+  });
+  document.getElementById('ef-brand').value = brandId;
+  // Rebuild site grid
+  var siteWrap = document.getElementById('ef-site-wrap');
+  var siteGrid = document.getElementById('ef-site-grid');
+  if (!siteWrap || !siteGrid) return;
+  var sites = SB_SITES.filter(function(s){ return s.brand_id === brandId; });
+  var color = BRAND_COLORS[brandId] || '#374151';
+  siteGrid.innerHTML = sites.map(function(s) {
+    return '<button type="button" class="efm-site-btn" '
+      + 'onclick="efSelectSite(\'' + s.site_id + '\')" data-site="' + s.site_id + '">'
+      + s.site_name + '</button>';
+  }).join('');
+  siteWrap.style.display = '';
+  document.getElementById('ef-site').value = '';
+}
+
+function efSelectSite(siteId) {
+  EV_FORM_DATA.site_id = siteId;
+  var color = EV_FORM_DATA.brand_id ? (BRAND_COLORS[EV_FORM_DATA.brand_id] || '#374151') : '#374151';
+  document.querySelectorAll('.efm-site-btn').forEach(function(btn) {
+    if (btn.getAttribute('data-site') === siteId) {
+      btn.classList.add('efm-site-btn--selected');
+      btn.style.borderColor = color;
+      btn.style.background  = color + '0D';
+    } else {
+      btn.classList.remove('efm-site-btn--selected');
+      btn.style.borderColor = '';
+      btn.style.background  = '';
+    }
+  });
+  document.getElementById('ef-site').value = siteId;
+}
+
+function efSelectType(typeId) {
+  EV_FORM_DATA.event_type_id = typeId;
+  var type = EV_TYPES.find(function(t){ return t.id === typeId; });
+  var color = type ? type.color : '#6B7280';
+  document.querySelectorAll('.efm-type-btn').forEach(function(btn) {
+    if (btn.getAttribute('data-type') === typeId) {
+      btn.classList.add('efm-type-btn--selected');
+      btn.style.background   = color;
+      btn.style.color        = '#fff';
+      btn.style.borderColor  = color;
+    } else {
+      btn.classList.remove('efm-type-btn--selected');
+      var t2 = EV_TYPES.find(function(t){ return t.id === btn.getAttribute('data-type'); });
+      var c2 = t2 ? t2.color : '#6B7280';
+      btn.style.background  = '';
+      btn.style.color       = c2;
+      btn.style.borderColor = c2;
+    }
+  });
+  document.getElementById('ef-type').value = typeId;
+}
+
+/* ── STEP 2: Dates & Location & Contact ── */
+function evFormStep2() {
+  var html = '';
+
+  html += '<div class="efm-section-label">Dates &amp; Times</div>';
+  html += '<div class="efm-grid-2">';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-start-date">Start date</label><input class="efm-input" id="ef-start-date" type="date" value="' + evEscAttr(EV_FORM_DATA.start_date) + '"></div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-start-time">Start time <span style="font-weight:400;opacity:.6">(optional)</span></label><input class="efm-input" id="ef-start-time" type="time" value="' + evEscAttr(EV_FORM_DATA.start_time) + '"></div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-end-date">End date <span style="font-weight:400;opacity:.6">(optional)</span></label><input class="efm-input" id="ef-end-date" type="date" value="' + evEscAttr(EV_FORM_DATA.end_date) + '"></div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-end-time">End time <span style="font-weight:400;opacity:.6">(optional)</span></label><input class="efm-input" id="ef-end-time" type="time" value="' + evEscAttr(EV_FORM_DATA.end_time) + '"></div>';
+  html += '</div>';
+
+  html += '<div class="efm-divider"></div>';
+  html += '<div class="efm-section-label">Location</div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-location">Venue name</label><input class="efm-input" id="ef-location" type="text" placeholder="e.g. NEC Birmingham, Showroom forecourt" value="' + evEscAttr(EV_FORM_DATA.location) + '"></div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-location-addr">Address <span style="font-weight:400;opacity:.6">(optional)</span></label><textarea class="efm-input efm-textarea" id="ef-location-addr" rows="2" placeholder="Full address">' + evEsc(EV_FORM_DATA.location_address) + '</textarea></div>';
+
+  html += '<div class="efm-divider"></div>';
+  html += '<div class="efm-section-label">Contact <span style="font-weight:400;opacity:.6">(optional)</span></div>';
+  html += '<div class="efm-grid-3">';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-contact-name">Name</label><input class="efm-input" id="ef-contact-name" type="text" value="' + evEscAttr(EV_FORM_DATA.contact_name) + '"></div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-contact-email">Email</label><input class="efm-input" id="ef-contact-email" type="email" value="' + evEscAttr(EV_FORM_DATA.contact_email) + '"></div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-contact-phone">Phone</label><input class="efm-input" id="ef-contact-phone" type="tel" value="' + evEscAttr(EV_FORM_DATA.contact_phone) + '"></div>';
+  html += '</div>';
+
+  return html;
+}
+
+/* ── STEP 3: Budget & Vehicles ── */
+function evFormStep3() {
+  var html = '';
+  var brandId = EV_FORM_DATA.brand_id;
+  var existingVehicles = EV_FORM_DATA._vehicles || (EV_EDITING_ID ? (EV_VEHICLES[EV_EDITING_ID] || []) : []);
+
+  html += '<div class="efm-section-label">Budget</div>';
+  html += '<div class="efm-grid-2">';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-planned-budget">Planned budget</label><div class="efm-input-prefix"><span>£</span><input class="efm-input" id="ef-planned-budget" type="number" min="0" placeholder="0" value="' + evEscAttr(String(EV_FORM_DATA.planned_budget)) + '"></div></div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-actual-spend">Actual spend</label><div class="efm-input-prefix"><span>£</span><input class="efm-input" id="ef-actual-spend" type="number" min="0" placeholder="0" value="' + evEscAttr(String(EV_FORM_DATA.actual_spend)) + '"></div></div>';
+  html += '</div>';
+
+  html += '<div class="efm-field">'
+    + '<label class="efm-toggle-row" for="ef-coop">'
+    + '<input type="checkbox" id="ef-coop"' + (EV_FORM_DATA.coop_funded ? ' checked' : '') + ' onchange="document.getElementById(\'ef-coop-row\').style.display=this.checked?\'\':\' none\'">'
+    + '<span class="efm-toggle-label">Co-op funded by manufacturer</span>'
+    + '</label>'
+    + '</div>';
+  html += '<div id="ef-coop-row" style="' + (EV_FORM_DATA.coop_funded ? '' : 'display:none') + '">'
+    + '<div class="efm-field"><label class="efm-label" for="ef-coop-amount">Co-op amount</label><div class="efm-input-prefix"><span>£</span><input class="efm-input" id="ef-coop-amount" type="number" min="0" placeholder="0" value="' + evEscAttr(String(EV_FORM_DATA.coop_amount)) + '"></div></div>'
+    + '</div>';
+
+  html += '<div class="efm-divider"></div>';
+  html += '<div class="efm-section-label">Attendance</div>';
+  html += '<div class="efm-grid-3">';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-expected-footfall">Expected footfall</label><input class="efm-input" id="ef-expected-footfall" type="number" min="0" placeholder="e.g. 200" value="' + evEscAttr(String(EV_FORM_DATA.expected_footfall)) + '"></div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-actual-footfall">Actual footfall</label><input class="efm-input" id="ef-actual-footfall" type="number" min="0" placeholder="After event" value="' + evEscAttr(String(EV_FORM_DATA.actual_footfall)) + '"></div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-staff-required">Staff required</label><input class="efm-input" id="ef-staff-required" type="number" min="0" placeholder="e.g. 4" value="' + evEscAttr(String(EV_FORM_DATA.staff_required)) + '"></div>';
+  html += '</div>';
+
+  html += '<div class="efm-divider"></div>';
+  html += '<div class="efm-section-label">Vehicles on display</div>';
+
+  if (brandId === 'motormatch') {
+    html += '<div class="efm-field"><label class="efm-label" for="ef-vehicle-notes">Vehicle notes <span style="font-weight:400;opacity:.6">(free text for Motor Match)</span></label>'
+      + '<textarea class="efm-input efm-textarea" id="ef-vehicle-notes" rows="3" placeholder="List the vehicles being displayed...">' + evEsc(EV_FORM_DATA.vehicle_notes) + '</textarea></div>';
+  } else {
+    var models = EV_VM[brandId] || [];
+    if (!models.length) {
+      html += '<p style="font-family:var(--font-b);font-size:13px;color:var(--ink-faint)">No vehicle models found for this brand.</p>';
+    } else {
+      html += '<div class="efm-vehicles-grid" id="ef-vehicles-list">';
+      models.forEach(function(m) {
+        var found = existingVehicles.find(function(v){ return v.model_name === m.model_name; });
+        var checked = !!found;
+        html += '<label class="efm-vehicle-card' + (checked ? ' efm-vehicle-card--checked' : '') + '">'
+          + '<input type="checkbox" id="efv-' + evEscAttr(m.id) + '" data-model="' + evEscAttr(m.model_name) + '" data-brand="' + evEscAttr(brandId) + '"' + (checked ? ' checked' : '') + ' onchange="efVehicleToggle(this)">'
+          + '<div class="efm-vehicle-name">' + evEsc(m.model_name) + '</div>'
+          + '<div class="efm-vehicle-qty" style="' + (checked ? '' : 'display:none') + '" id="efv-qty-' + evEscAttr(m.id) + '">'
+          + '<input type="number" min="1" value="' + (found ? found.quantity : 1) + '" style="width:56px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;font-family:var(--font-m);font-size:12px;text-align:center" data-qty-for="efv-' + evEscAttr(m.id) + '">'
+          + '</div>'
+          + '</label>';
+      });
+      html += '</div>';
+    }
   }
-  // Repopulate vehicles
-  var vwrap = document.getElementById('ef-vehicles-wrap');
-  if (vwrap) vwrap.innerHTML = evBuildVehiclesWidget(brandId, null);
-  // Show/hide vehicle notes field for Motor Match
-  var vehicleNotesRow = document.getElementById('ef-vehicle-notes');
-  // Already handled by rebuild
+
+  return html;
 }
 
-/* ── Form helpers ── */
-function evField(labelText, inputHtml) {
-  return '<div style="margin-bottom:14px">' + evLabel(labelText) + inputHtml + '</div>';
-}
-function evLabel(text) {
-  return '<div style="font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);margin-bottom:4px">' + text + '</div>';
+function efVehicleToggle(cb) {
+  var card = cb.closest('.efm-vehicle-card');
+  var qtyWrap = document.getElementById('efv-qty-' + cb.id.replace('efv-',''));
+  if (cb.checked) {
+    if (card) card.classList.add('efm-vehicle-card--checked');
+    if (qtyWrap) qtyWrap.style.display = '';
+  } else {
+    if (card) card.classList.remove('efm-vehicle-card--checked');
+    if (qtyWrap) qtyWrap.style.display = 'none';
+  }
 }
 
-/* ══ SAVE EVENT ══ */
+/* ── STEP 4: POS Items & Notes ── */
+function evFormStep4() {
+  var existing = EV_FORM_DATA._pos || (EV_EDITING_ID ? (EV_EVENT_POS[EV_EDITING_ID] || []) : []);
+  var html = '';
+
+  html += '<div class="efm-section-label">POS Items</div>';
+
+  if (!EV_POS_ITEMS.length) {
+    html += '<p style="font-family:var(--font-b);font-size:13px;color:var(--ink-faint)">No POS items configured. Add them in Admin → POS Items.</p>';
+  } else {
+    var byCategory = {};
+    EV_POS_ITEMS.forEach(function(item) {
+      var cat = item.category || 'Other';
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(item);
+    });
+    html += '<div id="ef-pos-wrap">';
+    Object.keys(byCategory).sort().forEach(function(cat) {
+      html += '<div class="efm-pos-category">'
+        + '<div class="efm-pos-cat-label">' + evEsc(cat) + '</div>';
+      byCategory[cat].forEach(function(item) {
+        var found = existing.find(function(p){ return p.pos_item_id === item.id; });
+        html += '<div class="efm-pos-row">'
+          + '<label class="efm-pos-check-label">'
+          + '<input type="checkbox" id="efp-' + item.id + '" data-pos-id="' + item.id + '" data-pos-name="' + evEscAttr(item.name) + '"' + (found ? ' checked' : '') + ' onchange="efPosToggle(this)">'
+          + '<span>' + evEsc(item.name) + '</span>'
+          + '</label>'
+          + '<div class="efm-pos-inputs" id="efp-inputs-' + item.id + '" style="' + (found ? '' : 'display:none') + '">'
+          + '<input type="number" min="0" value="' + (found ? found.quantity : 1) + '" placeholder="Qty" class="efm-input efm-input--sm" data-qty-for="efp-' + item.id + '">'
+          + '<div class="efm-input-prefix efm-input-prefix--sm"><span>£</span><input type="number" min="0" step="0.01" value="' + (found ? found.unit_cost : (item.default_unit_cost || 0)) + '" placeholder="unit" class="efm-input efm-input--sm" data-cost-for="efp-' + item.id + '"></div>'
+          + '</div>'
+          + '</div>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '<div class="efm-divider"></div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-notes">Notes <span style="font-weight:400;opacity:.6">(optional)</span></label>'
+    + '<textarea class="efm-input efm-textarea" id="ef-notes" rows="4" placeholder="Any additional notes about this event...">' + evEsc(EV_FORM_DATA.notes) + '</textarea></div>';
+
+  return html;
+}
+
+function efPosToggle(cb) {
+  var wrap = document.getElementById('efp-inputs-' + cb.getAttribute('data-pos-id'));
+  if (wrap) wrap.style.display = cb.checked ? '' : 'none';
+}
+
+/* ══ SAVE ══ */
 async function evSave(saveAsConfirmed) {
-  var titleEl = document.getElementById('ef-title');
-  if (!titleEl || !titleEl.value.trim()) { alert('Please enter an event title.'); return; }
+  evFormCollectStep(EV_FORM_STEP);
 
-  var siteId  = document.getElementById('ef-site').value;
-  var brandId = document.getElementById('ef-brand').value;
-  var typeId  = document.getElementById('ef-type').value;
-  var startDate = document.getElementById('ef-start-date').value;
-
-  if (!siteId)    { alert('Please select a site.');       return; }
-  if (!brandId)   { alert('Please select a brand.');      return; }
-  if (!typeId)    { alert('Please select an event type.'); return; }
-  if (!startDate) { alert('Please set a start date.');    return; }
-
-  var coopChecked = document.getElementById('ef-coop').checked;
+  var d = EV_FORM_DATA;
+  if (!d.title.trim())      { evFormError('Please enter an event title.'); return; }
+  if (!d.brand_id)          { evFormError('Please select a brand.'); return; }
+  if (!d.site_id)           { evFormError('Please select a site.'); return; }
+  if (!d.event_type_id)     { evFormError('Please select an event type.'); return; }
+  if (!d.start_date)        { evFormError('Please set a start date.'); return; }
 
   var payload = {
-    title:           titleEl.value.trim(),
-    site_id:         siteId,
-    brand_id:        brandId,
-    event_type_id:   typeId,
-    status:          saveAsConfirmed ? 'confirmed' : (EV_EDITING_ID ? undefined : 'draft'),
-    start_date:      startDate,
-    end_date:        document.getElementById('ef-end-date').value   || null,
-    start_time:      document.getElementById('ef-start-time').value || null,
-    end_time:        document.getElementById('ef-end-time').value   || null,
-    location:        document.getElementById('ef-location').value.trim()      || null,
-    location_address:document.getElementById('ef-location-addr').value.trim() || null,
-    contact_name:    document.getElementById('ef-contact-name').value.trim()  || null,
-    contact_email:   document.getElementById('ef-contact-email').value.trim() || null,
-    contact_phone:   document.getElementById('ef-contact-phone').value.trim() || null,
-    planned_budget:  parseFloat(document.getElementById('ef-planned-budget').value) || null,
-    actual_spend:    parseFloat(document.getElementById('ef-actual-spend').value)   || null,
-    coop_funded:     coopChecked,
-    coop_amount:     coopChecked ? (parseFloat(document.getElementById('ef-coop-amount').value) || null) : null,
-    expected_footfall: parseInt(document.getElementById('ef-expected-footfall').value) || null,
-    staff_required:    parseInt(document.getElementById('ef-staff-required').value)   || null,
-    notes:           document.getElementById('ef-notes').value.trim() || null,
-    updated_at:      new Date().toISOString()
+    title:            d.title.trim(),
+    site_id:          d.site_id,
+    brand_id:         d.brand_id,
+    event_type_id:    d.event_type_id,
+    status:           saveAsConfirmed ? 'confirmed' : (EV_EDITING_ID ? undefined : 'draft'),
+    start_date:       d.start_date,
+    end_date:         d.end_date         || null,
+    start_time:       d.start_time       || null,
+    end_time:         d.end_time         || null,
+    location:         d.location.trim()  || null,
+    location_address: d.location_address.trim() || null,
+    contact_name:     d.contact_name.trim()  || null,
+    contact_email:    d.contact_email.trim() || null,
+    contact_phone:    d.contact_phone.trim() || null,
+    planned_budget:   parseFloat(d.planned_budget) || null,
+    actual_spend:     parseFloat(d.actual_spend)   || null,
+    coop_funded:      !!d.coop_funded,
+    coop_amount:      d.coop_funded ? (parseFloat(d.coop_amount) || null) : null,
+    expected_footfall:parseInt(d.expected_footfall) || null,
+    actual_footfall:  parseInt(d.actual_footfall)   || null,
+    staff_required:   parseInt(d.staff_required)    || null,
+    vehicle_notes:    d.brand_id === 'motormatch' ? (d.vehicle_notes.trim() || null) : null,
+    notes:            d.notes.trim() || null,
+    updated_at:       new Date().toISOString()
   };
+  Object.keys(payload).forEach(function(k){ if (payload[k] === undefined) delete payload[k]; });
 
-  // Vehicle notes (motor match)
-  var vnEl = document.getElementById('ef-vehicle-notes');
-  if (vnEl) payload.vehicle_notes = vnEl.value.trim() || null;
-
-  // Remove undefined keys
-  Object.keys(payload).forEach(function(k) { if (payload[k] === undefined) delete payload[k]; });
-
-  var saveBtns = document.querySelectorAll('#ev-form-panel .btn');
-  saveBtns.forEach(function(b){ b.disabled = true; });
+  var saveBtns = document.querySelectorAll('#efm-body ~ .efm-footer .btn');
+  saveBtns.forEach(function(b){ b.disabled = true; b.style.opacity = '0.6'; });
 
   try {
     var eventId;
     var oldEvent = EV_EDITING_ID ? EV_EVENTS.find(function(e){ return e.id === EV_EDITING_ID; }) : null;
 
     if (EV_EDITING_ID) {
-      // PATCH
       var r = await fetch(SUPA + '/events?id=eq.' + EV_EDITING_ID, {
         method: 'PATCH',
         headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
@@ -878,7 +1023,6 @@ async function evSave(saveAsConfirmed) {
       if (!r.ok) throw new Error(await r.text());
       eventId = EV_EDITING_ID;
     } else {
-      // POST
       payload.created_by = CB_CURRENT_USER;
       payload.created_at = new Date().toISOString();
       var r = await fetch(SUPA + '/events', {
@@ -891,52 +1035,38 @@ async function evSave(saveAsConfirmed) {
       eventId = newRows[0].id;
     }
 
-    // Save vehicles
-    await evSaveVehicles(eventId, brandId);
-
-    // Save POS
+    await evSaveVehicles(eventId, d.brand_id);
     await evSavePOS(eventId);
 
-    // Budget integration
+    // Budget delta
     if (EV_EDITING_ID && oldEvent) {
-      // Delta planned
-      var oldPlanned = oldEvent.planned_budget || 0;
-      var newPlanned = payload.planned_budget  || 0;
-      var oldActual  = oldEvent.actual_spend   || 0;
-      var newActual  = payload.actual_spend    || 0;
-      if (newPlanned !== oldPlanned) await evUpdateBudget({ site_id: siteId, start_date: startDate }, newPlanned - oldPlanned, null);
-      if (newActual  !== oldActual)  await evUpdateBudget({ site_id: siteId, start_date: startDate }, null, newActual - oldActual);
+      var oldP = oldEvent.planned_budget || 0, newP = parseFloat(d.planned_budget) || 0;
+      var oldA = oldEvent.actual_spend   || 0, newA = parseFloat(d.actual_spend)   || 0;
+      if (newP !== oldP) await evUpdateBudget({ site_id: d.site_id, start_date: d.start_date }, newP - oldP, null);
+      if (newA !== oldA) await evUpdateBudget({ site_id: d.site_id, start_date: d.start_date }, null, newA - oldA);
     } else {
-      // New event
-      if (payload.planned_budget) await evUpdateBudget({ site_id: siteId, start_date: startDate }, payload.planned_budget, null);
-      if (payload.actual_spend)   await evUpdateBudget({ site_id: siteId, start_date: startDate }, null, payload.actual_spend);
+      if (payload.planned_budget) await evUpdateBudget({ site_id: d.site_id, start_date: d.start_date }, payload.planned_budget, null);
+      if (payload.actual_spend)   await evUpdateBudget({ site_id: d.site_id, start_date: d.start_date }, null, payload.actual_spend);
     }
 
     evCloseForm();
     await evLoadEvents();
     evRender();
-    showToast('Event saved ✓', 'success');
+    showToast('Event saved \u2713', 'success');
   } catch(e) {
-    showToast('Error: ' + e.message, 'error');
-    saveBtns.forEach(function(b){ b.disabled = false; });
+    evFormError('Save failed: ' + e.message);
+    saveBtns.forEach(function(b){ b.disabled = false; b.style.opacity = ''; });
   }
 }
 
 async function evSaveVehicles(eventId, brandId) {
-  // Delete existing then re-insert
   await fetch(SUPA + '/event_vehicles?event_id=eq.' + eventId, { method: 'DELETE', headers: getAuthHeaders() });
-
-  if (brandId === 'motormatch') return; // Free text — no rows
-
+  if (brandId === 'motormatch') return;
   var rows = [];
-  var checkboxes = document.querySelectorAll('#ef-vehicles-list input[type=checkbox]:checked');
-  checkboxes.forEach(function(cb) {
-    var modelName = cb.getAttribute('data-model');
-    var qtyInput  = document.querySelector('[data-qty-for="' + cb.id + '"]');
-    var qty       = parseInt(qtyInput ? qtyInput.value : 1) || 1;
-    rows.push({ event_id: eventId, brand_id: brandId, model_name: modelName, quantity: qty });
+  document.querySelectorAll('#ef-vehicles-list input[type=checkbox]:checked').forEach(function(cb) {
+    var qtyInput = document.querySelector('[data-qty-for="' + cb.id + '"]');
+    rows.push({ event_id: eventId, brand_id: brandId, model_name: cb.getAttribute('data-model'), quantity: parseInt(qtyInput ? qtyInput.value : 1) || 1 });
   });
-
   if (!rows.length) return;
   await fetch(SUPA + '/event_vehicles', {
     method: 'POST',
@@ -946,34 +1076,97 @@ async function evSaveVehicles(eventId, brandId) {
 }
 
 async function evSavePOS(eventId) {
-  // Delete existing then re-insert
   await fetch(SUPA + '/event_pos?event_id=eq.' + eventId, { method: 'DELETE', headers: getAuthHeaders() });
-
-  var rows = [];
-  var checkboxes = document.querySelectorAll('#ef-pos-wrap input[type=checkbox]:checked');
-  checkboxes.forEach(function(cb) {
-    var posId   = cb.getAttribute('data-pos-id');
-    var posName = cb.getAttribute('data-pos-name');
-    var qtyInput  = document.querySelector('[data-qty-for="efp-' + posId + '"]');
-    var costInput = document.querySelector('[data-cost-for="efp-' + posId + '"]');
-    var qty   = parseInt(qtyInput   ? qtyInput.value   : 1)   || 1;
-    var cost  = parseFloat(costInput ? costInput.value : 0)    || 0;
-    rows.push({
-      event_id:      eventId,
-      pos_item_id:   posId,
-      pos_item_name: posName,
-      quantity:      qty,
-      unit_cost:     cost,
-      total_cost:    Math.round(qty * cost * 100) / 100
-    });
-  });
-
+  var rows = EV_FORM_DATA._pos || [];
   if (!rows.length) return;
+  var withId = rows.map(function(r){ return Object.assign({ event_id: eventId }, r); });
   await fetch(SUPA + '/event_pos', {
     method: 'POST',
     headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
-    body: JSON.stringify(rows)
+    body: JSON.stringify(withId)
   });
+}
+
+/* ══ STYLES ══ */
+function evInjectStyles() {
+  if (document.getElementById('ev-form-styles')) return;
+  var style = document.createElement('style');
+  style.id = 'ev-form-styles';
+  style.textContent = [
+    /* Modal shell */
+    '.efm-modal{background:var(--white);border-radius:12px;width:100%;max-width:640px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,0.28);overflow:hidden}',
+    '.efm-header{padding:22px 28px 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-shrink:0}',
+    '.efm-header-title{font-family:var(--font-d);font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.02em}',
+    '.efm-header-sub{font-family:var(--font-b);font-size:13px;color:rgba(255,255,255,0.7);margin-top:3px}',
+    /* Step indicator */
+    '.efm-steps{display:flex;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--white)}',
+    '.efm-step{display:flex;align-items:center;gap:8px;flex-shrink:0}',
+    '.efm-step-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:11px;font-weight:700;background:var(--surface);color:var(--ink-faint);border:1.5px solid var(--border);transition:all .2s}',
+    '.efm-step--active .efm-step-num{background:var(--swansway);color:#fff;border-color:var(--swansway)}',
+    '.efm-step--done .efm-step-num{background:#059669;color:#fff;border-color:#059669}',
+    '.efm-step-label{font-family:var(--font-b);font-size:12px;font-weight:600;color:var(--ink-faint);white-space:nowrap}',
+    '.efm-step--active .efm-step-label{color:var(--ink)}',
+    '.efm-step--done .efm-step-label{color:#059669}',
+    '.efm-step-line{flex:1;height:1px;background:var(--border);margin:0 10px}',
+    '.efm-step-line--done{background:#059669}',
+    /* Body */
+    '.efm-body{flex:1;overflow-y:auto;padding:24px 28px}',
+    '.efm-section-label{font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-faint);margin-bottom:12px}',
+    '.efm-divider{border:none;border-top:1px solid var(--border);margin:20px 0}',
+    /* Fields */
+    '.efm-field{margin-bottom:16px}',
+    '.efm-label{display:block;font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-soft);margin-bottom:6px}',
+    '.efm-input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:14px;color:var(--ink);background:var(--white);outline:none;box-sizing:border-box;transition:border-color .15s}',
+    '.efm-input:focus{border-color:var(--swansway)}',
+    '.efm-input--large{font-size:16px;padding:11px 14px;font-weight:600}',
+    '.efm-input--sm{width:72px;padding:5px 8px;font-size:12px}',
+    '.efm-textarea{resize:vertical;min-height:72px}',
+    '.efm-input-prefix{position:relative;display:flex;align-items:center}',
+    '.efm-input-prefix span{position:absolute;left:12px;font-family:var(--font-m);font-size:13px;color:var(--ink-soft);pointer-events:none}',
+    '.efm-input-prefix .efm-input{padding-left:24px}',
+    '.efm-input-prefix--sm span{left:8px;font-size:12px}',
+    '.efm-input-prefix--sm .efm-input{padding-left:20px}',
+    /* Grids */
+    '.efm-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}',
+    '.efm-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}',
+    /* Brand grid */
+    '.efm-brand-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}',
+    '.efm-brand-btn{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--border);border-radius:6px;background:var(--white);font-family:var(--font-b);font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;text-align:left;transition:all .15s;width:100%}',
+    '.efm-brand-btn:hover{background:var(--surface)}',
+    '.efm-brand-btn--selected{font-weight:700}',
+    '.efm-brand-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}',
+    /* Site grid */
+    '.efm-site-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px}',
+    '.efm-site-btn{padding:7px 12px;border:1.5px solid var(--border);border-radius:5px;background:var(--white);font-family:var(--font-b);font-size:12px;font-weight:500;color:var(--ink);cursor:pointer;text-align:left;transition:all .15s;width:100%}',
+    '.efm-site-btn:hover{background:var(--surface)}',
+    '.efm-site-btn--selected{font-weight:700}',
+    /* Type pills */
+    '.efm-type-row{display:flex;flex-wrap:wrap;gap:8px}',
+    '.efm-type-btn{padding:7px 16px;border:1.5px solid;border-radius:100px;font-family:var(--font-b);font-size:13px;font-weight:600;cursor:pointer;background:transparent;transition:all .2s}',
+    /* Toggle */
+    '.efm-toggle-row{display:flex;align-items:center;gap:10px;cursor:pointer}',
+    '.efm-toggle-row input{width:16px;height:16px;cursor:pointer;accent-color:var(--swansway)}',
+    '.efm-toggle-label{font-family:var(--font-b);font-size:13px;color:var(--ink)}',
+    /* Vehicle grid */
+    '.efm-vehicles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}',
+    '.efm-vehicle-card{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;transition:all .15s}',
+    '.efm-vehicle-card input[type=checkbox]{display:none}',
+    '.efm-vehicle-card:hover{background:var(--surface)}',
+    '.efm-vehicle-card--checked{border-color:var(--swansway);background:#EFF6FF}',
+    '.efm-vehicle-name{font-family:var(--font-b);font-size:13px;font-weight:600;color:var(--ink)}',
+    '.efm-vehicle-qty{margin-top:4px}',
+    /* POS */
+    '.efm-pos-category{margin-bottom:14px}',
+    '.efm-pos-cat-label{font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-faint);margin-bottom:6px}',
+    '.efm-pos-row{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:4px;transition:background .1s}',
+    '.efm-pos-row:hover{background:var(--surface)}',
+    '.efm-pos-check-label{display:flex;align-items:center;gap:8px;cursor:pointer;font-family:var(--font-b);font-size:13px;color:var(--ink);flex:1}',
+    '.efm-pos-check-label input{accent-color:var(--swansway);width:15px;height:15px;cursor:pointer}',
+    '.efm-pos-inputs{display:flex;align-items:center;gap:6px}',
+    /* Footer */
+    '.efm-footer{padding:16px 28px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--surface);flex-shrink:0}'
+  ].join('');
+  document.head.appendChild(style);
 }
 
 /* ══ UTILS ══ */
