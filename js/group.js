@@ -1,3 +1,4 @@
+var EV_EVENTS_BUDGET = [];
 // Swansway Marketing Portal — Group page functions // v8-cache-bust
 
 var _channelChartInst = null;
