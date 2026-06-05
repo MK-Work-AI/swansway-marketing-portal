@@ -626,7 +626,7 @@ function renderBudgetTracker() {
           ? '<span style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="btToggle(\'' + accordId + '\')">'
             + '<span class="bt-chevron" id="chv-' + accordId + '">&#9654;</span>' + btEsc(site.site_name) + '</span>'
             + (sitePlan > 0 ? '<div style="font-size:10px;font-family:var(--font-m);color:var(--ink-faint);margin-top:2px;margin-left:16px">&pound;'
-              + identifiedTotal.toLocaleString() + ' of &pound;' + sitePlan.toLocaleString() + ' identified</div>' : '')
+              + identifiedTotal.toLocaleString() + ' committed of &pound;' + sitePlan.toLocaleString() + ' annual allocation</div>' : '')
           : btEsc(site.site_name);
 
         rows += '<tr style="background:var(--white);border-bottom:' + (hasItems ? 'none' : '1px solid var(--border)') + '">'
@@ -714,12 +714,12 @@ function renderBudgetTracker() {
             acHtml += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:16px">';
             acHtml += '<div style="flex:1">';
             acHtml += '<div style="display:flex;justify-content:space-between;margin-bottom:5px;font-family:var(--font-m);font-size:10px;color:var(--ink-soft)">'
-              + '<span>Identified spend</span><span style="font-weight:700;color:' + barColor + '">' + pct + '% of allocation</span></div>';
+              + '<span>Committed vs annual allocation</span><span style="font-weight:700;color:' + barColor + '">' + pct + '% committed</span></div>';
             acHtml += '<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">'
               + '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:3px"></div></div>';
             acHtml += '</div>';
             acHtml += '<div style="font-family:var(--font-m);font-size:11px;color:var(--ink-faint);text-align:right;flex-shrink:0">'
-              + (sitePlan - identifiedTotal > 0 ? '&pound;' + (sitePlan - identifiedTotal).toLocaleString() + ' unallocated' : 'Fully allocated')
+              + (sitePlan - identifiedTotal > 0 ? '&pound;' + (sitePlan - identifiedTotal).toLocaleString() + ' uncommitted' : 'Fully allocated')
               + '</div></div>';
           }
 
