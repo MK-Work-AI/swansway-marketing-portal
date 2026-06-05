@@ -1,4 +1,34 @@
 var EV_EVENTS_BUDGET = [];
+
+// Parse site_id field from a campaign — may be a JSON array or single string
+function btParseCampSiteIds(c) {
+  if (!c.site_id) return [];
+  try {
+    var p = JSON.parse(c.site_id);
+    if (Array.isArray(p)) return p;
+  } catch(e) {}
+  return [c.site_id];
+}
+
+// Check if campaign applies to a given site
+function btCampMatchesSite(c, siteId, brandId) {
+  if (c.scope === 'sites' || c.scope === 'site') {
+    var sids = btParseCampSiteIds(c);
+    return sids.indexOf(siteId) !== -1;
+  }
+  // brand scope — applies to all sites of that brand
+  return c.brand_id === brandId;
+}
+
+// Get display-ready site names from a campaign's site_id field
+function btCampSiteNames(c) {
+  var sids = btParseCampSiteIds(c);
+  if (!sids.length) return 'Brand-wide';
+  return sids.map(function(sid) {
+    var s = (typeof HUB_SITES !== 'undefined') ? HUB_SITES.find(function(x){ return x.site_id === sid; }) : null;
+    return s ? s.site_name : sid;
+  }).join(', ');
+}
 // Swansway Marketing Portal — Group page functions // v8-cache-bust
 
 var _channelChartInst = null;
@@ -571,8 +601,7 @@ function renderBudgetTracker() {
         var siteCamps = BUILT_IN_CAMPAIGNS.filter(function(c) {
           if (!c.start_date) return false;
           if (new Date(c.start_date + 'T00:00:00').getFullYear() !== planYear) return false;
-          if (c.scope === 'site') return c.site_id === site.site_id;
-          return c.brand_id === site.brand_id;
+          return btCampMatchesSite(c, site.site_id, site.brand_id);
         });
         var siteEvs = EV_EVENTS_BUDGET.filter(function(ev) {
           if (ev.site_id !== site.site_id || !ev.start_date) return false;
@@ -621,7 +650,7 @@ function renderBudgetTracker() {
                 + '<td style="font-weight:600">' + btEsc(c.name) + '</td>'
                 + '<td><span style="font-size:10px;padding:2px 7px;border-radius:3px;background:#F3F4F6;font-family:var(--font-m)">' + btEsc(c.type || '&mdash;') + '</span></td>'
                 + '<td style="color:var(--ink-soft);white-space:nowrap">' + dateStr + '</td>'
-                + '<td style="color:var(--ink-faint);font-size:11px">' + (c.scope === 'site' ? 'Site' : 'Brand-wide') + '</td>'
+                + '<td style="color:var(--ink-faint);font-size:11px">' + (c.scope === 'sites' || c.scope === 'site' ? btCampSiteNames(c) : 'Brand-wide') + '</td>'
                 + '<td style="text-align:right;font-family:var(--font-m)">' + (c.budget ? '&pound;' + Number(c.budget).toLocaleString() : '&mdash;') + '</td>'
                 + '<td><span style="font-size:10px;padding:2px 7px;border-radius:3px;color:#fff;background:' + sc + ';font-family:var(--font-m)">' + btEsc(c.status || 'planned') + '</span></td>'
                 + '</tr>';
@@ -963,16 +992,22 @@ function calShowCampaign(cJson) {
     makeCell('Budget', c.budget ? '£' + Number(c.budget).toLocaleString() : null),
     makeCell('Dates', dates),
     makeCell('Objective', c.objective),
-    makeCell('Scope', c.scope === 'site' ? 'Site-level' : 'Brand-wide'),
+    makeCell('Scope', (c.scope === 'sites' || c.scope === 'site') ? 'Site-specific' : 'Brand-wide'),
   ];
+  // Sites — show parsed site names for site-scoped campaigns
+  if (c.scope === 'sites' || c.scope === 'site') {
+    var campSiteNames = btCampSiteNames(c);
+    if (campSiteNames && campSiteNames !== 'Brand-wide') {
+      cellDefs.push(makeCell('Sites', campSiteNames, true));
+    }
+  } else if (c.locations && c.locations.length) {
+    cellDefs.push(makeCell('Locations', c.locations.slice(0,5).join(', ') + (c.locations.length > 5 ? ' +' + (c.locations.length-5) : ''), true));
+  }
   if (c.channels && c.channels.length) {
     cellDefs.push(makeCell('Channels', c.channels.slice(0,6).join(', ') + (c.channels.length > 6 ? ' +' + (c.channels.length-6) + ' more' : ''), true));
   }
   if (c.allocation && c.allocation.length) {
     cellDefs.push(makeCell('Top channel', c.allocation[0].n + ' · ' + c.allocation[0].p + '%'));
-  }
-  if (c.locations && c.locations.length) {
-    cellDefs.push(makeCell('Sites', c.locations.slice(0,5).join(', ') + (c.locations.length > 5 ? ' +' + (c.locations.length-5) : ''), true));
   }
   cellDefs.forEach(function(cl) { if (cl) grid.appendChild(cl); });
 
