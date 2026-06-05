@@ -144,15 +144,17 @@ function bbSelectBrand(id) {
 
 
 function bbSetScope(scope, el) {
+  // scope: 'brand' = all sites, 'sites' = custom multi-select subset
   BB.scope = scope;
   document.querySelectorAll('.bb-scope-btn').forEach(function(b){b.classList.remove('bb-selected');});
   if(el) el.classList.add('bb-selected');
   var sitePicker = document.getElementById('bb-site-picker');
-  if (scope === 'site') {
+  if (scope === 'sites') {
     if (sitePicker) { sitePicker.style.display = 'block'; bbRenderSiteGrid(); }
   } else {
     if (sitePicker) sitePicker.style.display = 'none';
-    BB.site_id = '';
+    BB.site_id = ''; BB.site_ids = []; BB.site_splits = {};
+    bbHideSplitStep();
   }
   bbUpdateBrief();
   bbLoadHeadroom();
@@ -174,21 +176,141 @@ function bbRenderSiteGrid() {
     }
     el.innerHTML = '<div style="font-size:12px;color:var(--ink-soft);padding:8px">No sites for ' + (BB.brand ? BB.brand.name : 'this brand') + '</div>'; return;
   }
+  // Multi-select hint
   el.innerHTML = '';
+  var hint = document.createElement('div');
+  hint.style.cssText = 'font-size:11px;color:var(--ink-faint);font-family:var(--font-b);margin-bottom:8px';
+  hint.textContent = 'Select all sites this campaign will run across';
+  el.parentNode.insertBefore(hint, el);
+  var brandColor = (typeof BRAND_COLORS !== 'undefined' && brandId) ? (BRAND_COLORS[brandId] || '#1A2E4A') : '#1A2E4A';
   sites.forEach(function(s) {
+    var isSel = BB.site_ids.indexOf(s.site_id) !== -1;
     var d = document.createElement('div');
-    d.className = 'bb-site-tile' + (BB.site_id === s.site_id ? ' bb-selected' : '');
+    d.className = 'bb-site-tile' + (isSel ? ' bb-selected' : '');
     d.dataset.sid = s.site_id;
-    d.innerHTML = '<div style="font-weight:600">' + s.site_name + '</div>' + (s.town ? '<div style="font-size:10px;color:var(--ink-faint)">' + s.town + '</div>' : '');
-    d.onclick = function(){
-      BB.site_id = this.dataset.sid;
-      document.querySelectorAll('#bb-site-grid .bb-site-tile').forEach(function(t){t.classList.remove('bb-selected');});
-      this.classList.add('bb-selected');
+    if (isSel) { d.style.borderColor = brandColor; d.style.background = brandColor + '12'; }
+    d.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center">'
+      + '<div style="font-weight:600">' + s.site_name + '</div>'
+      + '<div class="bb-site-check" style="' + (isSel ? '' : 'display:none') + ';color:' + brandColor + ';font-weight:700;font-size:14px">✓</div>'
+      + '</div>'
+      + (s.town ? '<div style="font-size:10px;color:var(--ink-faint)">' + s.town + '</div>' : '');
+    d.onclick = function() {
+      var sid = this.dataset.sid;
+      var idx = BB.site_ids.indexOf(sid);
+      var bc  = (typeof BRAND_COLORS !== 'undefined') ? (BRAND_COLORS[BB.brand.id] || '#1A2E4A') : '#1A2E4A';
+      if (idx === -1) {
+        BB.site_ids.push(sid);
+        this.classList.add('bb-selected');
+        this.style.borderColor = bc;
+        this.style.background  = bc + '12';
+        this.querySelector('.bb-site-check').style.display = '';
+      } else {
+        BB.site_ids.splice(idx, 1);
+        this.classList.remove('bb-selected');
+        this.style.borderColor = '';
+        this.style.background  = '';
+        this.querySelector('.bb-site-check').style.display = 'none';
+      }
+      BB.site_id = BB.site_ids[0] || '';
+      BB.site_splits = {}; // reset splits when selection changes
+      bbUpdateSiteCount();
       bbUpdateBrief();
       bbLoadHeadroom();
     };
     el.appendChild(d);
   });
+}
+
+function bbUpdateSiteCount() {
+  var el = document.getElementById('bb-site-count');
+  if (!el) return;
+  var n = BB.site_ids.length;
+  el.textContent = n === 0 ? 'No sites selected' : n + ' site' + (n > 1 ? 's' : '') + ' selected';
+  el.style.color = n === 0 ? 'var(--ink-faint)' : 'var(--ink)';
+}
+
+function bbHideSplitStep() {
+  var el = document.getElementById('bb-split-step');
+  if (el) el.style.display = 'none';
+}
+
+function bbShowSplitStep() {
+  // Only show if multiple sites selected
+  if (!BB.site_ids || BB.site_ids.length < 2) { bbHideSplitStep(); return; }
+  var el = document.getElementById('bb-split-step');
+  if (!el) return;
+  el.style.display = 'block';
+  bbRenderSplitStep();
+}
+
+function bbRenderSplitStep() {
+  var el = document.getElementById('bb-split-body');
+  if (!el || !BB.brand) return;
+  var total = BB.budget || 0;
+  var n = BB.site_ids.length;
+  // Pre-fill splits: use existing BB.site_splits or equal division
+  if (!Object.keys(BB.site_splits).length) {
+    var equal = Math.round(total / n);
+    BB.site_ids.forEach(function(sid, i) {
+      BB.site_splits[sid] = (i === n - 1) ? (total - equal * (n - 1)) : equal; // last gets remainder
+    });
+  }
+  var html = '<div style="font-size:12px;font-family:var(--font-b);color:var(--ink-soft);margin-bottom:14px">'
+    + 'Total campaign budget: <strong>£' + total.toLocaleString() + '</strong>. Set how much each site gets.</div>';
+  html += '<div id="bb-split-rows">';
+  BB.site_ids.forEach(function(sid) {
+    var site = (typeof HUB_SITES !== 'undefined') ? HUB_SITES.find(function(s){ return s.site_id === sid; }) : null;
+    var name = site ? site.site_name : sid;
+    var val = BB.site_splits[sid] || 0;
+    html += '<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="flex:1;font-family:var(--font-b);font-size:13px;font-weight:600">' + name + '</div>'
+      + '<div style="display:flex;align-items:center;gap:4px">'
+      + '<span style="font-family:var(--font-m);font-size:13px;color:var(--ink-soft)">£</span>'
+      + '<input type="number" min="0" step="100" value="' + val + '" data-sid="' + sid + '" '
+      + 'style="width:100px;padding:6px 8px;border:1.5px solid var(--border);border-radius:5px;font-family:var(--font-m);font-size:13px;text-align:right" '
+      + 'oninput="bbSplitInput(this)">'
+      + '</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  // Running total
+  var sum = BB.site_ids.reduce(function(s,sid){ return s + (BB.site_splits[sid] || 0); }, 0);
+  var diff = total - sum;
+  var totalColor = Math.abs(diff) < 1 ? '#059669' : '#DC2626';
+  html += '<div id="bb-split-total" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:2px solid var(--border)">'
+    + '<div style="font-family:var(--font-m);font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-soft)">Total allocated</div>'
+    + '<div style="font-family:var(--font-m);font-size:14px;font-weight:700;color:' + totalColor + '">£' + sum.toLocaleString()
+    + (Math.abs(diff) > 0 ? ' <span style="font-size:11px;font-weight:400">(' + (diff > 0 ? '£' + diff.toLocaleString() + ' unallocated' : '£' + Math.abs(diff).toLocaleString() + ' over') + ')</span>' : ' ✓')
+    + '</div>'
+    + '</div>';
+  html += '<div style="margin-top:10px"><button class="bb-btn-secondary" onclick="bbSplitEqual()">Split equally</button></div>';
+  el.innerHTML = html;
+}
+
+function bbSplitInput(input) {
+  var sid = input.getAttribute('data-sid');
+  BB.site_splits[sid] = parseInt(input.value) || 0;
+  // Recompute total display only
+  var total = BB.budget || 0;
+  var sum = BB.site_ids.reduce(function(s,id){ return s + (BB.site_splits[id] || 0); }, 0);
+  var diff = total - sum;
+  var totalColor = Math.abs(diff) < 1 ? '#059669' : '#DC2626';
+  var el = document.getElementById('bb-split-total');
+  if (el) el.innerHTML = '<div style="font-family:var(--font-m);font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-soft)">Total allocated</div>'
+    + '<div style="font-family:var(--font-m);font-size:14px;font-weight:700;color:' + totalColor + '">£' + sum.toLocaleString()
+    + (Math.abs(diff) > 0 ? ' <span style="font-size:11px;font-weight:400">(' + (diff > 0 ? '£' + diff.toLocaleString() + ' unallocated' : '£' + Math.abs(diff).toLocaleString() + ' over') + ')</span>' : ' ✓')
+    + '</div>';
+}
+
+function bbSplitEqual() {
+  BB.site_splits = {};
+  var n = BB.site_ids.length;
+  var total = BB.budget || 0;
+  var equal = Math.round(total / n);
+  BB.site_ids.forEach(function(sid, i) {
+    BB.site_splits[sid] = (i === n - 1) ? (total - equal * (n - 1)) : equal;
+  });
+  bbRenderSplitStep();
 }
 
 
@@ -251,9 +373,10 @@ async function bbLoadHeadroom() {
   if (!BB.start_date || !BB.end_date || !brandId) { barEl.style.display = 'none'; return; }
   var months = bbGetCampaignMonths(BB.start_date, BB.end_date);
   if (!months.length) { barEl.style.display = 'none'; return; }
-  var siteId = BB.scope === 'site' ? BB.site_id : null;
-  var sites = siteId ? [siteId]
+  var sites = (BB.scope === 'sites' && BB.site_ids && BB.site_ids.length)
+    ? BB.site_ids
     : HUB_SITES.filter(function(s){ return s.brand_id === brandId; }).map(function(s){ return s.site_id; });
+  var siteId = BB.scope === 'sites' ? (BB.site_ids[0] || null) : null;
   if (!sites.length) { barEl.style.display = 'none'; return; }
   var totalPlanned = 0;
   sites.forEach(function(sid) {
@@ -276,8 +399,10 @@ async function bbLoadHeadroom() {
   } catch(e) {}
   var available = totalPlanned - committed;
   var pct = totalPlanned > 0 ? Math.round(committed / totalPlanned * 100) : 0;
-  var scopeLabel = siteId
-    ? ((HUB_SITES.find(function(s){ return s.site_id === siteId; }) || {}).site_name || siteId)
+  var scopeLabel = (BB.scope === 'sites' && BB.site_ids && BB.site_ids.length)
+    ? (BB.site_ids.length === 1
+        ? ((HUB_SITES.find(function(s){ return s.site_id === BB.site_ids[0]; }) || {}).site_name || BB.site_ids[0])
+        : BB.site_ids.length + ' sites')
     : (BB.brand.name + ' (all sites)');
   barEl.style.display = 'block';
   var avColour = available >= BB.budget ? '#059669' : '#DC2626';
@@ -1588,6 +1713,7 @@ async function bbSaveBrief() {
     end_date:          BB.end_date || null,
     site_id:           BB.site_id || null,
     scope:             BB.scope || 'brand',
+    sites:             BB.site_ids && BB.site_ids.length > 1 ? BB.site_ids : null,
   };
 
   // If we already have a saved brief ID, update it — don't create a duplicate
@@ -1676,15 +1802,19 @@ async function bbSaveBudgetCommitments(briefId, briefTitle) {
     await fetch(base + '/brief_budget_commitments?brief_id=eq.' + briefId, { method:'DELETE', headers:hdrs });
     var months = bbGetCampaignMonths(BB.start_date, BB.end_date);
     if (!months.length || !BB.brand) return;
-    var sites = BB.scope === 'site' && BB.site_id
-      ? [BB.site_id]
+    var sites = (BB.scope === 'sites' && BB.site_ids && BB.site_ids.length)
+      ? BB.site_ids
       : HUB_SITES.filter(function(s){ return s.brand_id === BB.brand.id; }).map(function(s){ return s.site_id; });
     if (!sites.length) return;
-    var perMPS = Math.round(BB.budget / months.length / sites.length);
     var rows = [];
     sites.forEach(function(sid) {
+      // Use per-site split if available, otherwise divide equally
+      var siteBudget = (BB.site_splits && BB.site_splits[sid] != null)
+        ? BB.site_splits[sid]
+        : Math.round(BB.budget / sites.length);
+      var perMonth = Math.round(siteBudget / months.length);
       months.forEach(function(m) {
-        rows.push({ brief_id:briefId, site_id:sid, brand_id:BB.brand.id, month_index:m.index, year:PLAN_YEAR, amount:perMPS, brief_title:briefTitle });
+        rows.push({ brief_id:briefId, site_id:sid, brand_id:BB.brand.id, month_index:m.index, year:PLAN_YEAR, amount:perMonth, brief_title:briefTitle });
       });
     });
     await fetch(base + '/brief_budget_commitments', { method:'POST', headers:hdrs, body:JSON.stringify(rows) });
@@ -2257,7 +2387,7 @@ function bbNewBrief() {
   BB.brand = null; BB.ctype = null; BB.budget = 5000; BB.duration = null;
   BB.audiences = []; BB.channels = []; BB.objective = null;
   BB.proposition = ''; BB.start_date = ''; BB.end_date = '';
-  BB.site_id = ''; BB.scope = 'brand'; BB.step = 1;
+  BB.site_id = ''; BB.site_ids = []; BB.site_splits = {}; BB.scope = 'brand'; BB.step = 1;
   BB._calCampaignId = null;
   window._lastSavedBriefId = null;
   window._lastSavedBriefTitle = null;
@@ -2435,6 +2565,24 @@ async function bbLoadBrief(id) {
     BB.end_date   = brief.end_date   || '';
     BB.site_id    = brief.site_id    || '';
     BB.scope      = brief.scope      || 'brand';
+    BB.site_ids   = []; BB.site_splits = {};
+    // Restore multi-site selection from commitments (async, best-effort)
+    if (BB.scope === 'sites' && window._lastSavedBriefId) {
+      fetch('https://humitzrleflxnlnodpde.supabase.co/rest/v1/brief_budget_commitments?brief_id=eq.' + window._lastSavedBriefId + '&select=site_id,month_index,amount', { headers: getAuthHeaders() })
+        .then(function(r){ return r.json(); })
+        .then(function(rows) {
+          var seen = {}, splits = {};
+          rows.forEach(function(r){
+            if (!seen[r.site_id]) { seen[r.site_id] = true; BB.site_ids.push(r.site_id); splits[r.site_id] = 0; }
+            splits[r.site_id] += (r.amount || 0);
+          });
+          BB.site_splits = splits;
+          BB.site_id = BB.site_ids[0] || '';
+          if (BB.scope === 'sites' && BB.site_ids.length > 0) bbRenderSiteGrid();
+        }).catch(function(){});
+    } else if (BB.site_id) {
+      BB.site_ids = [BB.site_id];
+    }
     var _sdInp = document.getElementById('bb-start-date');
     var _edInp = document.getElementById('bb-end-date');
     if (_sdInp) _sdInp.value = BB.start_date;
