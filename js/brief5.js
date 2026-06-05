@@ -738,9 +738,13 @@ function bbUpdateBrief() {
     setVal('bbp-dates', '—', true);
   }
   // Site
-  if (BB.scope === 'site' && BB.site_id) {
-    var siteObj = (typeof HUB_SITES !== 'undefined') ? HUB_SITES.find(function(s){ return s.site_id === BB.site_id; }) : null;
-    setVal('bbp-site', siteObj ? siteObj.site_name : BB.site_id, false);
+  if (BB.scope === 'sites' && BB.site_ids && BB.site_ids.length) {
+    if (BB.site_ids.length === 1) {
+      var siteObj = (typeof HUB_SITES !== 'undefined') ? HUB_SITES.find(function(s){ return s.site_id === BB.site_ids[0]; }) : null;
+      setVal('bbp-site', siteObj ? siteObj.site_name : BB.site_ids[0], false);
+    } else {
+      setVal('bbp-site', BB.site_ids.length + ' sites selected', false);
+    }
   } else {
     setVal('bbp-site', BB.brand ? BB.brand.name + ' (all sites)' : 'All sites', !BB.brand);
   }
