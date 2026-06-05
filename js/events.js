@@ -444,11 +444,6 @@ async function evChangeStatus(id, newStatus) {
 async function evDelete(id) {
   if (!confirm('Delete this event? This cannot be undone.')) return;
   try {
-    var ev = EV_EVENTS.find(function(e){ return e.id === id; });
-    if (ev) {
-      if (ev.planned_budget) await evUpdateBudget(ev, -ev.planned_budget, null);
-      if (ev.actual_spend)   await evUpdateBudget(ev, null, -ev.actual_spend);
-    }
     var r = await fetch(SUPA + '/events?id=eq.' + id, { method: 'DELETE', headers: getAuthHeaders() });
     if (!r.ok) throw new Error(await r.text());
     evCloseDetail();
@@ -458,28 +453,7 @@ async function evDelete(id) {
   } catch(e) { showToast('Error: ' + e.message, 'error'); }
 }
 
-/* ══ BUDGET INTEGRATION ══ */
-async function evUpdateBudget(ev, plannedDelta, actualDelta) {
-  if (!ev.site_id || !ev.start_date) return;
-  var month = new Date(ev.start_date + 'T00:00:00').getMonth();
-  var mN = 'm' + month;
-  try {
-    var r = await fetch(SUPA + '/site_budgets?site_id=eq.' + encodeURIComponent(ev.site_id) + '&limit=1', { headers: getAuthHeaders() });
-    if (!r.ok) return;
-    var rows = await r.json();
-    if (!rows || !rows.length) return;
-    var row = rows[0];
-    var patch = {};
-    if (plannedDelta !== null && plannedDelta !== undefined) patch[mN + '_planned'] = (row[mN + '_planned'] || 0) + plannedDelta;
-    if (actualDelta  !== null && actualDelta  !== undefined) patch[mN + '_actual']  = (row[mN + '_actual']  || 0) + actualDelta;
-    if (!Object.keys(patch).length) return;
-    await fetch(SUPA + '/site_budgets?site_id=eq.' + encodeURIComponent(ev.site_id), {
-      method: 'PATCH',
-      headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
-      body: JSON.stringify(patch)
-    });
-  } catch(e) { console.warn('evUpdateBudget:', e); }
-}
+/* Budget integration: events are aggregated on the budget page directly from the events table — site_budgets is not mutated by events */
 
 /* ══════════════════════════════════════════════════════════
    STEPPED MODAL FORM
@@ -1124,8 +1098,7 @@ async function evSave(saveAsConfirmed) {
         var oldP = oldEvent.planned_budget || 0, newP = parseFloat(d.planned_budget) || 0;
         var oldA = oldEvent.actual_spend   || 0, newA = parseFloat(d.actual_spend)   || 0;
         var siteId = d.site_ids[0] || oldEvent.site_id;
-        if (newP !== oldP) await evUpdateBudget({ site_id: siteId, start_date: d.start_date }, newP - oldP, null);
-        if (newA !== oldA) await evUpdateBudget({ site_id: siteId, start_date: d.start_date }, null, newA - oldA);
+        // Budget changes reflected via events table directly — no site_budgets mutation needed
       }
     } else {
       // New: create one event per site
@@ -1142,8 +1115,7 @@ async function evSave(saveAsConfirmed) {
         var eventId = newRows[0].id;
         await evSaveVehicles(eventId, d.brand_id);
         await evSavePOS(eventId);
-        if (payload.planned_budget) await evUpdateBudget({ site_id: siteId, start_date: d.start_date }, payload.planned_budget, null);
-        if (payload.actual_spend)   await evUpdateBudget({ site_id: siteId, start_date: d.start_date }, null, payload.actual_spend);
+        // Budget aggregated from events table on budget page — no site_budgets mutation
       }
     }
 
