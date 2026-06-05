@@ -1520,7 +1520,26 @@ function renderBriefsList() {
       const sd = new Date(brief.start_date+'T00:00:00'), ed = new Date(brief.end_date+'T00:00:00');
       dateStr = sd.getDate()+' '+MN[sd.getMonth()]+' – '+ed.getDate()+' '+MN[ed.getMonth()];
     }
-    const site = brief.site_id ? brief.site_id.replace(/-/g,' ').replace(/\b\w/g,l=>l.toUpperCase()) : '';
+    // Parse site_id — may be a JSON array of site IDs (multi-site) or a single ID
+    let siteLabel = '';
+    if (brief.site_id) {
+      try {
+        const sids = JSON.parse(brief.site_id);
+        if (Array.isArray(sids) && sids.length) {
+          // Map to human-readable names if HUB_SITES available
+          const names = sids.map(sid => {
+            const s = typeof HUB_SITES !== 'undefined' ? HUB_SITES.find(x => x.site_id === sid) : null;
+            return s ? s.site_name : sid.replace(/-/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+          });
+          siteLabel = names.join(', ');
+        }
+      } catch(e) {
+        // Single site_id string
+        const s = typeof HUB_SITES !== 'undefined' ? HUB_SITES.find(x => x.site_id === brief.site_id) : null;
+        siteLabel = s ? s.site_name : brief.site_id.replace(/-/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+      }
+    }
+    const site = siteLabel;
     const chips = [brief.campaign_type, brief.budget ? '£'+Number(brief.budget).toLocaleString() : '', brief.duration_label||(brief.duration_weeks?brief.duration_weeks+' wks':''), dateStr, site].filter(Boolean).map(t=>`<span style="background:var(--surface);padding:2px 7px;border-radius:4px;font-size:10px;white-space:nowrap">${t}</span>`).join('');
     return `<div class="brief-card" style="--card-color:${color}" onclick="openBriefFromPanel('${brief.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
