@@ -153,7 +153,7 @@
 <div class="page-strip">
   <div><div class="page-title">Campaign Autopsy</div><div class="page-subtitle">Post-campaign analysis and learnings</div></div>
   <div class="action-row">
-    <button class="btn btn-accent" onclick="if(typeof autopsyNew==='function')autopsyNew()">+ New autopsy</button>
+<!-- Autopsy creation coming soon -->
   </div>
 </div>
 <div id="autopsy-form" style="display:none;margin-bottom:1.5rem"></div>
@@ -166,10 +166,12 @@ window.addEventListener('load', function() {
     // Fallback - show empty state
     var el = document.getElementById('autopsy-list');
     if (el && !el.children.length) {
-      el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink-soft)">'
-        + '<div style="font-size:32px;margin-bottom:10px">🔬</div>'
-        + '<div style="font-family:var(--font-d);font-size:18px;font-weight:700;margin-bottom:6px">No autopsies yet</div>'
-        + '<div style="font-size:13px">Complete a campaign and run a post-campaign analysis.</div>'
+      el.innerHTML = '<div style="padding:60px 40px;text-align:center">'
+        + '<div style="font-size:40px;margin-bottom:16px">🔬</div>'
+        + '<div style="font-family:var(--font-d);font-size:20px;font-weight:800;color:var(--ink);margin-bottom:8px">Campaign Autopsy — Coming Soon</div>'
+        + '<div style="font-size:14px;color:var(--ink-soft);max-width:420px;margin:0 auto;line-height:1.6">'
+        + 'This section will let you run structured post-campaign reviews — capturing what worked, what didn\'t, and what to do differently next time. '
+        + 'It will be available once your first campaigns complete.</div>'
         + '</div>';
     }
   }, 1500);
