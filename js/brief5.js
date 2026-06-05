@@ -1717,7 +1717,6 @@ async function bbSaveBrief() {
     end_date:          BB.end_date || null,
     site_id:           BB.site_id || null,
     scope:             BB.scope || 'brand',
-    sites:             BB.site_ids && BB.site_ids.length > 1 ? BB.site_ids : null,
   };
 
   // If we already have a saved brief ID, update it — don't create a duplicate
