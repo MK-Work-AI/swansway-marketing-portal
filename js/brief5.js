@@ -2516,29 +2516,15 @@ async function bbDeleteBrief(id) {
   var base = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
   var hdrs = getAuthHeaders({'Content-Type':'application/json'});
   try {
-    // Delete linked campaign tasks and campaign first
-    var camps = await fetch(base+'/campaigns?brief_id=eq.'+id+'&select=id',{headers:hdrs}).then(function(r){return r.json();});
-    if (Array.isArray(camps)) {
-      for (var i = 0; i < camps.length; i++) {
-        await fetch(base+'/campaign_tasks?campaign_id=eq.'+camps[i].id, {method:'DELETE',headers:hdrs});
-        await fetch(base+'/campaigns?id=eq.'+camps[i].id, {method:'DELETE',headers:hdrs});
-      }
+    // Single delete — cascade removes campaigns + campaign_tasks automatically
+    await fetch(base+'/briefs?id=eq.'+id, {method:'DELETE', headers:hdrs});
+    // Update local caches
+    if (Array.isArray(window.BUILT_IN_CAMPAIGNS)) {
+      window.BUILT_IN_CAMPAIGNS = window.BUILT_IN_CAMPAIGNS.filter(function(x){ return x.brief_id !== id; });
     }
-    // Delete the brief
-    await SB.from('briefs').delete().eq('id', id);
-    // If this was the currently loaded brief, reset to new
     if (window._lastSavedBriefId === id) bbNewBrief();
     loadBriefs();
-    // Remove from local cache immediately
-    if (Array.isArray(window.BUILT_IN_CAMPAIGNS)) {
-      window.BUILT_IN_CAMPAIGNS = window.BUILT_IN_CAMPAIGNS.filter(function(x){
-        return !camps.some(function(c){ return c.id === x.id; });
-      });
-    }
-    // Reload and re-render calendar
-    if (typeof calLoadFromSupabase === 'function') {
-      await calLoadFromSupabase();
-    }
+    if (typeof calLoadFromSupabase === 'function') await calLoadFromSupabase();
     if (typeof renderCrossCalendar === 'function') renderCrossCalendar();
     showToast('Campaign deleted', 'success');
   } catch(e) {
