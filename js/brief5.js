@@ -35,7 +35,7 @@ function bbInit() {
 
 function bbGoStep(n) {
   if(n > BB.step && !bbCanGoTo(n)) return;
-  if (n === 3) setTimeout(bbRenderBudgetIntel, 100);
+  if (n === 3) { setTimeout(bbRenderBudgetIntel, 100); setTimeout(bbShowSplitStep, 150); }
   if (n === 5) setTimeout(bbRenderStep5Context, 100);
   // Always clear any campaign-mode display overrides
   if (window._bbCampModeActive) {
