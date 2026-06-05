@@ -608,11 +608,21 @@ function renderBudgetTracker() {
           return new Date(ev.start_date + 'T00:00:00').getFullYear() === planYear;
         });
         var identifiedCamp = siteCamps.reduce(function(sum, c) {
+          // Try exact per-site amount from brief_budget_commitments
           var bsa = (window.BRIEF_SITE_AMOUNTS && c.brief_id && window.BRIEF_SITE_AMOUNTS[c.brief_id])
             ? (window.BRIEF_SITE_AMOUNTS[c.brief_id][site.site_id] || null) : null;
           if (bsa === null && c.budget) {
             var cids = btParseCampSiteIds(c);
-            bsa = cids.length > 1 ? Math.round(c.budget / cids.length) : c.budget;
+            if (cids.length > 1) {
+              // Multi-site: divide equally across selected sites
+              bsa = Math.round(c.budget / cids.length);
+            } else if (cids.length === 0) {
+              // Brand-wide: divide equally across all brand sites
+              var brandSiteCount = HUB_SITES.filter(function(s){ return s.brand_id === site.brand_id; }).length || 1;
+              bsa = Math.round(c.budget / brandSiteCount);
+            } else {
+              bsa = c.budget;
+            }
           }
           return sum + (bsa || 0);
         }, 0);
@@ -661,7 +671,14 @@ function renderBudgetTracker() {
               // If no per-site data, estimate: total / number of sites in campaign
               if (bsa === null && c.budget) {
                 var campSiteIds = btParseCampSiteIds(c);
-                bsa = campSiteIds.length > 1 ? Math.round(c.budget / campSiteIds.length) : c.budget;
+                if (campSiteIds.length > 1) {
+                  bsa = Math.round(c.budget / campSiteIds.length);
+                } else if (campSiteIds.length === 0) {
+                  var bSiteCount = HUB_SITES.filter(function(s){ return s.brand_id === (c.brand_id || site.brand_id); }).length || 1;
+                  bsa = Math.round(c.budget / bSiteCount);
+                } else {
+                  bsa = c.budget;
+                }
               }
               // Scope label — how many sites share this campaign
               var campSiteCount = btParseCampSiteIds(c).length;
@@ -1159,7 +1176,6 @@ async function loadSiteBudgets() {
     if (typeof renderBudgetTracker === 'function') renderBudgetTracker();
     var _cvEl = document.getElementById('view-channels');
     if (_cvEl && _cvEl.classList.contains('active') && typeof renderGroupChannels === 'function') renderGroupChannels();
-    if (typeof renderBudgetTracker === 'function') renderBudgetTracker();
     // Re-render brand site budget tab if on brand.html
     var urlParams = new URLSearchParams(window.location.search);
     var activeBrandId = urlParams.get('brand');
