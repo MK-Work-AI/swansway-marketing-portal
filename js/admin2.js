@@ -147,7 +147,14 @@ async function adminInit() {
     return;
   }
 
-  var unEl = document.getElementById('user-name'); if (unEl) unEl.textContent = email.split('@')[0];
+  var unEl = document.getElementById('user-name');
+  if (unEl) {
+    var sess2 = await SB.auth.getUser();
+    var displayName = sess2.data.user.user_metadata && sess2.data.user.user_metadata.full_name
+      ? sess2.data.user.user_metadata.full_name.split(' ')[0]
+      : email.split('@')[0];
+    unEl.textContent = displayName;
+  }
   showLoading(true);
   await loadAdminCfg();
   showLoading(false);
