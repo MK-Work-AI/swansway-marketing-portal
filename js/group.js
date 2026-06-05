@@ -879,11 +879,16 @@ function calShowCampaign(cJson) {
   delBtn.onclick = async function() {
     if (!confirm('Delete this campaign and its tasks?')) return;
     try {
-      await fetch(SUPABASE_URL + '/rest/v1/campaign_tasks?campaign_id=eq.' + c.id, { method:'DELETE', headers:getAuthHeaders() });
-      await fetch(SUPABASE_URL + '/rest/v1/campaigns?id=eq.' + c.id, { method:'DELETE', headers:getAuthHeaders() });
-      if (c.brief_id) await fetch(SUPABASE_URL + '/rest/v1/briefs?id=eq.' + c.brief_id, { method:'DELETE', headers:getAuthHeaders() });
+      // Delete brief — cascade removes campaign + tasks automatically
+      if (c.brief_id) {
+        await fetch(SUPABASE_URL + '/rest/v1/briefs?id=eq.' + c.brief_id, { method:'DELETE', headers:getAuthHeaders() });
+      } else {
+        // No brief — delete campaign directly (cascade removes tasks)
+        await fetch(SUPABASE_URL + '/rest/v1/campaigns?id=eq.' + c.id, { method:'DELETE', headers:getAuthHeaders() });
+      }
       BUILT_IN_CAMPAIGNS = BUILT_IN_CAMPAIGNS.filter(function(x){ return x.id !== c.id; });
       overlay.remove();
+      await calLoadFromSupabase();
       renderCrossCalendar();
       showToast('Campaign deleted', 'success');
     } catch(e) { console.warn('delete campaign:', e); }
