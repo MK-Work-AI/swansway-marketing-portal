@@ -111,6 +111,7 @@ function bbRenderBrands() {
 function bbSelectBrand(id) {
   BB.brand = BB_BRANDS.find(b=>b.id===id);
   BB.audiences = []; BB.channels = [];
+  BB.site_ids = []; BB.site_id = ''; BB.site_splits = {}; // reset sites when brand changes
   document.querySelectorAll('.bb-brand-pill').forEach(p=>p.classList.remove('bb-selected'));
   // Use data-brand attribute instead of event.currentTarget (safer)
   var pill = document.querySelector('.bb-brand-pill[data-brand="'+id+'"]');
@@ -121,6 +122,9 @@ function bbSelectBrand(id) {
   var _dates = document.getElementById('bb-dates-section');
   if (_scope) _scope.style.display = 'block';
   if (_dates) _dates.style.display = 'block';
+  // If Specific sites picker is open, refresh it for the new brand
+  var _picker = document.getElementById('bb-site-picker');
+  if (_picker && _picker.style.display !== 'none') bbRenderSiteGrid();
   // Pre-populate channels from brand_channels table
   var brandChs = BRAND_CHANNELS_DATA[id] || [];
   if (brandChs.length) {
