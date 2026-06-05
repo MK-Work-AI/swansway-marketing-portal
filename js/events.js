@@ -3,7 +3,6 @@
    Swansway Marketing Portal v2
    ══════════════════════════════════════════════════════════ */
 
-var SUPA = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
 
 /* ── State ── */
 var EV_EVENTS       = [];
