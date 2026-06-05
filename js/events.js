@@ -18,11 +18,6 @@ var EV_YEAR         = new Date().getFullYear();
 var EV_FILTER       = { brand: '', site: '', type: '', status: '' };
 var EV_EDITING_ID   = null; // null = new, string = editing existing
 
-var BRAND_COLORS = {
-  audi:'#BB0A21', vw:'#001E50', vwcv:'#1B4F72', seat:'#E2231A',
-  cupra:'#C8920A', landrover:'#1D4E1D', jaguar:'#1B2631', honda:'#CC0000',
-  peugeot:'#1B3A6B', byd:'#0066CC', omoda:'#6B21A8', motormatch:'#374151'
-};
 
 var STATUS_COLORS = {
   draft:     '#6B7280',
