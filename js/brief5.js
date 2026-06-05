@@ -1719,17 +1719,39 @@ async function bbSaveBrief() {
     scope:             BB.scope || 'brand',
   };
 
-  // If we already have a saved brief ID, update it — don't create a duplicate
+  // Use direct fetch to avoid Supabase JS client schema cache issues
+  var _bbBase = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
+  var _bbHdrs = getAuthHeaders({'Content-Type':'application/json','Prefer':'return=representation'});
   let data, error;
-  if (window._lastSavedBriefId) {
-    record.updated_at = new Date().toISOString();
-    // Don't reset status on update — remove it so existing status is preserved
-    delete record.status;
-    const res = await SB.from('briefs').update(record).eq('id', window._lastSavedBriefId).select().single();
-    data = res.data; error = res.error;
-  } else {
-    const res = await SB.from('briefs').insert([record]).select().single();
-    data = res.data; error = res.error;
+  try {
+    var _bbResp;
+    if (window._lastSavedBriefId) {
+      record.updated_at = new Date().toISOString();
+      delete record.status;
+      _bbResp = await fetch(_bbBase + '/briefs?id=eq.' + window._lastSavedBriefId, {
+        method: 'PATCH',
+        headers: _bbHdrs,
+        body: JSON.stringify(record)
+      });
+    } else {
+      _bbResp = await fetch(_bbBase + '/briefs', {
+        method: 'POST',
+        headers: _bbHdrs,
+        body: JSON.stringify([record])
+      });
+    }
+    if (!_bbResp.ok) {
+      var _bbErr = await _bbResp.text();
+      error = { message: _bbErr };
+      data = null;
+    } else {
+      var _bbRows = await _bbResp.json();
+      data = Array.isArray(_bbRows) ? _bbRows[0] : _bbRows;
+      error = null;
+    }
+  } catch(_bbEx) {
+    error = { message: _bbEx.message };
+    data = null;
   }
   btn.disabled = false; btn.textContent = window._lastSavedBriefId ? 'Update campaign' : 'Save campaign';
 
