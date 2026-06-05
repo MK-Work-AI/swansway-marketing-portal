@@ -990,17 +990,23 @@ function bbGenerateBrief() {
 
 
 async function loadBriefCommitmentsForTracker() {
-  var anon = SUPABASE_ANON_KEY;
   var base = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
   try {
-    var rows = await fetch(base + '/brief_budget_commitments?year=eq.' + PLAN_YEAR + '&select=site_id,month_index,amount', {
+    var rows = await fetch(base + '/brief_budget_commitments?year=eq.' + PLAN_YEAR + '&select=brief_id,site_id,month_index,amount', {
       headers: getAuthHeaders()
     }).then(function(r){ return r.json(); });
     BRIEF_COMMITMENTS = {};
+    window.BRIEF_SITE_AMOUNTS = {}; // [brief_id][site_id] = total amount across months
     if (Array.isArray(rows)) {
       rows.forEach(function(r) {
+        // Aggregate for budget tracker monthly columns
         if (!BRIEF_COMMITMENTS[r.site_id]) BRIEF_COMMITMENTS[r.site_id] = {};
         BRIEF_COMMITMENTS[r.site_id][r.month_index] = (BRIEF_COMMITMENTS[r.site_id][r.month_index] || 0) + (r.amount || 0);
+        // Per-brief-per-site total for accordion
+        if (r.brief_id) {
+          if (!window.BRIEF_SITE_AMOUNTS[r.brief_id]) window.BRIEF_SITE_AMOUNTS[r.brief_id] = {};
+          window.BRIEF_SITE_AMOUNTS[r.brief_id][r.site_id] = (window.BRIEF_SITE_AMOUNTS[r.brief_id][r.site_id] || 0) + (r.amount || 0);
+        }
       });
     }
   } catch(e) { console.warn('loadBriefCommitmentsForTracker:', e); }
