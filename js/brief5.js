@@ -235,6 +235,25 @@ function bbHideSplitStep() {
   if (el) el.style.display = 'none';
 }
 
+function bbParseSiteIds(brief) {
+  // site_id field may be: null, a single ID string, or a JSON array string
+  if (!brief || !brief.site_id) return [];
+  try {
+    var parsed = JSON.parse(brief.site_id);
+    if (Array.isArray(parsed)) return parsed;
+  } catch(e) {}
+  return [brief.site_id];
+}
+
+function bbSiteNames(siteIds) {
+  if (!siteIds || !siteIds.length) return null;
+  if (typeof HUB_SITES === 'undefined') return siteIds.join(', ');
+  return siteIds.map(function(sid) {
+    var s = HUB_SITES.find(function(s){ return s.site_id === sid; });
+    return s ? s.site_name : sid;
+  }).join(', ');
+}
+
 function bbShowSplitStep() {
   // Only show if multiple sites selected
   if (!BB.site_ids || BB.site_ids.length < 2) { bbHideSplitStep(); return; }
@@ -752,12 +771,7 @@ function bbUpdateBrief() {
   }
   // Site
   if (BB.scope === 'sites' && BB.site_ids && BB.site_ids.length) {
-    if (BB.site_ids.length === 1) {
-      var siteObj = (typeof HUB_SITES !== 'undefined') ? HUB_SITES.find(function(s){ return s.site_id === BB.site_ids[0]; }) : null;
-      setVal('bbp-site', siteObj ? siteObj.site_name : BB.site_ids[0], false);
-    } else {
-      setVal('bbp-site', BB.site_ids.length + ' sites selected', false);
-    }
+    setVal('bbp-site', bbSiteNames(BB.site_ids) || (BB.site_ids.length + ' sites'), false);
   } else {
     setVal('bbp-site', BB.brand ? BB.brand.name + ' (all sites)' : 'All sites', !BB.brand);
   }
@@ -1728,7 +1742,9 @@ async function bbSaveBrief() {
     notes:             '',
     start_date:        BB.start_date || null,
     end_date:          BB.end_date || null,
-    site_id:           BB.site_id || null,
+    site_id:           (BB.scope === 'sites' && BB.site_ids && BB.site_ids.length > 1)
+                         ? JSON.stringify(BB.site_ids)
+                         : (BB.site_id || null),
     scope:             BB.scope || 'brand',
   };
 
@@ -2259,15 +2275,8 @@ function bbRenderCampaignSidebar(el, brief, camp, tasks) {
       + bbCampSidebarRow('Dates', dateStr)
       + bbCampSidebarRow('Site', (function() {
           if (brief.scope === 'sites' || brief.scope === 'site') {
-            // Derive site names from BRIEF_COMMITMENTS distinct site_ids for this brief
-            var bsids = Object.keys(BRIEF_COMMITMENTS).filter(function(sid) {
-              return Object.keys(BRIEF_COMMITMENTS[sid]).some(function(m) { return true; });
-            });
-            // Use site_id as fallback since we store first site there
-            if (brief.site_id) {
-              var sobj = (typeof HUB_SITES !== 'undefined') ? HUB_SITES.find(function(s){ return s.site_id === brief.site_id; }) : null;
-              return sobj ? sobj.site_name : brief.site_id;
-            }
+            var sids = bbParseSiteIds(brief);
+            if (sids.length) return bbSiteNames(sids);
           }
           return brand.name ? brand.name + ' (all sites)' : '\u2014';
         })())
@@ -2615,26 +2624,10 @@ async function bbLoadBrief(id) {
     // Restore dates
     BB.start_date = brief.start_date || '';
     BB.end_date   = brief.end_date   || '';
-    BB.site_id    = brief.site_id    || '';
     BB.scope      = brief.scope      || 'brand';
-    BB.site_ids   = []; BB.site_splits = {};
-    // Restore multi-site selection from commitments (async, best-effort)
-    if (BB.scope === 'sites' && window._lastSavedBriefId) {
-      fetch('https://humitzrleflxnlnodpde.supabase.co/rest/v1/brief_budget_commitments?brief_id=eq.' + window._lastSavedBriefId + '&select=site_id,month_index,amount', { headers: getAuthHeaders() })
-        .then(function(r){ return r.json(); })
-        .then(function(rows) {
-          var seen = {}, splits = {};
-          rows.forEach(function(r){
-            if (!seen[r.site_id]) { seen[r.site_id] = true; BB.site_ids.push(r.site_id); splits[r.site_id] = 0; }
-            splits[r.site_id] += (r.amount || 0);
-          });
-          BB.site_splits = splits;
-          BB.site_id = BB.site_ids[0] || '';
-          if (BB.scope === 'sites' && BB.site_ids.length > 0) bbRenderSiteGrid();
-        }).catch(function(){});
-    } else if (BB.site_id) {
-      BB.site_ids = [BB.site_id];
-    }
+    BB.site_ids   = bbParseSiteIds(brief);
+    BB.site_id    = BB.site_ids[0] || '';
+    BB.site_splits = {};
     var _sdInp = document.getElementById('bb-start-date');
     var _edInp = document.getElementById('bb-end-date');
     if (_sdInp) _sdInp.value = BB.start_date;
