@@ -1658,15 +1658,34 @@ async function loadSiteContacts() {
 
 
 async function deleteBriefFromPanel(id) {
-  if (!confirm('Delete this brief?')) return;
+  if (!confirm('Delete this campaign? This cannot be undone.')) return;
   try {
-    await fetch(SUPABASE_URL + '/rest/v1/briefs?id=eq.' + id, {
-      method: 'DELETE',
-      headers: getAuthHeaders({'Content-Type': 'application/json'})
-    });
+    var base = SUPABASE_URL + '/rest/v1';
+    var hdrs = getAuthHeaders({'Content-Type': 'application/json'});
+    // Find and delete linked campaign tasks + campaigns
+    var camps = await fetch(base + '/campaigns?brief_id=eq.' + id + '&select=id', {headers: hdrs}).then(function(r){return r.json();});
+    if (Array.isArray(camps)) {
+      for (var i = 0; i < camps.length; i++) {
+        await fetch(base + '/campaign_tasks?campaign_id=eq.' + camps[i].id, {method:'DELETE', headers:hdrs});
+        await fetch(base + '/campaigns?id=eq.' + camps[i].id, {method:'DELETE', headers:hdrs});
+      }
+      // Remove from local calendar cache
+      if (Array.isArray(window.BUILT_IN_CAMPAIGNS)) {
+        window.BUILT_IN_CAMPAIGNS = window.BUILT_IN_CAMPAIGNS.filter(function(x){
+          return !camps.some(function(c){ return c.id === x.id; });
+        });
+      }
+    }
+    // Delete the brief record
+    await fetch(base + '/briefs?id=eq.' + id, {method:'DELETE', headers:hdrs});
+    // Update panel
     SB_BRIEFS_CACHE = SB_BRIEFS_CACHE.filter(function(b) { return b.id !== id; });
     if (typeof renderBriefsList === 'function') renderBriefsList();
-  } catch(e) { console.warn('deleteBriefFromPanel error:', e); }
+    // Refresh calendar immediately
+    if (typeof calLoadFromSupabase === 'function') await calLoadFromSupabase();
+    if (typeof renderCrossCalendar === 'function') renderCrossCalendar();
+    showToast('Campaign deleted', 'success');
+  } catch(e) { console.warn('deleteBriefFromPanel error:', e); showToast('Delete error: ' + e.message, 'error'); }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
