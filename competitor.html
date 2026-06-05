@@ -164,8 +164,104 @@
   <div id="comp-scan-msg" style="font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px">Analysing competitors…</div>
   <div id="comp-scan-sub" style="font-size:12px;color:var(--ink-soft)">competitor intelligence</div>
 </div>
+<div id="comp-scan-error" style="display:none;color:#DC2626;font-size:13px;padding:12px 0"></div>
 <div id="competitor-results"></div>
 </main>
+
+<script>
+async function competitorScan() {
+  var name = (document.getElementById('comp-url') || {}).value || '';
+  if (!name.trim()) { showToast('Enter a competitor name first', 'error'); return; }
+
+  var statusEl = document.getElementById('competitor-scan-status');
+  var msgEl = document.getElementById('comp-scan-msg');
+  var subEl = document.getElementById('comp-scan-sub');
+  var resultsEl = document.getElementById('competitor-results');
+  var scanErr = document.getElementById('comp-scan-error');
+
+  if (statusEl) statusEl.style.display = 'block';
+  if (msgEl) msgEl.textContent = 'Analysing ' + name + '…';
+  if (subEl) subEl.textContent = 'Searching for competitor intelligence';
+  if (resultsEl) resultsEl.innerHTML = '';
+  if (scanErr) scanErr.style.display = 'none';
+
+  try {
+    var prompt = 'You are a UK automotive dealer marketing analyst. Analyse the competitor dealership group or brand "' + name + '" for Swansway Motor Group, a UK dealership group selling Audi, VW, SEAT, CUPRA, Land Rover, Jaguar, Honda, Peugeot, BYD, OMODA/JAECOO and VW Commercial. Return ONLY a JSON object (no markdown, no preamble) with these exact keys: { "name": string, "overview": string (2-3 sentences), "strengths": [string] (3-4 items), "weaknesses": [string] (3-4 items), "digital": { "seo": string, "ppc": string, "social": string }, "threats": [string] (2-3 items), "opportunities": [string] (2-3 items), "verdict": string (1 punchy sentence) }';
+
+    var r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    var data = await r.json();
+    var text = (data.content || []).map(function(b){ return b.text || ''; }).join('');
+    var clean = text.replace(/```json|```/g, '').trim();
+    var intel = JSON.parse(clean);
+
+    if (statusEl) statusEl.style.display = 'none';
+    if (resultsEl) resultsEl.innerHTML = renderCompetitorIntel(intel);
+
+  } catch(e) {
+    if (statusEl) statusEl.style.display = 'none';
+    var errEl = document.getElementById('comp-scan-error');
+    if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Scan error: ' + e.message; }
+  }
+}
+
+function renderCompetitorIntel(d) {
+  var score = '⚠️';
+  return '<div style="display:flex;flex-direction:column;gap:1.5rem">'
+
+    + '<div style="background:var(--swansway);color:#fff;border-radius:8px;padding:20px 24px;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">'
+    + '<div><div style="font-family:var(--font-d);font-size:22px;font-weight:800;margin-bottom:6px">' + d.name + '</div>'
+    + '<div style="font-size:13px;opacity:0.85;max-width:600px">' + d.overview + '</div></div>'
+    + '<div style="background:rgba(255,255,255,0.12);border-radius:6px;padding:10px 16px;text-align:center;flex-shrink:0">'
+    + '<div style="font-family:var(--font-m);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.7;margin-bottom:4px">Verdict</div>'
+    + '<div style="font-family:var(--font-d);font-size:13px;font-weight:700;max-width:200px">' + d.verdict + '</div></div></div>'
+
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">'
+    + compCard('✅ Strengths', d.strengths, '#059669', '#D1FAE5')
+    + compCard('⚠️ Weaknesses', d.weaknesses, '#D97706', '#FEF3C7')
+    + compCard('🚨 Threats to us', d.threats, '#DC2626', '#FEE2E2')
+    + compCard('💡 Our opportunities', d.opportunities, '#2563EB', '#DBEAFE')
+    + '</div>'
+
+    + '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:20px 24px">'
+    + '<div style="font-family:var(--font-d);font-size:15px;font-weight:700;margin-bottom:14px">Digital presence</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">'
+    + compDigital('SEO', d.digital && d.digital.seo)
+    + compDigital('Paid search', d.digital && d.digital.ppc)
+    + compDigital('Social media', d.digital && d.digital.social)
+    + '</div></div>'
+
+    + '</div>';
+}
+
+function compCard(title, items, color, bg) {
+  return '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:18px 20px;border-top:3px solid ' + color + '">'
+    + '<div style="font-family:var(--font-d);font-size:14px;font-weight:700;margin-bottom:12px;color:' + color + '">' + title + '</div>'
+    + '<ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:6px">'
+    + (items||[]).map(function(i){ return '<li style="font-size:13px;color:var(--ink)">' + i + '</li>'; }).join('')
+    + '</ul></div>';
+}
+
+function compDigital(label, text) {
+  return '<div style="background:var(--surface);border-radius:6px;padding:12px 14px">'
+    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-soft);margin-bottom:6px">' + label + '</div>'
+    + '<div style="font-size:12px;color:var(--ink)">' + (text || '—') + '</div></div>';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.activeElement && document.activeElement.id === 'comp-url') {
+    competitorScan();
+  }
+});
+</script>
 
 <script>
 function navBrand(id) { navCloseAll(); window.location = 'brand.html?brand=' + id; }
