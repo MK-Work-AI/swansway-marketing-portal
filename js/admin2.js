@@ -105,6 +105,7 @@ var CT_PERMISSIONS = {};
 var CT_SELECTED = null;
 var CURRENT_PAGE = 'dashboard';
 var SB_CURRENT_BRAND = 'audi';
+var SB_VIEW = 'planned'; // 'planned' or 'actual'
 var SK_CURRENT_BRAND = 'audi';
 var SC_CURRENT_BRAND = 'audi';
 var BK_CURRENT_BRAND = 'audi';
@@ -431,6 +432,7 @@ function sbRenderTable(brandId) {
   var thStyle = 'background:var(--swansway);color:#fff;font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:10px 8px;text-align:right;white-space:nowrap;border:none';
   var th1Style = thStyle.replace('text-align:right','text-align:left');
 
+  var field = SB_VIEW === 'actual' ? 'actual' : 'planned';
   if (thead) {
     thead.innerHTML = '<tr>'
       + '<th style="'+th1Style+'">Site</th>'
@@ -453,7 +455,8 @@ function sbRenderTable(brandId) {
     tr.innerHTML = '<td style="font-family:var(--font-b);font-size:13px;font-weight:600;padding:8px 10px;white-space:nowrap;color:var(--ink)">'+site.site_name+'</td>'
       + '<td style="font-family:var(--font-m);font-size:13px;font-weight:700;color:var(--swansway);padding:8px 10px;text-align:right;white-space:nowrap">£'+(d.annual_planned||0).toLocaleString()+'</td>'
       + months.map(function(m,i){
-          return '<td style="padding:4px 6px;text-align:right"><input class="admin-input admin-input-sm" type="number" value="'+(d['m'+i+'_planned']||0)+'" data-site="'+site.site_id+'" data-field="m'+i+'_planned" onchange="sbSetVal(this)" style="width:58px;text-align:right;font-family:var(--font-m);font-size:12px"></td>';
+          var f = 'm'+i+'_'+field;
+          return '<td style="padding:4px 6px;text-align:right"><input class="admin-input admin-input-sm" type="number" value="'+(d[f]||0)+'" data-site="'+site.site_id+'" data-field="'+f+'" onchange="sbSetVal(this)" style="width:58px;text-align:right;font-family:var(--font-m);font-size:12px"></td>';
         }).join('');
     tbody.appendChild(tr);
   });
