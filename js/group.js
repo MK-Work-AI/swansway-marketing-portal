@@ -607,7 +607,15 @@ function renderBudgetTracker() {
           if (ev.site_id !== site.site_id || !ev.start_date) return false;
           return new Date(ev.start_date + 'T00:00:00').getFullYear() === planYear;
         });
-        var identifiedCamp  = siteCamps.reduce(function(s,c){ return s + (c.budget || 0); }, 0);
+        var identifiedCamp = siteCamps.reduce(function(sum, c) {
+          var bsa = (window.BRIEF_SITE_AMOUNTS && c.brief_id && window.BRIEF_SITE_AMOUNTS[c.brief_id])
+            ? (window.BRIEF_SITE_AMOUNTS[c.brief_id][site.site_id] || null) : null;
+          if (bsa === null && c.budget) {
+            var cids = btParseCampSiteIds(c);
+            bsa = cids.length > 1 ? Math.round(c.budget / cids.length) : c.budget;
+          }
+          return sum + (bsa || 0);
+        }, 0);
         var identifiedEvPl  = siteEvs.reduce(function(s,e){ return s + (e.planned_budget || 0); }, 0);
         var identifiedEvAc  = siteEvs.reduce(function(s,e){ return s + (e.actual_spend   || 0); }, 0);
         var identifiedTotal = identifiedCamp + identifiedEvPl;
@@ -640,22 +648,36 @@ function renderBudgetTracker() {
           if (siteCamps.length > 0) {
             acHtml += '<div class="bt-accord-section-label">Campaigns</div>';
             acHtml += '<table class="bt-accord-table"><thead><tr>'
-              + '<th>Campaign</th><th>Type</th><th>Dates</th><th>Scope</th><th style="text-align:right">Planned budget</th><th>Status</th>'
+              + '<th>Campaign</th><th>Type</th><th>Dates</th><th>Coverage</th><th style="text-align:right">This site</th><th>Status</th>'
               + '</tr></thead><tbody>';
             siteCamps.forEach(function(c) {
               var sc = STATUS_C[c.status] || '#6B7280';
               var dateStr = c.start_date ? btFmtDate(c.start_date) : '&mdash;';
               if (c.end_date && c.end_date !== c.start_date) dateStr += ' &ndash; ' + btFmtDate(c.end_date);
+              // Per-site amount from BRIEF_SITE_AMOUNTS, fallback to equal split of total
+              var bsa = (window.BRIEF_SITE_AMOUNTS && c.brief_id && window.BRIEF_SITE_AMOUNTS[c.brief_id])
+                ? (window.BRIEF_SITE_AMOUNTS[c.brief_id][site.site_id] || null)
+                : null;
+              // If no per-site data, estimate: total / number of sites in campaign
+              if (bsa === null && c.budget) {
+                var campSiteIds = btParseCampSiteIds(c);
+                bsa = campSiteIds.length > 1 ? Math.round(c.budget / campSiteIds.length) : c.budget;
+              }
+              // Scope label — how many sites share this campaign
+              var campSiteCount = btParseCampSiteIds(c).length;
+              var scopeLabel = campSiteCount > 1
+                ? campSiteCount + '-site campaign'
+                : (c.scope === 'sites' || c.scope === 'site' ? 'This site only' : 'Brand-wide');
               acHtml += '<tr>'
                 + '<td style="font-weight:600">' + btEsc(c.name) + '</td>'
                 + '<td><span style="font-size:10px;padding:2px 7px;border-radius:3px;background:#F3F4F6;font-family:var(--font-m)">' + btEsc(c.type || '&mdash;') + '</span></td>'
                 + '<td style="color:var(--ink-soft);white-space:nowrap">' + dateStr + '</td>'
-                + '<td style="color:var(--ink-faint);font-size:11px">' + (c.scope === 'sites' || c.scope === 'site' ? btCampSiteNames(c) : 'Brand-wide') + '</td>'
-                + '<td style="text-align:right;font-family:var(--font-m)">' + (c.budget ? '&pound;' + Number(c.budget).toLocaleString() : '&mdash;') + '</td>'
+                + '<td style="color:var(--ink-faint);font-size:11px">' + scopeLabel + '</td>'
+                + '<td style="text-align:right;font-family:var(--font-m)">' + (bsa !== null ? '&pound;' + Number(bsa).toLocaleString() : '&mdash;') + '</td>'
                 + '<td><span style="font-size:10px;padding:2px 7px;border-radius:3px;color:#fff;background:' + sc + ';font-family:var(--font-m)">' + btEsc(c.status || 'planned') + '</span></td>'
                 + '</tr>';
             });
-            acHtml += '<tr class="bt-accord-total"><td colspan="4">Campaigns total</td>'
+            acHtml += '<tr class="bt-accord-total"><td colspan="4">This site\'s campaign spend</td>'
               + '<td style="text-align:right;font-family:var(--font-m)">' + (identifiedCamp > 0 ? '&pound;' + identifiedCamp.toLocaleString() : '&mdash;') + '</td><td></td></tr>';
             acHtml += '</tbody></table>';
           }
