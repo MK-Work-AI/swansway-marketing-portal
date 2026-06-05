@@ -16,8 +16,8 @@ var EV_MONTH        = new Date().getMonth();
 var EV_YEAR         = new Date().getFullYear();
 var EV_FILTER       = { brand: '', site: '', type: '', status: '' };
 var EV_EDITING_ID   = null;
-var EV_FORM_STEP    = 1; // 1-4
-var EV_FORM_DATA    = {}; // accumulates across steps
+var EV_FORM_STEP    = 1;
+var EV_FORM_DATA    = {};
 
 var STATUS_COLORS = {
   draft:     '#6B7280',
@@ -282,8 +282,8 @@ function evRenderCard(ev) {
   var statusColor = STATUS_COLORS[ev.status] || '#6B7280';
   var vehicles = EV_VEHICLES[ev.id] || [];
   var dateStr = evFormatDateRange(ev.start_date, ev.end_date);
-  var budget  = ev.planned_budget ? '£' + Number(ev.planned_budget).toLocaleString('en-GB') + ' planned' : '';
-  if (ev.actual_spend) budget += ' / £' + Number(ev.actual_spend).toLocaleString('en-GB') + ' actual';
+  var budget  = ev.planned_budget ? '\xA3' + Number(ev.planned_budget).toLocaleString('en-GB') + ' planned' : '';
+  if (ev.actual_spend) budget += ' / \xA3' + Number(ev.actual_spend).toLocaleString('en-GB') + ' actual';
   return '<div class="ev-card" onclick="evOpenDetail(\'' + ev.id + '\')">'
     + '<div class="ev-card-header">'
     + '<span class="ev-badge" style="background:' + typeColor + '">' + evEsc(typeName) + '</span>'
@@ -292,11 +292,11 @@ function evRenderCard(ev) {
     + '</div>'
     + '<div class="ev-card-title">' + evEsc(ev.title) + '</div>'
     + '<div class="ev-card-meta">'
-    + (dateStr ? '<span class="ev-card-meta-item">📅 ' + dateStr + '</span>' : '')
-    + (ev.location ? '<span class="ev-card-meta-item">📍 ' + evEsc(ev.location) + '</span>' : '')
-    + (budget ? '<span class="ev-card-meta-item">💷 ' + budget + '</span>' : '')
-    + (ev.expected_footfall ? '<span class="ev-card-meta-item">👥 ' + Number(ev.expected_footfall).toLocaleString() + ' expected</span>' : '')
-    + (vehicles.length ? '<span class="ev-card-meta-item">🚗 ' + vehicles.reduce(function(s,v){ return s + v.quantity; }, 0) + ' vehicles</span>' : '')
+    + (dateStr ? '<span class="ev-card-meta-item">\uD83D\uDCC5 ' + dateStr + '</span>' : '')
+    + (ev.location ? '<span class="ev-card-meta-item">\uD83D\uDCCD ' + evEsc(ev.location) + '</span>' : '')
+    + (budget ? '<span class="ev-card-meta-item">\uD83D\uDCB7 ' + budget + '</span>' : '')
+    + (ev.expected_footfall ? '<span class="ev-card-meta-item">\uD83D\uDC65 ' + Number(ev.expected_footfall).toLocaleString() + ' expected</span>' : '')
+    + (vehicles.length ? '<span class="ev-card-meta-item">\uD83D\uDE97 ' + vehicles.reduce(function(s,v){ return s + v.quantity; }, 0) + ' vehicles</span>' : '')
     + '</div>'
     + '</div>';
 }
@@ -310,7 +310,10 @@ function evFormatDate(d) {
 function evFormatDateRange(start, end) {
   if (!start) return '';
   if (!end || end === start) return evFormatDate(start);
-  return evFormatDate(start) + ' — ' + evFormatDate(end);
+  return evFormatDate(start) + ' \u2014 ' + evFormatDate(end);
+}
+function evFmtGBP(n) {
+  return '\xA3' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 /* ══ DETAIL MODAL ══ */
@@ -340,62 +343,64 @@ function evOpenDetail(id) {
     + '<div class="ev-modal-title">' + evEsc(ev.title) + '</div>'
     + '<div class="ev-modal-site">' + (site ? evEsc(site.site_name) : ev.site_id || '') + '</div>'
     + '</div>'
-    + '<button class="ev-modal-close" onclick="evCloseDetail()">×</button>'
+    + '<button class="ev-modal-close" onclick="evCloseDetail()">\xD7</button>'
     + '</div>'
     + '<div class="ev-modal-body">'
-    + evModalSection('📅 Dates & Times', evModalGrid([
+    + evModalSection('\uD83D\uDCC5 Dates & Times', evModalGrid([
         { label: 'Start', val: evFormatDate(ev.start_date) + (ev.start_time ? ' at ' + ev.start_time : '') },
-        { label: 'End',   val: ev.end_date ? evFormatDate(ev.end_date) + (ev.end_time ? ' at ' + ev.end_time : '') : '—' }
+        { label: 'End',   val: ev.end_date ? evFormatDate(ev.end_date) + (ev.end_time ? ' at ' + ev.end_time : '') : '\u2014' }
       ]))
-    + (ev.location || ev.location_address ? evModalSection('📍 Location', evModalGrid([
+    + (ev.location || ev.location_address ? evModalSection('\uD83D\uDCCD Location', evModalGrid([
         ev.location         ? { label: 'Venue',   val: ev.location,         full: true } : null,
         ev.location_address ? { label: 'Address', val: ev.location_address, full: true } : null
       ].filter(Boolean))) : '')
-    + (ev.contact_name || ev.contact_email || ev.contact_phone ? evModalSection('👤 Contact', evModalGrid([
+    + (ev.contact_name || ev.contact_email || ev.contact_phone ? evModalSection('\uD83D\uDC64 Contact', evModalGrid([
         ev.contact_name  ? { label: 'Name',  val: ev.contact_name } : null,
         ev.contact_email ? { label: 'Email', val: '<a href="mailto:' + evEsc(ev.contact_email) + '">' + evEsc(ev.contact_email) + '</a>' } : null,
         ev.contact_phone ? { label: 'Phone', val: '<a href="tel:' + evEsc(ev.contact_phone) + '">' + evEsc(ev.contact_phone) + '</a>' } : null
       ].filter(Boolean))) : '')
-    + evModalSection('💷 Budget', evModalGrid([
-        { label: 'Planned budget', val: ev.planned_budget ? '£' + Number(ev.planned_budget).toLocaleString('en-GB') : '—' },
-        { label: 'Actual spend',   val: ev.actual_spend   ? '£' + Number(ev.actual_spend).toLocaleString('en-GB')   : '—' },
-        ev.coop_funded ? { label: 'Co-op amount', val: ev.coop_amount ? '£' + Number(ev.coop_amount).toLocaleString('en-GB') : 'Yes (TBC)' } : null
+    + evModalSection('\uD83D\uDCB7 Budget', evModalGrid([
+        { label: 'Planned budget', val: ev.planned_budget ? evFmtGBP(ev.planned_budget) : '\u2014' },
+        { label: 'Actual spend',   val: ev.actual_spend   ? evFmtGBP(ev.actual_spend)   : '\u2014' },
+        ev.coop_funded ? { label: 'Co-op amount', val: ev.coop_amount ? evFmtGBP(ev.coop_amount) : 'Yes (TBC)' } : null
       ].filter(Boolean)))
-    + (vehicles.length ? evModalSection('🚗 Vehicles',
+    + (vehicles.length ? evModalSection('\uD83D\uDE97 Vehicles',
         '<div style="display:flex;flex-wrap:wrap;gap:8px">'
-        + vehicles.map(function(v){ return '<span style="padding:4px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-family:var(--font-b);font-size:12px">' + evEsc(v.model_name) + ' × ' + v.quantity + '</span>'; }).join('')
+        + vehicles.map(function(v){ return '<span style="padding:4px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-family:var(--font-b);font-size:12px">' + evEsc(v.model_name) + ' \xD7 ' + v.quantity + '</span>'; }).join('')
         + '</div>') : '')
-    + (pos.length ? evModalSection('📦 POS Items',
+    + (pos.length ? evModalSection('\uD83D\uDCE6 POS Items',
         '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:1px solid var(--border)">'
         + '<th style="text-align:left;padding:4px 8px;font-family:var(--font-m);font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft)">Item</th>'
         + '<th style="text-align:right;padding:4px 8px;font-family:var(--font-m);font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft)">Qty</th>'
         + '<th style="text-align:right;padding:4px 8px;font-family:var(--font-m);font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft)">Unit</th>'
         + '<th style="text-align:right;padding:4px 8px;font-family:var(--font-m);font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft)">Total</th>'
         + '</tr></thead><tbody>'
-        + pos.map(function(p){ return '<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px">' + evEsc(p.pos_item_name) + '</td><td style="padding:5px 8px;text-align:right;font-family:var(--font-m)">' + p.quantity + '</td><td style="padding:5px 8px;text-align:right;font-family:var(--font-m)">' + (p.unit_cost ? '£' + Number(p.unit_cost).toLocaleString('en-GB') : '—') + '</td><td style="padding:5px 8px;text-align:right;font-family:var(--font-m)">' + (p.total_cost ? '£' + Number(p.total_cost).toLocaleString('en-GB') : '—') + '</td></tr>'; }).join('')
-        + '<tr style="border-top:2px solid var(--border)"><td colspan="3" style="padding:6px 8px;font-family:var(--font-m);font-size:10px;text-transform:uppercase;color:var(--ink-soft)">Total POS cost</td><td style="padding:6px 8px;text-align:right;font-family:var(--font-m);color:var(--swansway)">£' + Number(posTotalCost).toLocaleString('en-GB') + '</td></tr>'
+        + pos.map(function(p){ return '<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px">' + evEsc(p.pos_item_name) + '</td><td style="padding:5px 8px;text-align:right;font-family:var(--font-m)">' + p.quantity + '</td><td style="padding:5px 8px;text-align:right;font-family:var(--font-m)">' + (p.unit_cost ? evFmtGBP(p.unit_cost) : '\u2014') + '</td><td style="padding:5px 8px;text-align:right;font-family:var(--font-m)">' + (p.total_cost ? evFmtGBP(p.total_cost) : '\u2014') + '</td></tr>'; }).join('')
+        + '<tr style="border-top:2px solid var(--border)"><td colspan="3" style="padding:6px 8px;font-family:var(--font-m);font-size:10px;text-transform:uppercase;color:var(--ink-soft)">Total POS cost</td><td style="padding:6px 8px;text-align:right;font-family:var(--font-m);color:var(--swansway)">' + evFmtGBP(posTotalCost) + '</td></tr>'
         + '</tbody></table>') : '')
-    + (ev.expected_footfall || ev.actual_footfall || ev.staff_required ? evModalSection('👥 Attendance', evModalGrid([
+    + (ev.expected_footfall || ev.actual_footfall || ev.staff_required ? evModalSection('\uD83D\uDC65 Attendance', evModalGrid([
         ev.expected_footfall ? { label: 'Expected footfall', val: Number(ev.expected_footfall).toLocaleString() } : null,
         ev.actual_footfall   ? { label: 'Actual footfall',   val: Number(ev.actual_footfall).toLocaleString()   } : null,
         ev.staff_required    ? { label: 'Staff required',    val: ev.staff_required } : null
       ].filter(Boolean))) : '')
-    + (ev.notes ? evModalSection('📝 Notes', '<p style="font-family:var(--font-b);font-size:13px;color:var(--ink-soft);white-space:pre-wrap;margin:0">' + evEsc(ev.notes) + '</p>') : '')
-    + (ev.status === 'completed' ? evModalSection('📊 Debrief', ev.debrief
+    + (ev.notes ? evModalSection('\uD83D\uDCDD Notes', '<p style="font-family:var(--font-b);font-size:13px;color:var(--ink-soft);white-space:pre-wrap;margin:0">' + evEsc(ev.notes) + '</p>') : '')
+    + (ev.status === 'completed' ? evModalSection('\uD83D\uDCCA Debrief', ev.debrief
         ? '<p style="font-family:var(--font-b);font-size:13px;color:var(--ink-soft);white-space:pre-wrap;margin:0">' + evEsc(ev.debrief) + '</p>'
         : '<p style="font-family:var(--font-b);font-size:13px;color:var(--ink-faint);margin:0">No debrief added yet.</p>') : '')
     + '</div>'
     + '<div class="ev-modal-footer">'
-    + '<button class="btn" onclick="evOpenForm(\'' + ev.id + '\')">✏ Edit</button>'
-    + (isLeadership && ev.status === 'draft'     ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'confirmed\')">✓ Confirm</button>' : '')
-    + (isLeadership && ev.status === 'confirmed' ? '<button class="btn" onclick="evChangeStatus(\'' + ev.id + '\',\'draft\')">↩ Unconfirm</button>' : '')
-    + (isLeadership && ev.status === 'confirmed' ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'completed\')">✅ Mark Complete</button>' : '')
-    + (isLeadership && ev.status !== 'cancelled' && ev.status !== 'completed' ? '<button class="btn" style="color:#DC2626;border-color:#DC2626" onclick="evChangeStatus(\'' + ev.id + '\',\'cancelled\')">✕ Cancel</button>' : '')
-    + (isLeadership ? '<button class="btn" style="color:#DC2626;border-color:#DC2626;margin-left:auto" onclick="evDelete(\'' + ev.id + '\')">🗑 Delete</button>' : '')
+    + '<button class="btn" onclick="evOpenForm(\'' + ev.id + '\')">\u270F Edit</button>'
+    + (isLeadership && ev.status === 'draft'     ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'confirmed\')">\u2713 Confirm</button>' : '')
+    + (isLeadership && ev.status === 'confirmed' ? '<button class="btn" onclick="evChangeStatus(\'' + ev.id + '\',\'draft\')">\u21A9 Unconfirm</button>' : '')
+    + (isLeadership && ev.status === 'confirmed' ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'completed\')">&#x2705; Mark Complete</button>' : '')
+    + (isLeadership && ev.status !== 'cancelled' && ev.status !== 'completed' ? '<button class="btn" style="color:#DC2626;border-color:#DC2626" onclick="evChangeStatus(\'' + ev.id + '\',\'cancelled\')">\u2715 Cancel</button>' : '')
+    + (isLeadership ? '<button class="btn" style="color:#DC2626;border-color:#DC2626;margin-left:auto" onclick="evDelete(\'' + ev.id + '\')">\uD83D\uDDD1 Delete</button>' : '')
     + '</div>'
     + '</div></div>';
 
   document.getElementById('ev-modal-root').innerHTML = html;
+  // After step 3 renders, async-load budget data
+  if (EV_FORM_STEP === 3) setTimeout(efLoadBudgetPanel, 0);
 }
 
 function evCloseDetail() {
@@ -478,21 +483,20 @@ async function evUpdateBudget(ev, plannedDelta, actualDelta) {
 
 /* ══════════════════════════════════════════════════════════
    STEPPED MODAL FORM
-   Step 1 — Brand, Site, Event type, Title
-   Step 2 — Dates & Location & Contact
-   Step 3 — Budget & Footfall & Vehicles
-   Step 4 — POS Items & Notes
+   Step 1 — Brand + multi-site + event type + title
+   Step 2 — Dates, location, contact
+   Step 3 — Budget (with remaining) + footfall + vehicles
+   Step 4 — POS items + notes
    ══════════════════════════════════════════════════════════ */
 
 function evOpenForm(id) {
   EV_EDITING_ID = id || null;
   EV_FORM_STEP  = 1;
   var ev = id ? EV_EVENTS.find(function(e){ return e.id === id; }) : null;
-  // Pre-populate form data from existing event
   EV_FORM_DATA = ev ? {
     title:            ev.title || '',
     brand_id:         ev.brand_id || '',
-    site_id:          ev.site_id || '',
+    site_ids:         ev.site_id ? [ev.site_id] : [],
     event_type_id:    ev.event_type_id || '',
     start_date:       ev.start_date || '',
     end_date:         ev.end_date || '',
@@ -511,15 +515,17 @@ function evOpenForm(id) {
     actual_footfall:  ev.actual_footfall || '',
     staff_required:   ev.staff_required || '',
     vehicle_notes:    ev.vehicle_notes || '',
-    notes:            ev.notes || ''
+    notes:            ev.notes || '',
+    _vehicles:        null,
+    _pos:             null
   } : {
-    title:'', brand_id:'', site_id:'', event_type_id:'',
+    title:'', brand_id:'', site_ids:[], event_type_id:'',
     start_date:'', end_date:'', start_time:'', end_time:'',
     location:'', location_address:'',
     contact_name:'', contact_email:'', contact_phone:'',
     planned_budget:'', actual_spend:'', coop_funded:false, coop_amount:'',
     expected_footfall:'', actual_footfall:'', staff_required:'',
-    vehicle_notes:'', notes:''
+    vehicle_notes:'', notes:'', _vehicles:null, _pos:null
   };
   evCloseDetail();
   evRenderFormModal();
@@ -532,12 +538,11 @@ function evCloseForm() {
 }
 
 function evFormCollectStep(step) {
-  // Collect current step's field values into EV_FORM_DATA
   if (step === 1) {
     EV_FORM_DATA.title         = (document.getElementById('ef-title')    || {}).value || '';
     EV_FORM_DATA.brand_id      = (document.getElementById('ef-brand')    || {}).value || '';
-    EV_FORM_DATA.site_id       = (document.getElementById('ef-site')     || {}).value || '';
     EV_FORM_DATA.event_type_id = (document.getElementById('ef-type')     || {}).value || '';
+    // site_ids tracked live via efToggleSite — already in EV_FORM_DATA.site_ids
   } else if (step === 2) {
     EV_FORM_DATA.start_date       = (document.getElementById('ef-start-date')    || {}).value || '';
     EV_FORM_DATA.end_date         = (document.getElementById('ef-end-date')      || {}).value || '';
@@ -549,15 +554,14 @@ function evFormCollectStep(step) {
     EV_FORM_DATA.contact_email    = (document.getElementById('ef-contact-email') || {}).value || '';
     EV_FORM_DATA.contact_phone    = (document.getElementById('ef-contact-phone') || {}).value || '';
   } else if (step === 3) {
-    EV_FORM_DATA.planned_budget   = (document.getElementById('ef-planned-budget')    || {}).value || '';
-    EV_FORM_DATA.actual_spend     = (document.getElementById('ef-actual-spend')      || {}).value || '';
-    EV_FORM_DATA.coop_funded      = !!(document.getElementById('ef-coop') || {}).checked;
-    EV_FORM_DATA.coop_amount      = (document.getElementById('ef-coop-amount')       || {}).value || '';
-    EV_FORM_DATA.expected_footfall= (document.getElementById('ef-expected-footfall') || {}).value || '';
-    EV_FORM_DATA.actual_footfall  = (document.getElementById('ef-actual-footfall')   || {}).value || '';
-    EV_FORM_DATA.staff_required   = (document.getElementById('ef-staff-required')    || {}).value || '';
-    EV_FORM_DATA.vehicle_notes    = (document.getElementById('ef-vehicle-notes')     || {}).value || '';
-    // Collect vehicle checkboxes
+    EV_FORM_DATA.planned_budget    = (document.getElementById('ef-planned-budget')    || {}).value || '';
+    EV_FORM_DATA.actual_spend      = (document.getElementById('ef-actual-spend')      || {}).value || '';
+    EV_FORM_DATA.coop_funded       = !!(document.getElementById('ef-coop') || {}).checked;
+    EV_FORM_DATA.coop_amount       = (document.getElementById('ef-coop-amount')       || {}).value || '';
+    EV_FORM_DATA.expected_footfall = (document.getElementById('ef-expected-footfall') || {}).value || '';
+    EV_FORM_DATA.actual_footfall   = (document.getElementById('ef-actual-footfall')   || {}).value || '';
+    EV_FORM_DATA.staff_required    = (document.getElementById('ef-staff-required')    || {}).value || '';
+    EV_FORM_DATA.vehicle_notes     = (document.getElementById('ef-vehicle-notes')     || {}).value || '';
     EV_FORM_DATA._vehicles = [];
     document.querySelectorAll('#ef-vehicles-list input[type=checkbox]:checked').forEach(function(cb) {
       var qtyInput = document.querySelector('[data-qty-for="' + cb.id + '"]');
@@ -565,7 +569,6 @@ function evFormCollectStep(step) {
     });
   } else if (step === 4) {
     EV_FORM_DATA.notes = (document.getElementById('ef-notes') || {}).value || '';
-    // Collect POS checkboxes
     EV_FORM_DATA._pos = [];
     document.querySelectorAll('#ef-pos-wrap input[type=checkbox]:checked').forEach(function(cb) {
       var posId   = cb.getAttribute('data-pos-id');
@@ -581,13 +584,13 @@ function evFormCollectStep(step) {
 
 function evFormValidateStep(step) {
   if (step === 1) {
-    if (!EV_FORM_DATA.title.trim())      { evFormError('Please enter an event title.'); return false; }
-    if (!EV_FORM_DATA.brand_id)          { evFormError('Please select a brand.'); return false; }
-    if (!EV_FORM_DATA.site_id)           { evFormError('Please select a site.'); return false; }
-    if (!EV_FORM_DATA.event_type_id)     { evFormError('Please select an event type.'); return false; }
+    if (!EV_FORM_DATA.title.trim())          { evFormError('Please enter an event title.'); return false; }
+    if (!EV_FORM_DATA.brand_id)              { evFormError('Please select a brand.'); return false; }
+    if (!EV_FORM_DATA.site_ids.length)       { evFormError('Please select at least one site.'); return false; }
+    if (!EV_FORM_DATA.event_type_id)         { evFormError('Please select an event type.'); return false; }
   }
   if (step === 2) {
-    if (!EV_FORM_DATA.start_date)        { evFormError('Please set a start date.'); return false; }
+    if (!EV_FORM_DATA.start_date)            { evFormError('Please set a start date.'); return false; }
   }
   return true;
 }
@@ -617,54 +620,56 @@ function evFormBack() {
 }
 
 function evRenderFormModal() {
-  var isEdit = !!EV_EDITING_ID;
   var isLeadership = CB_TEAM[CB_CURRENT_USER] && CB_TEAM[CB_CURRENT_USER].is_leadership;
   var brandColor = EV_FORM_DATA.brand_id ? (BRAND_COLORS[EV_FORM_DATA.brand_id] || '#1A2E4A') : '#1A2E4A';
   var brandName  = EV_FORM_DATA.brand_id ? (BRAND_DISPLAY[EV_FORM_DATA.brand_id] || EV_FORM_DATA.brand_id) : '';
+  var siteCount  = EV_FORM_DATA.site_ids.length;
 
   var steps = ['Event', 'Dates & Location', 'Budget & Vehicles', 'POS & Notes'];
 
-  // Step indicator
   var stepHtml = '<div class="efm-steps">';
   steps.forEach(function(s, i) {
     var n = i + 1;
     var cls = n < EV_FORM_STEP ? 'efm-step efm-step--done' : (n === EV_FORM_STEP ? 'efm-step efm-step--active' : 'efm-step');
     stepHtml += '<div class="' + cls + '">'
-      + '<div class="efm-step-num">' + (n < EV_FORM_STEP ? '✓' : n) + '</div>'
+      + '<div class="efm-step-num">' + (n < EV_FORM_STEP ? '\u2713' : n) + '</div>'
       + '<div class="efm-step-label">' + s + '</div>'
       + '</div>';
     if (i < steps.length - 1) stepHtml += '<div class="efm-step-line' + (n < EV_FORM_STEP ? ' efm-step-line--done' : '') + '"></div>';
   });
   stepHtml += '</div>';
 
-  // Body per step
   var body = '';
   if (EV_FORM_STEP === 1) body = evFormStep1();
   if (EV_FORM_STEP === 2) body = evFormStep2();
   if (EV_FORM_STEP === 3) body = evFormStep3();
   if (EV_FORM_STEP === 4) body = evFormStep4();
 
-  // Footer buttons
   var footer = '<div class="efm-footer">';
   footer += '<button class="btn" onclick="evCloseForm()">Cancel</button>';
   footer += '<div style="display:flex;gap:8px;margin-left:auto;align-items:center">';
-  if (EV_FORM_STEP > 1) footer += '<button class="btn" onclick="evFormBack()">← Back</button>';
+  if (EV_FORM_STEP > 1) footer += '<button class="btn" onclick="evFormBack()">\u2190 Back</button>';
   if (EV_FORM_STEP < 4) {
-    footer += '<button class="btn btn-accent" onclick="evFormNext()">Continue →</button>';
+    footer += '<button class="btn btn-accent" onclick="evFormNext()">Continue \u2192</button>';
   } else {
-    footer += '<button class="btn" onclick="evSave(false)" id="ef-save-draft-btn">Save as Draft</button>';
-    if (isLeadership) footer += '<button class="btn" style="background:var(--swansway);color:#fff;border-color:var(--swansway)" onclick="evSave(true)" id="ef-save-confirm-btn">Save &amp; Confirm</button>';
+    footer += '<button class="btn" onclick="evSave(false)">Save as Draft</button>';
+    if (isLeadership) footer += '<button class="btn" style="background:var(--swansway);color:#fff;border-color:var(--swansway)" onclick="evSave(true)">Save &amp; Confirm</button>';
   }
   footer += '</div></div>';
+
+  var headerSub = steps[EV_FORM_STEP - 1];
+  if (EV_FORM_STEP === 1 && siteCount > 0) {
+    headerSub += ' \u2014 ' + siteCount + ' site' + (siteCount !== 1 ? 's' : '') + ' selected';
+  }
 
   var html = '<div class="ev-modal-overlay" id="ev-modal-overlay" onclick="if(event.target===this)evCloseForm()">'
     + '<div class="efm-modal">'
     + '<div class="efm-header" style="background:' + brandColor + '">'
     + '<div>'
-    + '<div class="efm-header-title">' + (isEdit ? 'Edit Event' : 'New Event') + (brandName ? ' — ' + brandName : '') + '</div>'
-    + '<div class="efm-header-sub">' + steps[EV_FORM_STEP - 1] + '</div>'
+    + '<div class="efm-header-title">' + (EV_EDITING_ID ? 'Edit Event' : 'New Event') + (brandName ? ' \u2014 ' + brandName : '') + '</div>'
+    + '<div class="efm-header-sub">' + headerSub + '</div>'
     + '</div>'
-    + '<button class="ev-modal-close" style="color:rgba(255,255,255,0.7)" onclick="evCloseForm()">×</button>'
+    + '<button class="ev-modal-close" style="color:rgba(255,255,255,0.7)" onclick="evCloseForm()">\xD7</button>'
     + '</div>'
     + stepHtml
     + '<div class="efm-body" id="efm-body">'
@@ -677,7 +682,7 @@ function evRenderFormModal() {
   document.getElementById('ev-modal-root').innerHTML = html;
 }
 
-/* ── STEP 1: Event basics ── */
+/* ── STEP 1: Brand / Sites / Type / Title ── */
 function evFormStep1() {
   var sites = EV_FORM_DATA.brand_id
     ? SB_SITES.filter(function(s){ return s.brand_id === EV_FORM_DATA.brand_id; })
@@ -685,16 +690,14 @@ function evFormStep1() {
 
   var html = '';
 
-  // Title — large, prominent
+  // Title
   html += '<div class="efm-field efm-field--title">'
     + '<label class="efm-label" for="ef-title">Event title</label>'
     + '<input class="efm-input efm-input--large" id="ef-title" type="text" placeholder="e.g. Land Rover Discovery Launch Weekend" autocomplete="off" value="' + evEscAttr(EV_FORM_DATA.title) + '">'
     + '</div>';
 
-  // Brand — visual brand selector grid
-  html += '<div class="efm-field">'
-    + '<label class="efm-label">Brand</label>'
-    + '<div class="efm-brand-grid" id="ef-brand-grid">';
+  // Brand grid
+  html += '<div class="efm-field"><label class="efm-label">Brand</label><div class="efm-brand-grid" id="ef-brand-grid">';
   Object.keys(BRAND_COLORS).forEach(function(b) {
     var selected = (EV_FORM_DATA.brand_id === b);
     var color = BRAND_COLORS[b];
@@ -707,49 +710,68 @@ function evFormStep1() {
   });
   html += '</div></div>';
 
-  // Site — shown only once brand is selected, filtered
+  // Site multi-select — shown once brand picked
   html += '<div class="efm-field" id="ef-site-wrap" style="' + (EV_FORM_DATA.brand_id ? '' : 'display:none') + '">'
-    + '<label class="efm-label" for="ef-site">Site</label>'
+    + '<label class="efm-label">Sites <span style="font-weight:400;opacity:.6">— select all that apply</span></label>'
     + '<div class="efm-site-grid" id="ef-site-grid">';
   if (sites.length) {
+    var brandColor = BRAND_COLORS[EV_FORM_DATA.brand_id] || '#374151';
     sites.forEach(function(s) {
-      var sel = EV_FORM_DATA.site_id === s.site_id;
-      var color = BRAND_COLORS[s.brand_id] || '#374151';
+      var sel = EV_FORM_DATA.site_ids.indexOf(s.site_id) !== -1;
       html += '<button type="button" class="efm-site-btn' + (sel ? ' efm-site-btn--selected' : '') + '" '
-        + 'style="' + (sel ? 'border-color:' + color + ';background:' + color + '0D' : '') + '" '
-        + 'onclick="efSelectSite(\'' + s.site_id + '\')" data-site="' + s.site_id + '">'
+        + 'style="' + (sel ? 'border-color:' + brandColor + ';background:' + brandColor + '12' : '') + '" '
+        + 'onclick="efToggleSite(\'' + s.site_id + '\')" data-site="' + s.site_id + '">'
         + s.site_name
+        + (sel ? ' <span class="efm-site-check">\u2713</span>' : '')
         + '</button>';
     });
   }
-  html += '</div></div>';
+  html += '</div>';
+  // Selected count chip
+  if (EV_FORM_DATA.site_ids.length) {
+    html += '<div class="efm-site-summary" id="ef-site-summary">'
+      + evBuildSiteChips(EV_FORM_DATA.site_ids)
+      + '</div>';
+  } else {
+    html += '<div class="efm-site-summary" id="ef-site-summary" style="display:none"></div>';
+  }
+  html += '</div>';
 
-  // Event type — coloured pill selector
-  html += '<div class="efm-field">'
-    + '<label class="efm-label">Event type</label>'
-    + '<div class="efm-type-row" id="ef-type-row">';
+  // Event type pills
+  html += '<div class="efm-field"><label class="efm-label">Event type</label><div class="efm-type-row" id="ef-type-row">';
   EV_TYPES.forEach(function(t) {
     var sel = EV_FORM_DATA.event_type_id === t.id;
     html += '<button type="button" class="efm-type-btn' + (sel ? ' efm-type-btn--selected' : '') + '" '
       + 'style="' + (sel ? 'background:' + t.color + ';color:#fff;border-color:' + t.color : 'border-color:' + t.color + ';color:' + t.color) + '" '
       + 'onclick="efSelectType(\'' + t.id + '\')" data-type="' + t.id + '">'
-      + t.name
-      + '</button>';
+      + t.name + '</button>';
   });
   html += '</div></div>';
 
-  // Hidden inputs to hold selections (read by collect)
+  // Hidden carrier inputs
   html += '<input type="hidden" id="ef-brand" value="' + evEscAttr(EV_FORM_DATA.brand_id) + '">';
-  html += '<input type="hidden" id="ef-site"  value="' + evEscAttr(EV_FORM_DATA.site_id)  + '">';
   html += '<input type="hidden" id="ef-type"  value="' + evEscAttr(EV_FORM_DATA.event_type_id) + '">';
 
   return html;
 }
 
+function evBuildSiteChips(siteIds) {
+  if (!siteIds || !siteIds.length) return '';
+  return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">'
+    + siteIds.map(function(sid) {
+        var site = SB_SITES.find(function(s){ return s.site_id === sid; });
+        var color = site ? (BRAND_COLORS[site.brand_id] || '#374151') : '#374151';
+        return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px 3px 10px;background:' + color + '18;border:1px solid ' + color + '44;border-radius:100px;font-family:var(--font-b);font-size:12px;font-weight:600;color:var(--ink)">'
+          + evEsc(site ? site.site_name : sid)
+          + '<button type="button" onclick="efToggleSite(\'' + sid + '\')" style="background:none;border:none;cursor:pointer;padding:0;margin-left:2px;color:var(--ink-soft);font-size:14px;line-height:1">\xD7</button>'
+          + '</span>';
+      }).join('')
+    + '</div>';
+}
+
 function efSelectBrand(brandId) {
   EV_FORM_DATA.brand_id = brandId;
-  EV_FORM_DATA.site_id  = ''; // reset site when brand changes
-  // Update brand button styles
+  EV_FORM_DATA.site_ids = []; // reset sites on brand change
   document.querySelectorAll('.efm-brand-btn').forEach(function(btn) {
     var b = btn.getAttribute('data-brand');
     var color = BRAND_COLORS[b];
@@ -764,36 +786,62 @@ function efSelectBrand(brandId) {
     }
   });
   document.getElementById('ef-brand').value = brandId;
-  // Rebuild site grid
+  // Rebuild site grid for this brand
   var siteWrap = document.getElementById('ef-site-wrap');
   var siteGrid = document.getElementById('ef-site-grid');
+  var summary  = document.getElementById('ef-site-summary');
   if (!siteWrap || !siteGrid) return;
   var sites = SB_SITES.filter(function(s){ return s.brand_id === brandId; });
   var color = BRAND_COLORS[brandId] || '#374151';
   siteGrid.innerHTML = sites.map(function(s) {
-    return '<button type="button" class="efm-site-btn" '
-      + 'onclick="efSelectSite(\'' + s.site_id + '\')" data-site="' + s.site_id + '">'
-      + s.site_name + '</button>';
+    return '<button type="button" class="efm-site-btn" onclick="efToggleSite(\'' + s.site_id + '\')" data-site="' + s.site_id + '">' + s.site_name + '</button>';
   }).join('');
   siteWrap.style.display = '';
-  document.getElementById('ef-site').value = '';
+  if (summary) { summary.innerHTML = ''; summary.style.display = 'none'; }
 }
 
-function efSelectSite(siteId) {
-  EV_FORM_DATA.site_id = siteId;
-  var color = EV_FORM_DATA.brand_id ? (BRAND_COLORS[EV_FORM_DATA.brand_id] || '#374151') : '#374151';
+function efToggleSite(siteId) {
+  var idx = EV_FORM_DATA.site_ids.indexOf(siteId);
+  if (idx === -1) {
+    EV_FORM_DATA.site_ids.push(siteId);
+  } else {
+    EV_FORM_DATA.site_ids.splice(idx, 1);
+  }
+  // Update button appearance
+  var brandColor = EV_FORM_DATA.brand_id ? (BRAND_COLORS[EV_FORM_DATA.brand_id] || '#374151') : '#374151';
   document.querySelectorAll('.efm-site-btn').forEach(function(btn) {
-    if (btn.getAttribute('data-site') === siteId) {
+    var sid = btn.getAttribute('data-site');
+    var isSel = EV_FORM_DATA.site_ids.indexOf(sid) !== -1;
+    if (isSel) {
       btn.classList.add('efm-site-btn--selected');
-      btn.style.borderColor = color;
-      btn.style.background  = color + '0D';
+      btn.style.borderColor = brandColor;
+      btn.style.background  = brandColor + '12';
+      // Ensure check mark present
+      if (btn.innerHTML.indexOf('\u2713') === -1) btn.innerHTML = btn.textContent.trim() + ' <span class="efm-site-check">\u2713</span>';
     } else {
       btn.classList.remove('efm-site-btn--selected');
       btn.style.borderColor = '';
       btn.style.background  = '';
+      btn.innerHTML = btn.textContent.replace('\u2713','').trim();
     }
   });
-  document.getElementById('ef-site').value = siteId;
+  // Update summary chips
+  var summary = document.getElementById('ef-site-summary');
+  if (summary) {
+    if (EV_FORM_DATA.site_ids.length) {
+      summary.innerHTML = evBuildSiteChips(EV_FORM_DATA.site_ids);
+      summary.style.display = '';
+    } else {
+      summary.innerHTML = '';
+      summary.style.display = 'none';
+    }
+  }
+  // Update header sub
+  var headerSub = document.querySelector('.efm-header-sub');
+  if (headerSub) {
+    var count = EV_FORM_DATA.site_ids.length;
+    headerSub.textContent = 'Event' + (count ? ' \u2014 ' + count + ' site' + (count !== 1 ? 's' : '') + ' selected' : '');
+  }
 }
 
 function efSelectType(typeId) {
@@ -803,9 +851,9 @@ function efSelectType(typeId) {
   document.querySelectorAll('.efm-type-btn').forEach(function(btn) {
     if (btn.getAttribute('data-type') === typeId) {
       btn.classList.add('efm-type-btn--selected');
-      btn.style.background   = color;
-      btn.style.color        = '#fff';
-      btn.style.borderColor  = color;
+      btn.style.background  = color;
+      btn.style.color       = '#fff';
+      btn.style.borderColor = color;
     } else {
       btn.classList.remove('efm-type-btn--selected');
       var t2 = EV_TYPES.find(function(t){ return t.id === btn.getAttribute('data-type'); });
@@ -818,10 +866,9 @@ function efSelectType(typeId) {
   document.getElementById('ef-type').value = typeId;
 }
 
-/* ── STEP 2: Dates & Location & Contact ── */
+/* ── STEP 2: Dates, Location, Contact ── */
 function evFormStep2() {
   var html = '';
-
   html += '<div class="efm-section-label">Dates &amp; Times</div>';
   html += '<div class="efm-grid-2">';
   html += '<div class="efm-field"><label class="efm-label" for="ef-start-date">Start date</label><input class="efm-input" id="ef-start-date" type="date" value="' + evEscAttr(EV_FORM_DATA.start_date) + '"></div>';
@@ -829,46 +876,55 @@ function evFormStep2() {
   html += '<div class="efm-field"><label class="efm-label" for="ef-end-date">End date <span style="font-weight:400;opacity:.6">(optional)</span></label><input class="efm-input" id="ef-end-date" type="date" value="' + evEscAttr(EV_FORM_DATA.end_date) + '"></div>';
   html += '<div class="efm-field"><label class="efm-label" for="ef-end-time">End time <span style="font-weight:400;opacity:.6">(optional)</span></label><input class="efm-input" id="ef-end-time" type="time" value="' + evEscAttr(EV_FORM_DATA.end_time) + '"></div>';
   html += '</div>';
-
-  html += '<div class="efm-divider"></div>';
+  html += '<hr class="efm-divider">';
   html += '<div class="efm-section-label">Location</div>';
   html += '<div class="efm-field"><label class="efm-label" for="ef-location">Venue name</label><input class="efm-input" id="ef-location" type="text" placeholder="e.g. NEC Birmingham, Showroom forecourt" value="' + evEscAttr(EV_FORM_DATA.location) + '"></div>';
-  html += '<div class="efm-field"><label class="efm-label" for="ef-location-addr">Address <span style="font-weight:400;opacity:.6">(optional)</span></label><textarea class="efm-input efm-textarea" id="ef-location-addr" rows="2" placeholder="Full address">' + evEsc(EV_FORM_DATA.location_address) + '</textarea></div>';
-
-  html += '<div class="efm-divider"></div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-location-addr">Address <span style="font-weight:400;opacity:.6">(optional)</span></label><textarea class="efm-input efm-textarea" id="ef-location-addr" rows="2">' + evEsc(EV_FORM_DATA.location_address) + '</textarea></div>';
+  html += '<hr class="efm-divider">';
   html += '<div class="efm-section-label">Contact <span style="font-weight:400;opacity:.6">(optional)</span></div>';
   html += '<div class="efm-grid-3">';
   html += '<div class="efm-field"><label class="efm-label" for="ef-contact-name">Name</label><input class="efm-input" id="ef-contact-name" type="text" value="' + evEscAttr(EV_FORM_DATA.contact_name) + '"></div>';
   html += '<div class="efm-field"><label class="efm-label" for="ef-contact-email">Email</label><input class="efm-input" id="ef-contact-email" type="email" value="' + evEscAttr(EV_FORM_DATA.contact_email) + '"></div>';
   html += '<div class="efm-field"><label class="efm-label" for="ef-contact-phone">Phone</label><input class="efm-input" id="ef-contact-phone" type="tel" value="' + evEscAttr(EV_FORM_DATA.contact_phone) + '"></div>';
   html += '</div>';
-
   return html;
 }
 
-/* ── STEP 3: Budget & Vehicles ── */
+/* ── STEP 3: Budget (with remaining) + Vehicles ── */
 function evFormStep3() {
   var html = '';
   var brandId = EV_FORM_DATA.brand_id;
   var existingVehicles = EV_FORM_DATA._vehicles || (EV_EDITING_ID ? (EV_VEHICLES[EV_EDITING_ID] || []) : []);
 
+  // Budget inputs
   html += '<div class="efm-section-label">Budget</div>';
   html += '<div class="efm-grid-2">';
-  html += '<div class="efm-field"><label class="efm-label" for="ef-planned-budget">Planned budget</label><div class="efm-input-prefix"><span>£</span><input class="efm-input" id="ef-planned-budget" type="number" min="0" placeholder="0" value="' + evEscAttr(String(EV_FORM_DATA.planned_budget)) + '"></div></div>';
-  html += '<div class="efm-field"><label class="efm-label" for="ef-actual-spend">Actual spend</label><div class="efm-input-prefix"><span>£</span><input class="efm-input" id="ef-actual-spend" type="number" min="0" placeholder="0" value="' + evEscAttr(String(EV_FORM_DATA.actual_spend)) + '"></div></div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-planned-budget">Planned budget <span style="font-weight:400;opacity:.6">(per site)</span></label>'
+    + '<div class="efm-input-prefix"><span>\xA3</span><input class="efm-input" id="ef-planned-budget" type="number" min="0" placeholder="0" value="' + evEscAttr(String(EV_FORM_DATA.planned_budget)) + '" oninput="efUpdateBudgetPreview()"></div></div>';
+  html += '<div class="efm-field"><label class="efm-label" for="ef-actual-spend">Actual spend <span style="font-weight:400;opacity:.6">(per site)</span></label>'
+    + '<div class="efm-input-prefix"><span>\xA3</span><input class="efm-input" id="ef-actual-spend" type="number" min="0" placeholder="0" value="' + evEscAttr(String(EV_FORM_DATA.actual_spend)) + '"></div></div>';
   html += '</div>';
 
-  html += '<div class="efm-field">'
-    + '<label class="efm-toggle-row" for="ef-coop">'
+  // Co-op toggle
+  html += '<div class="efm-field"><label class="efm-toggle-row" for="ef-coop">'
     + '<input type="checkbox" id="ef-coop"' + (EV_FORM_DATA.coop_funded ? ' checked' : '') + ' onchange="document.getElementById(\'ef-coop-row\').style.display=this.checked?\'\':\' none\'">'
-    + '<span class="efm-toggle-label">Co-op funded by manufacturer</span>'
-    + '</label>'
-    + '</div>';
+    + '<span class="efm-toggle-label">Co-op funded by manufacturer</span></label></div>';
   html += '<div id="ef-coop-row" style="' + (EV_FORM_DATA.coop_funded ? '' : 'display:none') + '">'
-    + '<div class="efm-field"><label class="efm-label" for="ef-coop-amount">Co-op amount</label><div class="efm-input-prefix"><span>£</span><input class="efm-input" id="ef-coop-amount" type="number" min="0" placeholder="0" value="' + evEscAttr(String(EV_FORM_DATA.coop_amount)) + '"></div></div>'
-    + '</div>';
+    + '<div class="efm-field"><label class="efm-label" for="ef-coop-amount">Co-op amount</label>'
+    + '<div class="efm-input-prefix"><span>\xA3</span><input class="efm-input" id="ef-coop-amount" type="number" min="0" placeholder="0" value="' + evEscAttr(String(EV_FORM_DATA.coop_amount)) + '"></div></div></div>';
 
-  html += '<div class="efm-divider"></div>';
+  // Budget remaining panel — loaded async, placeholder shown first
+  html += '<div id="ef-budget-panel" class="efm-budget-panel">';
+  if (EV_FORM_DATA.site_ids.length && EV_FORM_DATA.start_date) {
+    html += '<div style="font-family:var(--font-b);font-size:12px;color:var(--ink-faint);text-align:center;padding:12px">Loading budget data\u2026</div>';
+  } else if (!EV_FORM_DATA.start_date) {
+    html += '<div style="font-family:var(--font-b);font-size:12px;color:var(--ink-faint);padding:10px 14px">Set a start date on the previous step to see remaining budgets.</div>';
+  } else {
+    html += '<div style="font-family:var(--font-b);font-size:12px;color:var(--ink-faint);padding:10px 14px">Select sites on the previous step to see remaining budgets.</div>';
+  }
+  html += '</div>';
+
+  html += '<hr class="efm-divider">';
   html += '<div class="efm-section-label">Attendance</div>';
   html += '<div class="efm-grid-3">';
   html += '<div class="efm-field"><label class="efm-label" for="ef-expected-footfall">Expected footfall</label><input class="efm-input" id="ef-expected-footfall" type="number" min="0" placeholder="e.g. 200" value="' + evEscAttr(String(EV_FORM_DATA.expected_footfall)) + '"></div>';
@@ -876,7 +932,7 @@ function evFormStep3() {
   html += '<div class="efm-field"><label class="efm-label" for="ef-staff-required">Staff required</label><input class="efm-input" id="ef-staff-required" type="number" min="0" placeholder="e.g. 4" value="' + evEscAttr(String(EV_FORM_DATA.staff_required)) + '"></div>';
   html += '</div>';
 
-  html += '<div class="efm-divider"></div>';
+  html += '<hr class="efm-divider">';
   html += '<div class="efm-section-label">Vehicles on display</div>';
 
   if (brandId === 'motormatch') {
@@ -894,7 +950,7 @@ function evFormStep3() {
         html += '<label class="efm-vehicle-card' + (checked ? ' efm-vehicle-card--checked' : '') + '">'
           + '<input type="checkbox" id="efv-' + evEscAttr(m.id) + '" data-model="' + evEscAttr(m.model_name) + '" data-brand="' + evEscAttr(brandId) + '"' + (checked ? ' checked' : '') + ' onchange="efVehicleToggle(this)">'
           + '<div class="efm-vehicle-name">' + evEsc(m.model_name) + '</div>'
-          + '<div class="efm-vehicle-qty" style="' + (checked ? '' : 'display:none') + '" id="efv-qty-' + evEscAttr(m.id) + '">'
+          + '<div class="efm-vehicle-qty"' + (checked ? '' : ' style="display:none"') + ' id="efv-qty-' + evEscAttr(m.id) + '">'
           + '<input type="number" min="1" value="' + (found ? found.quantity : 1) + '" style="width:56px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;font-family:var(--font-m);font-size:12px;text-align:center" data-qty-for="efv-' + evEscAttr(m.id) + '">'
           + '</div>'
           + '</label>';
@@ -906,9 +962,79 @@ function evFormStep3() {
   return html;
 }
 
+// Async: load budget data after step 3 renders
+async function efLoadBudgetPanel() {
+  var panel = document.getElementById('ef-budget-panel');
+  if (!panel) return;
+  if (!EV_FORM_DATA.site_ids.length || !EV_FORM_DATA.start_date) return;
+
+  var month = new Date(EV_FORM_DATA.start_date + 'T00:00:00').getMonth();
+  var monthName = MONTH_NAMES[month];
+  var mN = 'm' + month;
+  var plannedInput = parseFloat((document.getElementById('ef-planned-budget') || {}).value) || parseFloat(EV_FORM_DATA.planned_budget) || 0;
+
+  try {
+    var siteList = EV_FORM_DATA.site_ids.map(encodeURIComponent).join(',');
+    var r = await fetch(SUPA + '/site_budgets?site_id=in.(' + siteList + ')&select=*', { headers: getAuthHeaders() });
+    if (!r.ok) { panel.innerHTML = ''; return; }
+    var budgets = await r.json();
+
+    // Build a lookup by site_id
+    var budgetBySite = {};
+    budgets.forEach(function(b){ budgetBySite[b.site_id] = b; });
+
+    var rows = EV_FORM_DATA.site_ids.map(function(sid) {
+      var site = SB_SITES.find(function(s){ return s.site_id === sid; });
+      var siteName = site ? site.site_name : sid;
+      var brow = budgetBySite[sid];
+      var allocated = brow ? (brow[mN + '_planned'] || 0) : null;
+      var spent     = brow ? (brow[mN + '_actual']  || 0) : null;
+      var remaining = (allocated !== null) ? (allocated - spent - plannedInput) : null;
+      var color = remaining !== null ? (remaining < 0 ? '#DC2626' : remaining < allocated * 0.1 ? '#D97706' : '#059669') : '#6B7280';
+      return { siteName: siteName, allocated: allocated, spent: spent, remaining: remaining, color: color };
+    });
+
+    var html = '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-faint);margin-bottom:10px">'
+      + monthName + ' budget remaining per site</div>';
+    html += '<div class="efm-budget-rows">';
+    rows.forEach(function(row) {
+      if (row.allocated === null) {
+        html += '<div class="efm-budget-row">'
+          + '<span class="efm-budget-site">' + evEsc(row.siteName) + '</span>'
+          + '<span style="font-family:var(--font-b);font-size:12px;color:var(--ink-faint)">No budget set</span>'
+          + '</div>';
+      } else {
+        var pct = Math.max(0, Math.min(100, row.remaining !== null ? (row.remaining / row.allocated * 100) : 0));
+        html += '<div class="efm-budget-row">'
+          + '<span class="efm-budget-site">' + evEsc(row.siteName) + '</span>'
+          + '<div class="efm-budget-bar-wrap">'
+          + '<div class="efm-budget-bar" style="width:' + pct.toFixed(1) + '%;background:' + row.color + '"></div>'
+          + '</div>'
+          + '<span class="efm-budget-remaining" style="color:' + row.color + '">' + evFmtGBP(Math.max(0, row.remaining)) + ' left</span>'
+          + '<span class="efm-budget-total">of ' + evFmtGBP(row.allocated) + '</span>'
+          + '</div>';
+        if (row.remaining !== null && row.remaining < 0) {
+          html += '<div style="font-family:var(--font-b);font-size:11px;color:#DC2626;margin:-4px 0 6px 0">\u26A0 Over budget by ' + evFmtGBP(Math.abs(row.remaining)) + ' at this site</div>';
+        }
+      }
+    });
+    html += '</div>';
+    panel.innerHTML = html;
+  } catch(e) {
+    panel.innerHTML = '<div style="font-family:var(--font-b);font-size:12px;color:var(--ink-faint);padding:10px">Could not load budget data.</div>';
+    console.warn('efLoadBudgetPanel:', e);
+  }
+}
+
+function efUpdateBudgetPreview() {
+  // Re-run budget panel with current planned input value
+  efLoadBudgetPanel();
+}
+
 function efVehicleToggle(cb) {
   var card = cb.closest('.efm-vehicle-card');
-  var qtyWrap = document.getElementById('efv-qty-' + cb.id.replace('efv-',''));
+  var id = cb.id.replace('efv-', '');
+  var qtyWrap = document.getElementById('efv-qty-' + id);
   if (cb.checked) {
     if (card) card.classList.add('efm-vehicle-card--checked');
     if (qtyWrap) qtyWrap.style.display = '';
@@ -918,15 +1044,14 @@ function efVehicleToggle(cb) {
   }
 }
 
-/* ── STEP 4: POS Items & Notes ── */
+/* ── STEP 4: POS Items + Notes ── */
 function evFormStep4() {
   var existing = EV_FORM_DATA._pos || (EV_EDITING_ID ? (EV_EVENT_POS[EV_EDITING_ID] || []) : []);
   var html = '';
 
   html += '<div class="efm-section-label">POS Items</div>';
-
   if (!EV_POS_ITEMS.length) {
-    html += '<p style="font-family:var(--font-b);font-size:13px;color:var(--ink-faint)">No POS items configured. Add them in Admin → POS Items.</p>';
+    html += '<p style="font-family:var(--font-b);font-size:13px;color:var(--ink-faint)">No POS items configured. Add them in Admin \u2192 POS Items.</p>';
   } else {
     var byCategory = {};
     EV_POS_ITEMS.forEach(function(item) {
@@ -936,8 +1061,7 @@ function evFormStep4() {
     });
     html += '<div id="ef-pos-wrap">';
     Object.keys(byCategory).sort().forEach(function(cat) {
-      html += '<div class="efm-pos-category">'
-        + '<div class="efm-pos-cat-label">' + evEsc(cat) + '</div>';
+      html += '<div class="efm-pos-category"><div class="efm-pos-cat-label">' + evEsc(cat) + '</div>';
       byCategory[cat].forEach(function(item) {
         var found = existing.find(function(p){ return p.pos_item_id === item.id; });
         html += '<div class="efm-pos-row">'
@@ -947,7 +1071,7 @@ function evFormStep4() {
           + '</label>'
           + '<div class="efm-pos-inputs" id="efp-inputs-' + item.id + '" style="' + (found ? '' : 'display:none') + '">'
           + '<input type="number" min="0" value="' + (found ? found.quantity : 1) + '" placeholder="Qty" class="efm-input efm-input--sm" data-qty-for="efp-' + item.id + '">'
-          + '<div class="efm-input-prefix efm-input-prefix--sm"><span>£</span><input type="number" min="0" step="0.01" value="' + (found ? found.unit_cost : (item.default_unit_cost || 0)) + '" placeholder="unit" class="efm-input efm-input--sm" data-cost-for="efp-' + item.id + '"></div>'
+          + '<div class="efm-input-prefix efm-input-prefix--sm"><span>\xA3</span><input type="number" min="0" step="0.01" value="' + (found ? found.unit_cost : (item.default_unit_cost || 0)) + '" placeholder="unit" class="efm-input efm-input--sm" data-cost-for="efp-' + item.id + '"></div>'
           + '</div>'
           + '</div>';
       });
@@ -956,7 +1080,7 @@ function evFormStep4() {
     html += '</div>';
   }
 
-  html += '<div class="efm-divider"></div>';
+  html += '<hr class="efm-divider">';
   html += '<div class="efm-field"><label class="efm-label" for="ef-notes">Notes <span style="font-weight:400;opacity:.6">(optional)</span></label>'
     + '<textarea class="efm-input efm-textarea" id="ef-notes" rows="4" placeholder="Any additional notes about this event...">' + evEsc(EV_FORM_DATA.notes) + '</textarea></div>';
 
@@ -968,23 +1092,78 @@ function efPosToggle(cb) {
   if (wrap) wrap.style.display = cb.checked ? '' : 'none';
 }
 
-/* ══ SAVE ══ */
+/* ══ SAVE — creates one event row per site ══ */
 async function evSave(saveAsConfirmed) {
   evFormCollectStep(EV_FORM_STEP);
 
   var d = EV_FORM_DATA;
-  if (!d.title.trim())      { evFormError('Please enter an event title.'); return; }
-  if (!d.brand_id)          { evFormError('Please select a brand.'); return; }
-  if (!d.site_id)           { evFormError('Please select a site.'); return; }
-  if (!d.event_type_id)     { evFormError('Please select an event type.'); return; }
-  if (!d.start_date)        { evFormError('Please set a start date.'); return; }
+  if (!d.title.trim())        { evFormError('Please enter an event title.'); return; }
+  if (!d.brand_id)            { evFormError('Please select a brand.'); return; }
+  if (!d.site_ids.length)     { evFormError('Please select at least one site.'); return; }
+  if (!d.event_type_id)       { evFormError('Please select an event type.'); return; }
+  if (!d.start_date)          { evFormError('Please set a start date.'); return; }
 
+  var saveBtns = document.querySelectorAll('.efm-footer .btn');
+  saveBtns.forEach(function(b){ b.disabled = true; b.style.opacity = '0.6'; });
+
+  try {
+    if (EV_EDITING_ID) {
+      // Editing: update the single existing event (site can't be changed to multi in edit mode — leave as is)
+      var oldEvent = EV_EVENTS.find(function(e){ return e.id === EV_EDITING_ID; });
+      var payload = evBuildPayload(d, d.site_ids[0] || (oldEvent ? oldEvent.site_id : ''), saveAsConfirmed, false);
+      Object.keys(payload).forEach(function(k){ if (payload[k] === undefined) delete payload[k]; });
+      var r = await fetch(SUPA + '/events?id=eq.' + EV_EDITING_ID, {
+        method: 'PATCH',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
+        body: JSON.stringify(payload)
+      });
+      if (!r.ok) throw new Error(await r.text());
+      await evSaveVehicles(EV_EDITING_ID, d.brand_id);
+      await evSavePOS(EV_EDITING_ID);
+      if (oldEvent) {
+        var oldP = oldEvent.planned_budget || 0, newP = parseFloat(d.planned_budget) || 0;
+        var oldA = oldEvent.actual_spend   || 0, newA = parseFloat(d.actual_spend)   || 0;
+        var siteId = d.site_ids[0] || oldEvent.site_id;
+        if (newP !== oldP) await evUpdateBudget({ site_id: siteId, start_date: d.start_date }, newP - oldP, null);
+        if (newA !== oldA) await evUpdateBudget({ site_id: siteId, start_date: d.start_date }, null, newA - oldA);
+      }
+    } else {
+      // New: create one event per site
+      for (var i = 0; i < d.site_ids.length; i++) {
+        var siteId = d.site_ids[i];
+        var payload = evBuildPayload(d, siteId, saveAsConfirmed, true);
+        var r = await fetch(SUPA + '/events', {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=representation' }),
+          body: JSON.stringify([payload])
+        });
+        if (!r.ok) throw new Error(await r.text());
+        var newRows = await r.json();
+        var eventId = newRows[0].id;
+        await evSaveVehicles(eventId, d.brand_id);
+        await evSavePOS(eventId);
+        if (payload.planned_budget) await evUpdateBudget({ site_id: siteId, start_date: d.start_date }, payload.planned_budget, null);
+        if (payload.actual_spend)   await evUpdateBudget({ site_id: siteId, start_date: d.start_date }, null, payload.actual_spend);
+      }
+    }
+
+    evCloseForm();
+    await evLoadEvents();
+    evRender();
+    var n = EV_EDITING_ID ? 1 : d.site_ids.length;
+    showToast('Event' + (n > 1 ? 's' : '') + ' saved \u2713' + (n > 1 ? ' (' + n + ' sites)' : ''), 'success');
+  } catch(e) {
+    evFormError('Save failed: ' + e.message);
+    saveBtns.forEach(function(b){ b.disabled = false; b.style.opacity = ''; });
+  }
+}
+
+function evBuildPayload(d, siteId, saveAsConfirmed, isNew) {
   var payload = {
     title:            d.title.trim(),
-    site_id:          d.site_id,
+    site_id:          siteId,
     brand_id:         d.brand_id,
     event_type_id:    d.event_type_id,
-    status:           saveAsConfirmed ? 'confirmed' : (EV_EDITING_ID ? undefined : 'draft'),
     start_date:       d.start_date,
     end_date:         d.end_date         || null,
     start_time:       d.start_time       || null,
@@ -1005,58 +1184,16 @@ async function evSave(saveAsConfirmed) {
     notes:            d.notes.trim() || null,
     updated_at:       new Date().toISOString()
   };
-  Object.keys(payload).forEach(function(k){ if (payload[k] === undefined) delete payload[k]; });
-
-  var saveBtns = document.querySelectorAll('#efm-body ~ .efm-footer .btn');
-  saveBtns.forEach(function(b){ b.disabled = true; b.style.opacity = '0.6'; });
-
-  try {
-    var eventId;
-    var oldEvent = EV_EDITING_ID ? EV_EVENTS.find(function(e){ return e.id === EV_EDITING_ID; }) : null;
-
-    if (EV_EDITING_ID) {
-      var r = await fetch(SUPA + '/events?id=eq.' + EV_EDITING_ID, {
-        method: 'PATCH',
-        headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
-        body: JSON.stringify(payload)
-      });
-      if (!r.ok) throw new Error(await r.text());
-      eventId = EV_EDITING_ID;
-    } else {
-      payload.created_by = CB_CURRENT_USER;
-      payload.created_at = new Date().toISOString();
-      var r = await fetch(SUPA + '/events', {
-        method: 'POST',
-        headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=representation' }),
-        body: JSON.stringify([payload])
-      });
-      if (!r.ok) throw new Error(await r.text());
-      var newRows = await r.json();
-      eventId = newRows[0].id;
-    }
-
-    await evSaveVehicles(eventId, d.brand_id);
-    await evSavePOS(eventId);
-
-    // Budget delta
-    if (EV_EDITING_ID && oldEvent) {
-      var oldP = oldEvent.planned_budget || 0, newP = parseFloat(d.planned_budget) || 0;
-      var oldA = oldEvent.actual_spend   || 0, newA = parseFloat(d.actual_spend)   || 0;
-      if (newP !== oldP) await evUpdateBudget({ site_id: d.site_id, start_date: d.start_date }, newP - oldP, null);
-      if (newA !== oldA) await evUpdateBudget({ site_id: d.site_id, start_date: d.start_date }, null, newA - oldA);
-    } else {
-      if (payload.planned_budget) await evUpdateBudget({ site_id: d.site_id, start_date: d.start_date }, payload.planned_budget, null);
-      if (payload.actual_spend)   await evUpdateBudget({ site_id: d.site_id, start_date: d.start_date }, null, payload.actual_spend);
-    }
-
-    evCloseForm();
-    await evLoadEvents();
-    evRender();
-    showToast('Event saved \u2713', 'success');
-  } catch(e) {
-    evFormError('Save failed: ' + e.message);
-    saveBtns.forEach(function(b){ b.disabled = false; b.style.opacity = ''; });
+  if (saveAsConfirmed) {
+    payload.status = 'confirmed';
+  } else if (isNew) {
+    payload.status = 'draft';
   }
+  if (isNew) {
+    payload.created_by = CB_CURRENT_USER;
+    payload.created_at = new Date().toISOString();
+  }
+  return payload;
 }
 
 async function evSaveVehicles(eventId, brandId) {
@@ -1077,13 +1214,12 @@ async function evSaveVehicles(eventId, brandId) {
 
 async function evSavePOS(eventId) {
   await fetch(SUPA + '/event_pos?event_id=eq.' + eventId, { method: 'DELETE', headers: getAuthHeaders() });
-  var rows = EV_FORM_DATA._pos || [];
+  var rows = (EV_FORM_DATA._pos || []).map(function(r){ return Object.assign({ event_id: eventId }, r); });
   if (!rows.length) return;
-  var withId = rows.map(function(r){ return Object.assign({ event_id: eventId }, r); });
   await fetch(SUPA + '/event_pos', {
     method: 'POST',
     headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
-    body: JSON.stringify(withId)
+    body: JSON.stringify(rows)
   });
 }
 
@@ -1093,13 +1229,11 @@ function evInjectStyles() {
   var style = document.createElement('style');
   style.id = 'ev-form-styles';
   style.textContent = [
-    /* Modal shell */
-    '.efm-modal{background:var(--white);border-radius:12px;width:100%;max-width:640px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,0.28);overflow:hidden}',
+    '.efm-modal{background:var(--white);border-radius:12px;width:100%;max-width:660px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,0.28);overflow:hidden}',
     '.efm-header{padding:22px 28px 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-shrink:0}',
     '.efm-header-title{font-family:var(--font-d);font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.02em}',
-    '.efm-header-sub{font-family:var(--font-b);font-size:13px;color:rgba(255,255,255,0.7);margin-top:3px}',
-    /* Step indicator */
-    '.efm-steps{display:flex;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--white)}',
+    '.efm-header-sub{font-family:var(--font-b);font-size:13px;color:rgba(255,255,255,0.75);margin-top:3px}',
+    '.efm-steps{display:flex;align-items:center;padding:14px 28px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--white)}',
     '.efm-step{display:flex;align-items:center;gap:8px;flex-shrink:0}',
     '.efm-step-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:11px;font-weight:700;background:var(--surface);color:var(--ink-faint);border:1.5px solid var(--border);transition:all .2s}',
     '.efm-step--active .efm-step-num{background:var(--swansway);color:#fff;border-color:var(--swansway)}',
@@ -1109,11 +1243,9 @@ function evInjectStyles() {
     '.efm-step--done .efm-step-label{color:#059669}',
     '.efm-step-line{flex:1;height:1px;background:var(--border);margin:0 10px}',
     '.efm-step-line--done{background:#059669}',
-    /* Body */
-    '.efm-body{flex:1;overflow-y:auto;padding:24px 28px}',
+    '.efm-body{flex:1;overflow-y:auto;padding:22px 28px}',
     '.efm-section-label{font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-faint);margin-bottom:12px}',
     '.efm-divider{border:none;border-top:1px solid var(--border);margin:20px 0}',
-    /* Fields */
     '.efm-field{margin-bottom:16px}',
     '.efm-label{display:block;font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-soft);margin-bottom:6px}',
     '.efm-input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font-b);font-size:14px;color:var(--ink);background:var(--white);outline:none;box-sizing:border-box;transition:border-color .15s}',
@@ -1126,29 +1258,35 @@ function evInjectStyles() {
     '.efm-input-prefix .efm-input{padding-left:24px}',
     '.efm-input-prefix--sm span{left:8px;font-size:12px}',
     '.efm-input-prefix--sm .efm-input{padding-left:20px}',
-    /* Grids */
     '.efm-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}',
     '.efm-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}',
-    /* Brand grid */
     '.efm-brand-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}',
     '.efm-brand-btn{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--border);border-radius:6px;background:var(--white);font-family:var(--font-b);font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;text-align:left;transition:all .15s;width:100%}',
     '.efm-brand-btn:hover{background:var(--surface)}',
     '.efm-brand-btn--selected{font-weight:700}',
     '.efm-brand-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}',
-    /* Site grid */
-    '.efm-site-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px}',
-    '.efm-site-btn{padding:7px 12px;border:1.5px solid var(--border);border-radius:5px;background:var(--white);font-family:var(--font-b);font-size:12px;font-weight:500;color:var(--ink);cursor:pointer;text-align:left;transition:all .15s;width:100%}',
+    '.efm-site-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-bottom:0}',
+    '.efm-site-btn{padding:7px 12px;border:1.5px solid var(--border);border-radius:5px;background:var(--white);font-family:var(--font-b);font-size:12px;font-weight:500;color:var(--ink);cursor:pointer;text-align:left;transition:all .15s;width:100%;display:flex;justify-content:space-between;align-items:center}',
     '.efm-site-btn:hover{background:var(--surface)}',
     '.efm-site-btn--selected{font-weight:700}',
-    /* Type pills */
+    '.efm-site-check{font-size:11px;font-weight:700}',
+    '.efm-site-summary{margin-top:4px}',
     '.efm-type-row{display:flex;flex-wrap:wrap;gap:8px}',
     '.efm-type-btn{padding:7px 16px;border:1.5px solid;border-radius:100px;font-family:var(--font-b);font-size:13px;font-weight:600;cursor:pointer;background:transparent;transition:all .2s}',
-    /* Toggle */
     '.efm-toggle-row{display:flex;align-items:center;gap:10px;cursor:pointer}',
     '.efm-toggle-row input{width:16px;height:16px;cursor:pointer;accent-color:var(--swansway)}',
     '.efm-toggle-label{font-family:var(--font-b);font-size:13px;color:var(--ink)}',
+    /* Budget panel */
+    '.efm-budget-panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-top:2px;margin-bottom:4px}',
+    '.efm-budget-rows{display:flex;flex-direction:column;gap:8px}',
+    '.efm-budget-row{display:grid;grid-template-columns:180px 1fr 80px 80px;align-items:center;gap:10px}',
+    '.efm-budget-site{font-family:var(--font-b);font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.efm-budget-bar-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden}',
+    '.efm-budget-bar{height:100%;border-radius:3px;transition:width .4s}',
+    '.efm-budget-remaining{font-family:var(--font-m);font-size:12px;font-weight:700;text-align:right;white-space:nowrap}',
+    '.efm-budget-total{font-family:var(--font-m);font-size:11px;color:var(--ink-faint);text-align:right;white-space:nowrap}',
     /* Vehicle grid */
-    '.efm-vehicles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}',
+    '.efm-vehicles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}',
     '.efm-vehicle-card{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;transition:all .15s}',
     '.efm-vehicle-card input[type=checkbox]{display:none}',
     '.efm-vehicle-card:hover{background:var(--surface)}',
@@ -1158,12 +1296,11 @@ function evInjectStyles() {
     /* POS */
     '.efm-pos-category{margin-bottom:14px}',
     '.efm-pos-cat-label{font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-faint);margin-bottom:6px}',
-    '.efm-pos-row{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:4px;transition:background .1s}',
+    '.efm-pos-row{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:4px;transition:background .1s}',
     '.efm-pos-row:hover{background:var(--surface)}',
     '.efm-pos-check-label{display:flex;align-items:center;gap:8px;cursor:pointer;font-family:var(--font-b);font-size:13px;color:var(--ink);flex:1}',
     '.efm-pos-check-label input{accent-color:var(--swansway);width:15px;height:15px;cursor:pointer}',
     '.efm-pos-inputs{display:flex;align-items:center;gap:6px}',
-    /* Footer */
     '.efm-footer{padding:16px 28px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--surface);flex-shrink:0}'
   ].join('');
   document.head.appendChild(style);
