@@ -571,6 +571,33 @@ function renderBudgetTracker() {
           + '</tr>';
 
       });
+
+      // Events row per brand — aggregated across all brand sites
+      var brandEvPlanned = 0, brandEvActual = 0;
+      var brandEvCells = '';
+      for (var emi = 0; emi < 12; emi++) {
+        var mp = 0, ma = 0;
+        sites.forEach(function(site) {
+          var ev = getEventBudgetBySite(site.site_id);
+          mp += ev[emi].planned;
+          ma += ev[emi].actual;
+        });
+        brandEvPlanned += mp; brandEvActual += ma;
+        var evInner = ma > 0
+          ? '<span style="color:#7C3AED;font-weight:700">&pound;' + ma.toLocaleString() + '</span>'
+          : mp > 0 ? '<em style="color:#7C3AED;opacity:0.6">&pound;' + mp.toLocaleString() + '</em>'
+          : '<em style="color:var(--ink-faint)">&mdash;</em>';
+        brandEvCells += '<td class="budget-cell" style="font-size:11px;padding:4px 8px;background:#F5F3FF">' + evInner + '</td>';
+      }
+      if (brandEvPlanned > 0 || brandEvActual > 0) {
+        rows += '<tr style="background:#F5F3FF;border-bottom:1px solid #E9D5FF">'
+          + '<td style="padding:5px 10px 5px 28px;font-size:11px;color:#7C3AED;font-weight:600;border-left:4px solid #7C3AED">&#127914; Events &amp; Placements</td>'
+          + brandEvCells
+          + '<td style="text-align:right;font-size:11px;color:#7C3AED;padding:4px 8px">' + (brandEvPlanned > 0 ? '&pound;' + brandEvPlanned.toLocaleString() : '&mdash;') + '</td>'
+          + '<td style="text-align:right;font-size:11px;color:#7C3AED;font-weight:700;padding:4px 8px">' + (brandEvActual > 0 ? '&pound;' + brandEvActual.toLocaleString() : '&mdash;') + '</td>'
+          + '<td style="padding:4px 8px">&mdash;</td>'
+          + '</tr>';
+      }
     }
   });
   tbody.innerHTML = rows;
@@ -578,13 +605,23 @@ function renderBudgetTracker() {
   // Metrics
   var totalCommitted = 0;
   Object.values(BRIEF_COMMITMENTS).forEach(function(sm) { Object.values(sm).forEach(function(v){ totalCommitted += v; }); });
-  var trueRemaining = totalPlanned - totalCommitted - totalActual;
+  // Add events planned to committed total for remaining calculation
+  var totalEventsPlanned = 0;
+  if (typeof EV_EVENTS_BUDGET !== 'undefined') {
+    var planYear = parseInt(PLAN_YEAR) || new Date().getFullYear();
+    EV_EVENTS_BUDGET.forEach(function(ev) {
+      if (!ev.start_date) return;
+      if (new Date(ev.start_date + 'T00:00:00').getFullYear() !== planYear) return;
+      totalEventsPlanned += ev.planned_budget || 0;
+    });
+  }
+  var trueRemaining = totalPlanned - totalCommitted - totalActual - totalEventsPlanned;
   var pct = totalActual > 0 ? Math.round(totalActual/totalPlanned*100) : totalCommitted > 0 ? Math.round(totalCommitted/totalPlanned*100) : 0;
   metricsEl.innerHTML = [
     {label:'Total planned ' + PLAN_YEAR,  val:'&pound;' + (totalPlanned/1000000).toFixed(2) + 'M',                                        sub:'Across all brands',             color:'var(--swansway)'},
     {label:'Committed (briefs)',   val:totalCommitted > 0 ? '&pound;' + (totalCommitted/1000000).toFixed(2) + 'M' : '&pound;0',  sub:'From saved briefs',             color:'#D97706'},
     {label:'Actual spent',         val:totalActual > 0 ? '&pound;' + (totalActual/1000000).toFixed(2) + 'M' : '&pound;0',        sub:'Entered in site budgets',       color:'#059669'},
-    {label:'Remaining headroom',   val:'&pound;' + (Math.max(0,trueRemaining)/1000000).toFixed(2) + 'M',                          sub:'Planned − committed − actual', color:'#6B7280'},
+    {label:'Remaining headroom',   val:'&pound;' + (Math.max(0,trueRemaining)/1000000).toFixed(2) + 'M',                          sub:'Planned − committed − actual − events', color:'#6B7280'},
   ].map(function(m) {
     return '<div class="metric" style="border-top-color:' + m.color + '"><div class="metric-label">' + m.label + '</div><div class="metric-val" style="color:' + m.color + '">' + m.val + '</div><div class="metric-sub">' + m.sub + '</div></div>';
   }).join('');
@@ -979,6 +1016,7 @@ async function loadSiteBudgets() {
     if (typeof loadBriefCommitmentsForTracker === 'function') await loadBriefCommitmentsForTracker();
     // Now site budgets are loaded — trigger channel aggregation if brand data ready
     if (Object.keys(BRAND_CHANNELS_DATA).length) updateGroupChannelsFromBrands();
+    await loadEventsForBudget();
     if (typeof renderBudgetTracker === 'function') renderBudgetTracker();
     var _cvEl = document.getElementById('view-channels');
     if (_cvEl && _cvEl.classList.contains('active') && typeof renderGroupChannels === 'function') renderGroupChannels();
@@ -992,6 +1030,33 @@ async function loadSiteBudgets() {
 }
 
 
+
+async function loadEventsForBudget() {
+  try {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/events?select=site_id,start_date,planned_budget,actual_spend,status&status=neq.cancelled&order=start_date', {
+      headers: getAuthHeaders({'Content-Type':'application/json'})
+    });
+    if (!r.ok) return;
+    EV_EVENTS_BUDGET = await r.json();
+  } catch(e) { console.warn('loadEventsForBudget:', e); }
+}
+
+function getEventBudgetBySite(siteId) {
+  // Returns array of 12 months: {planned, actual} — only for PLAN_YEAR
+  var planYear = parseInt(PLAN_YEAR) || new Date().getFullYear();
+  var monthly = [];
+  for (var i = 0; i < 12; i++) monthly.push({ planned: 0, actual: 0 });
+  EV_EVENTS_BUDGET.forEach(function(ev) {
+    if (ev.site_id !== siteId) return;
+    if (!ev.start_date) return;
+    var d = new Date(ev.start_date + 'T00:00:00');
+    if (d.getFullYear() !== planYear) return;
+    var m = d.getMonth();
+    monthly[m].planned += ev.planned_budget || 0;
+    monthly[m].actual  += ev.actual_spend   || 0;
+  });
+  return monthly;
+}
 async function loadSiteKPIs() {
   try {
     var resp = await fetch(SUPABASE_URL + '/rest/v1/site_kpis?select=*', {
