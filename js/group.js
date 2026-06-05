@@ -275,6 +275,8 @@ async function calLoadFromSupabase() {
         start_date: r.start_date || null,
         end_date: r.end_date || null,
         scope: r.scope || 'brand',
+        site_id: r.site_id || null,
+        brand_id: r.brand_id || null,
         channels: r.confirmed_channels || []
       };
     });
@@ -573,32 +575,6 @@ function renderBudgetTracker() {
 
       });
 
-      // Events row per brand — aggregated across all brand sites
-      var brandEvPlanned = 0, brandEvActual = 0;
-      var brandEvCells = '';
-      for (var emi = 0; emi < 12; emi++) {
-        var mp = 0, ma = 0;
-        sites.forEach(function(site) {
-          var ev = getEventBudgetBySite(site.site_id);
-          mp += ev[emi].planned;
-          ma += ev[emi].actual;
-        });
-        brandEvPlanned += mp; brandEvActual += ma;
-        var evInner = ma > 0
-          ? '<span style="color:#7C3AED;font-weight:700">&pound;' + ma.toLocaleString() + '</span>'
-          : mp > 0 ? '<em style="color:#7C3AED;opacity:0.6">&pound;' + mp.toLocaleString() + '</em>'
-          : '<em style="color:var(--ink-faint)">&mdash;</em>';
-        brandEvCells += '<td class="budget-cell" style="font-size:11px;padding:4px 8px;background:#F5F3FF">' + evInner + '</td>';
-      }
-      if (brandEvPlanned > 0 || brandEvActual > 0) {
-        rows += '<tr style="background:#F5F3FF;border-bottom:1px solid #E9D5FF">'
-          + '<td style="padding:5px 10px 5px 28px;font-size:11px;color:#7C3AED;font-weight:600;border-left:4px solid #7C3AED">&#127914; Events &amp; Placements</td>'
-          + brandEvCells
-          + '<td style="text-align:right;font-size:11px;color:#7C3AED;padding:4px 8px">' + (brandEvPlanned > 0 ? '&pound;' + brandEvPlanned.toLocaleString() : '&mdash;') + '</td>'
-          + '<td style="text-align:right;font-size:11px;color:#7C3AED;font-weight:700;padding:4px 8px">' + (brandEvActual > 0 ? '&pound;' + brandEvActual.toLocaleString() : '&mdash;') + '</td>'
-          + '<td style="padding:4px 8px">&mdash;</td>'
-          + '</tr>';
-      }
     }
   });
   tbody.innerHTML = rows;
@@ -629,6 +605,7 @@ function renderBudgetTracker() {
 
   renderBudgetChart(mPlanned, mActual);
   renderBudgetSummary();
+  btInjectStyles();
 }
 
 
@@ -1034,7 +1011,7 @@ async function loadSiteBudgets() {
 
 async function loadEventsForBudget() {
   try {
-    var r = await fetch(SUPABASE_URL + '/rest/v1/events?select=site_id,start_date,planned_budget,actual_spend,status&status=neq.cancelled&order=start_date', {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/events?select=id,title,site_id,brand_id,start_date,end_date,planned_budget,actual_spend,status&status=neq.cancelled&order=start_date', {
       headers: getAuthHeaders({'Content-Type':'application/json'})
     });
     if (!r.ok) return;
@@ -1364,4 +1341,58 @@ function applyAdminKPITargets() {
     }
     if (ak.owner && ak.owner !== '--') gk.o = ak.owner;
   });
+}
+
+
+/* ══ BUDGET ACCORDION HELPERS ══ */
+var BT_OPEN = {};
+
+function btToggle(id) {
+  var panel = document.getElementById(id);
+  var row   = document.getElementById('row-' + id);
+  var chv   = document.getElementById('chv-' + id);
+  if (!panel || !row) return;
+  var open = BT_OPEN[id];
+  if (open) {
+    panel.style.display = 'none';
+    row.style.display = 'none';
+    if (chv) chv.innerHTML = '&#9654;';
+    BT_OPEN[id] = false;
+  } else {
+    panel.style.display = '';
+    row.style.display = '';
+    if (chv) chv.innerHTML = '&#9660;';
+    BT_OPEN[id] = true;
+  }
+}
+
+function btFmtDate(d) {
+  if (!d) return '';
+  var dt = new Date(d + 'T00:00:00');
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return dt.getDate() + ' ' + months[dt.getMonth()];
+}
+
+function btEsc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function btInjectStyles() {
+  if (document.getElementById('bt-accord-styles')) return;
+  var s = document.createElement('style');
+  s.id = 'bt-accord-styles';
+  s.textContent = [
+    '.bt-accord{animation:btFadeIn .18s ease}',
+    '@keyframes btFadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}',
+    '.bt-chevron{display:inline-block;font-size:9px;color:var(--ink-faint);transition:transform .2s;line-height:1;flex-shrink:0}',
+    '.bt-accord-section-label{font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-faint);margin-bottom:8px}',
+    '.bt-accord-table{width:100%;border-collapse:collapse;font-family:var(--font-b);font-size:12px}',
+    '.bt-accord-table th{font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-faint);padding:4px 10px 6px;text-align:left;border-bottom:1px solid var(--border)}',
+    '.bt-accord-table td{padding:7px 10px;color:var(--ink);border-bottom:1px solid var(--border)}',
+    '.bt-accord-table tr:last-child td{border-bottom:none}',
+    '.bt-accord-table tr:hover td{background:rgba(0,0,0,0.02)}',
+    '.bt-accord-total td{font-weight:700;font-size:11px;color:var(--ink-soft);border-top:1px solid var(--border);border-bottom:none;padding:6px 10px;background:var(--surface)}',
+  ].join('');
+  document.head.appendChild(s);
 }
