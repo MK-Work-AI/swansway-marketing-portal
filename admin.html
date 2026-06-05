@@ -181,6 +181,11 @@
       <button class="snav" data-page="brand" onclick="showPage('brand')">🏷 Brand Plans</button>
     </div>
     <div class="admin-sidebar-section">
+      <div class="admin-sidebar-label">Events</div>
+      <button class="snav" data-page="eventtypes" onclick="showPage('eventtypes')">📅 Event Types</button>
+      <button class="snav" data-page="positems" onclick="showPage('positems')">🎪 POS Items</button>
+    </div>
+    <div class="admin-sidebar-section">
       <div class="admin-sidebar-label">Site Data</div>
       <button class="snav" data-page="sitebudgets" onclick="showPage('sitebudgets')">💷 Site Budgets</button>
       <button class="snav" data-page="sitekpis" onclick="showPage('sitekpis')">📊 Site KPIs</button>
@@ -390,6 +395,49 @@
       </div>
       <div class="admin-metrics-row" id="users-metrics"></div>
       <div id="users-list"></div>
+    </div>
+
+    <!-- EVENT TYPES -->
+    <div class="admin-page" id="page-eventtypes">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">Event Types</div><div class="admin-page-sub">Manage event categories and colours</div></div>
+        <button class="btn btn-accent" onclick="etOpenAdd()">+ Add type</button>
+      </div>
+      <div id="et-add-form" style="display:none;margin-bottom:1rem;padding:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:6px">
+        <div class="form-grid-3" style="align-items:flex-end">
+          <div><div class="admin-field-label">Name</div><input class="admin-input" id="et-new-name" type="text" placeholder="Event type name" style="width:100%"></div>
+          <div><div class="admin-field-label">Colour</div><input class="admin-input" id="et-new-color" type="color" value="#1A2E4A" style="width:100%;height:38px;padding:2px 4px;cursor:pointer"></div>
+          <div><div class="admin-field-label">Sort order</div><input class="admin-input" id="et-new-sort" type="number" value="99" style="width:100%"></div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="btn btn-accent" onclick="etSaveNew()">Save</button>
+          <button class="btn" onclick="etCloseAdd()">Cancel</button>
+        </div>
+      </div>
+      <div class="admin-table-wrap"><table class="admin-table" id="et-table">
+        <thead><tr><th>Name</th><th>Colour</th><th>Sort</th><th>Active</th><th></th></tr></thead>
+        <tbody id="et-tbody"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--ink-faint)">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- POS ITEMS -->
+    <div class="admin-page" id="page-positems">
+      <div class="admin-page-header">
+        <div><div class="admin-page-title">POS Items</div><div class="admin-page-sub">Manage point-of-sale items and default costs</div></div>
+        <button class="btn btn-accent" onclick="piOpenAdd()">+ Add item</button>
+      </div>
+      <div id="pi-add-form" style="display:none;margin-bottom:1rem;padding:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:6px">
+        <div class="form-grid-3" style="align-items:flex-end">
+          <div><div class="admin-field-label">Name</div><input class="admin-input" id="pi-new-name" type="text" placeholder="Item name" style="width:100%"></div>
+          <div><div class="admin-field-label">Category</div><input class="admin-input" id="pi-new-cat" type="text" placeholder="e.g. Signage" list="pi-cat-list" style="width:100%"><datalist id="pi-cat-list"></datalist></div>
+          <div><div class="admin-field-label">Default unit cost (£)</div><input class="admin-input" id="pi-new-cost" type="number" min="0" step="0.01" value="0" style="width:100%"></div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="btn btn-accent" onclick="piSaveNew()">Save</button>
+          <button class="btn" onclick="piCloseAdd()">Cancel</button>
+        </div>
+      </div>
+      <div id="pi-content"><div style="text-align:center;padding:40px;color:var(--ink-faint)">Loading…</div></div>
     </div>
 
   </div><!-- end admin-main -->
