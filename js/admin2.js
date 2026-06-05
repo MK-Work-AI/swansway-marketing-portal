@@ -1039,14 +1039,13 @@ function buildBrandTabs(prefix, currentBrand, dataAttr) {
 
 
 /* ══ EVENT TYPES ADMIN ══ */
-var ET_SUPA = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
 var ET_ITEMS = [];
 
 async function etLoad() {
   var tbody = document.getElementById('et-tbody');
   if (!tbody) return;
   try {
-    var r = await fetch(ET_SUPA + '/event_types?select=*&order=sort_order', { headers: getAuthHeaders() });
+    var r = await fetch(SUPA + '/event_types?select=*&order=sort_order', { headers: getAuthHeaders() });
     if (!r.ok) throw new Error(await r.text());
     ET_ITEMS = await r.json();
     etRender();
@@ -1077,7 +1076,7 @@ async function etSaveNew() {
   var sort  = parseInt(document.getElementById('et-new-sort').value) || 99;
   if (!name) { alert('Please enter a name.'); return; }
   try {
-    var r = await fetch(ET_SUPA + '/event_types', {
+    var r = await fetch(SUPA + '/event_types', {
       method: 'POST',
       headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
       body: JSON.stringify([{ name: name, color: color, sort_order: sort, active: true }])
@@ -1092,7 +1091,7 @@ async function etSaveNew() {
 
 async function etUpdateSort(id, val) {
   try {
-    await fetch(ET_SUPA + '/event_types?id=eq.' + id, {
+    await fetch(SUPA + '/event_types?id=eq.' + id, {
       method: 'PATCH',
       headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
       body: JSON.stringify({ sort_order: parseInt(val) || 0 })
@@ -1103,7 +1102,7 @@ async function etUpdateSort(id, val) {
 
 async function etToggleActive(id, active) {
   try {
-    await fetch(ET_SUPA + '/event_types?id=eq.' + id, {
+    await fetch(SUPA + '/event_types?id=eq.' + id, {
       method: 'PATCH',
       headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
       body: JSON.stringify({ active: active })
@@ -1114,7 +1113,7 @@ async function etToggleActive(id, active) {
 async function etDelete(id) {
   if (!confirm('Delete this event type? This cannot be undone.')) return;
   try {
-    var r = await fetch(ET_SUPA + '/event_types?id=eq.' + id, {
+    var r = await fetch(SUPA + '/event_types?id=eq.' + id, {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
@@ -1131,7 +1130,7 @@ async function piLoad() {
   var el = document.getElementById('pi-content');
   if (!el) return;
   try {
-    var r = await fetch(ET_SUPA + '/pos_items?select=*&order=sort_order', { headers: getAuthHeaders() });
+    var r = await fetch(SUPA + '/pos_items?select=*&order=sort_order', { headers: getAuthHeaders() });
     if (!r.ok) throw new Error(await r.text());
     PI_ITEMS = await r.json();
     piRender();
@@ -1185,7 +1184,7 @@ async function piSaveNew() {
   if (!name) { alert('Please enter an item name.'); return; }
   if (!cat)  { alert('Please enter a category.'); return; }
   try {
-    var r = await fetch(ET_SUPA + '/pos_items', {
+    var r = await fetch(SUPA + '/pos_items', {
       method: 'POST',
       headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
       body: JSON.stringify([{ name: name, category: cat, default_unit_cost: cost, active: true, sort_order: 99 }])
@@ -1200,7 +1199,7 @@ async function piSaveNew() {
 
 async function piUpdateCost(id, val) {
   try {
-    await fetch(ET_SUPA + '/pos_items?id=eq.' + id, {
+    await fetch(SUPA + '/pos_items?id=eq.' + id, {
       method: 'PATCH',
       headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
       body: JSON.stringify({ default_unit_cost: parseFloat(val) || 0 })
@@ -1211,7 +1210,7 @@ async function piUpdateCost(id, val) {
 
 async function piToggleActive(id, active) {
   try {
-    await fetch(ET_SUPA + '/pos_items?id=eq.' + id, {
+    await fetch(SUPA + '/pos_items?id=eq.' + id, {
       method: 'PATCH',
       headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
       body: JSON.stringify({ active: active })
@@ -1222,7 +1221,7 @@ async function piToggleActive(id, active) {
 async function piDelete(id) {
   if (!confirm('Delete this POS item? This cannot be undone.')) return;
   try {
-    var r = await fetch(ET_SUPA + '/pos_items?id=eq.' + id, {
+    var r = await fetch(SUPA + '/pos_items?id=eq.' + id, {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
