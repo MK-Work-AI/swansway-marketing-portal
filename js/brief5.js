@@ -2398,7 +2398,8 @@ function bbExitCampaignMode() {
       if (scopeSec) scopeSec.style.display = 'block';
       if (datesSec) datesSec.style.display = 'block';
       // Restore site picker if site scope
-      if (BB.scope === 'site') {
+      if (BB.scope === 'site' || BB.scope === 'sites') {
+        if (BB.scope === 'site') BB.scope = 'sites'; // migrate old value
         var scopeSiteBtn = document.getElementById('scope-site');
         var scopeBrandBtn = document.getElementById('scope-brand');
         if (scopeSiteBtn) scopeSiteBtn.classList.add('bb-selected');
@@ -2632,7 +2633,9 @@ async function bbLoadBrief(id) {
     if (_spSec) _spSec.style.display = 'block';
     if (_dpSec) _dpSec.style.display = 'block';
     // Restore scope UI
-    if (BB.scope === 'site' && BB.site_id) {
+    if (BB.scope === 'site' || BB.scope === 'sites') {
+      if (BB.scope === 'site') BB.scope = 'sites'; // migrate old value
+      if (BB.site_id && BB.site_ids.indexOf(BB.site_id) === -1) BB.site_ids = [BB.site_id];
       var _ssSiteBtn = document.getElementById('scope-site');
       var _sbBrandBtn = document.getElementById('scope-brand');
       if (_ssSiteBtn) _ssSiteBtn.classList.add('bb-selected');
