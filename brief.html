@@ -959,11 +959,7 @@
         </div>
       </div>
 
-      <!-- Budget split step — shown after budget slider when multiple sites selected -->
-      <div id="bb-split-step" style="display:none;margin-top:1.5rem;padding:16px 20px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px">
-        <div class="bb-section-label" style="margin-bottom:2px">Budget split by site</div>
-        <div id="bb-split-body"></div>
-      </div>
+
 
 
 
@@ -1002,6 +998,11 @@
       <div class="bb-budget-sub" id="bb-budget-sub">—</div>
       <input type="range" class="bb-slider" id="bb-slider" min="1000" max="100000" step="500" value="5000" oninput="bbOnBudget(this.value);bbShowSplitStep()">
       <div class="bb-presets" id="bb-presets"></div>
+      <!-- Budget split — appears here when multiple sites are selected -->
+      <div id="bb-split-step" style="display:none;margin-top:1.25rem;padding:16px 20px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px">
+        <div class="bb-section-label" style="margin-bottom:8px">Budget split by site</div>
+        <div id="bb-split-body"></div>
+      </div>
       <div class="bb-section-label">Campaign duration</div>
       <div id="bb-duration-display" style="display:flex;align-items:baseline;gap:16px;margin-bottom:1.5rem;padding:20px 24px;background:var(--white);border:1.5px solid var(--border);border-radius:8px;min-height:72px">
         <div id="bb-dur-weeks-big" style="font-family:var(--font-d);font-size:52px;font-weight:800;color:var(--swansway);line-height:1">—</div>
