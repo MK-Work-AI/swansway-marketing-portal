@@ -216,6 +216,7 @@ function bbRenderSiteGrid() {
       bbUpdateSiteCount();
       bbUpdateBrief();
       bbLoadHeadroom();
+      bbShowSplitStep();
     };
     el.appendChild(d);
   });
