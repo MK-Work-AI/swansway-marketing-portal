@@ -850,7 +850,7 @@ function bbGenerateBrief() {
         <div class="bb-out-meta-item"><div class="bb-out-meta-label">Budget</div><div class="bb-out-meta-val">&pound;${BB.budget.toLocaleString()}</div></div>
         <div class="bb-out-meta-item"><div class="bb-out-meta-label">Duration</div><div class="bb-out-meta-val">${week} weeks</div></div>
         <div class="bb-out-meta-item"><div class="bb-out-meta-label">Dates</div><div class="bb-out-meta-val" style="font-size:13px;font-weight:500">${BB.start_date ? (()=>{ const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; const sd=new Date(BB.start_date+'T00:00:00'),ed=new Date((BB.end_date||BB.start_date)+'T00:00:00'); return sd.getDate()+' '+months[sd.getMonth()]+' – '+ed.getDate()+' '+months[ed.getMonth()]+' '+ed.getFullYear(); })() : fmt(now)+' – '+fmt(end)}</div></div>
-        <div class="bb-out-meta-item"><div class="bb-out-meta-label">Sites</div><div class="bb-out-meta-val" style="font-size:13px;font-weight:500">${BB.scope==='site'&&BB.site_id ? (HUB_SITES.find(s=>s.site_id===BB.site_id)?.site_name||BB.site_id) : (BB.brand?.locations?.join(', ')||'All sites')}</div></div>
+        <div class="bb-out-meta-item"><div class="bb-out-meta-label">Sites</div><div class="bb-out-meta-val" style="font-size:13px;font-weight:500">${BB.scope==='sites'&&BB.site_ids&&BB.site_ids.length ? (BB.site_ids.length===1 ? (HUB_SITES.find(s=>s.site_id===BB.site_ids[0])?.site_name||BB.site_ids[0]) : BB.site_ids.map(sid=>(HUB_SITES.find(s=>s.site_id===sid)?.site_name||sid)).join(', ')) : (BB.brand?.locations?.join(', ')||'All sites')}</div></div>
       </div>
     </div>
     <div class="bb-out-body">
@@ -2245,7 +2245,20 @@ function bbRenderCampaignSidebar(el, brief, camp, tasks) {
       + bbCampSidebarRow('Campaign type', (brief.campaign_type)||'\u2014')
       + bbCampSidebarRow('Budget', budget)
       + bbCampSidebarRow('Dates', dateStr)
-      + bbCampSidebarRow('Site', brief.site_id||(brief.scope==='brand'&&brand.name?brand.name+' (all sites)':'\u2014'))
+      + bbCampSidebarRow('Site', (function() {
+          if (brief.scope === 'sites' || brief.scope === 'site') {
+            // Derive site names from BRIEF_COMMITMENTS distinct site_ids for this brief
+            var bsids = Object.keys(BRIEF_COMMITMENTS).filter(function(sid) {
+              return Object.keys(BRIEF_COMMITMENTS[sid]).some(function(m) { return true; });
+            });
+            // Use site_id as fallback since we store first site there
+            if (brief.site_id) {
+              var sobj = (typeof HUB_SITES !== 'undefined') ? HUB_SITES.find(function(s){ return s.site_id === brief.site_id; }) : null;
+              return sobj ? sobj.site_name : brief.site_id;
+            }
+          }
+          return brand.name ? brand.name + ' (all sites)' : '\u2014';
+        })())
     + '</div>'
 
     // Blocker status
