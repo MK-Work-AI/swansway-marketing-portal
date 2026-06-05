@@ -536,7 +536,7 @@ function renderBudgetTracker() {
       + '<td style="text-align:right;font-size:11px;' + varStyle + '">' + varStr + '</td>'
       + '</tr>';
 
-    // Site rows — always visible, flat hierarchy
+    // Site rows with accordion
     if (hasSiteData) {
       sites.forEach(function(site) {
         var d = SITE_BUDGETS[site.site_id] || {};
@@ -565,18 +565,122 @@ function renderBudgetTracker() {
         } else { sVarStyle = ''; sVarStr = '&mdash;'; }
         var actOrCmt = siteActual > 0 ? '&pound;' + siteActual.toLocaleString()
           : siteCommitted > 0 ? '<span style="color:#D97706">&pound;' + siteCommitted.toLocaleString() + '</span>' : '&mdash;';
-        rows += '<tr style="background:var(--white);border-bottom:1px solid var(--border)">'
-          + '<td style="padding:7px 10px 7px 28px;font-size:12px;color:var(--ink);border-left:4px solid '+b.color+'">' + site.site_name + '</td>'
+
+        // Identify campaigns + events for this site
+        var planYear = parseInt(PLAN_YEAR) || new Date().getFullYear();
+        var siteCamps = BUILT_IN_CAMPAIGNS.filter(function(c) {
+          if (!c.start_date) return false;
+          if (new Date(c.start_date + 'T00:00:00').getFullYear() !== planYear) return false;
+          if (c.scope === 'site') return c.site_id === site.site_id;
+          return c.brand_id === site.brand_id;
+        });
+        var siteEvs = EV_EVENTS_BUDGET.filter(function(ev) {
+          if (ev.site_id !== site.site_id || !ev.start_date) return false;
+          return new Date(ev.start_date + 'T00:00:00').getFullYear() === planYear;
+        });
+        var identifiedCamp  = siteCamps.reduce(function(s,c){ return s + (c.budget || 0); }, 0);
+        var identifiedEvPl  = siteEvs.reduce(function(s,e){ return s + (e.planned_budget || 0); }, 0);
+        var identifiedEvAc  = siteEvs.reduce(function(s,e){ return s + (e.actual_spend   || 0); }, 0);
+        var identifiedTotal = identifiedCamp + identifiedEvPl;
+        var hasItems = siteCamps.length > 0 || siteEvs.length > 0;
+        var accordId = 'bta-' + site.site_id.replace(/[^a-z0-9]/gi, '_');
+
+        var siteLabel = hasItems
+          ? '<span style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="btToggle(\'' + accordId + '\')">'
+            + '<span class="bt-chevron" id="chv-' + accordId + '">&#9654;</span>' + btEsc(site.site_name) + '</span>'
+            + (sitePlan > 0 ? '<div style="font-size:10px;font-family:var(--font-m);color:var(--ink-faint);margin-top:2px;margin-left:16px">&pound;'
+              + identifiedTotal.toLocaleString() + ' of &pound;' + sitePlan.toLocaleString() + ' identified</div>' : '')
+          : btEsc(site.site_name);
+
+        rows += '<tr style="background:var(--white);border-bottom:' + (hasItems ? 'none' : '1px solid var(--border)') + '">'
+          + '<td style="padding:7px 10px 7px 28px;font-size:12px;color:var(--ink);border-left:4px solid ' + b.color + '">' + siteLabel + '</td>'
           + siteCells
           + '<td style="text-align:right;font-size:11px;color:var(--ink-faint);padding:4px 8px">' + (sitePlan > 0 ? '&pound;' + sitePlan.toLocaleString() : '&mdash;') + '</td>'
           + '<td style="text-align:right;font-size:11px;padding:4px 8px">' + actOrCmt + '</td>'
           + '<td style="text-align:right;font-size:11px;' + sVarStyle + ';padding:4px 8px">' + sVarStr + '</td>'
           + '</tr>';
 
+        // Accordion detail row
+        if (hasItems) {
+          var STATUS_C = { planned:'#6B7280', briefed:'#D97706', active:'#059669', completed:'#374151', approved:'#2563EB', cancelled:'#DC2626' };
+          var STATUS_E = { draft:'#6B7280', confirmed:'#2563EB', completed:'#059669', cancelled:'#DC2626' };
+          var colCount = 16;
+          var acHtml = '<td colspan="' + colCount + '" style="padding:0;border-left:4px solid ' + b.color + ';background:var(--surface);border-bottom:1px solid var(--border)">';
+          acHtml += '<div class="bt-accord" id="' + accordId + '" style="display:none"><div style="padding:14px 20px 18px">';
+
+          if (siteCamps.length > 0) {
+            acHtml += '<div class="bt-accord-section-label">Campaigns</div>';
+            acHtml += '<table class="bt-accord-table"><thead><tr>'
+              + '<th>Campaign</th><th>Type</th><th>Dates</th><th>Scope</th><th style="text-align:right">Planned budget</th><th>Status</th>'
+              + '</tr></thead><tbody>';
+            siteCamps.forEach(function(c) {
+              var sc = STATUS_C[c.status] || '#6B7280';
+              var dateStr = c.start_date ? btFmtDate(c.start_date) : '&mdash;';
+              if (c.end_date && c.end_date !== c.start_date) dateStr += ' &ndash; ' + btFmtDate(c.end_date);
+              acHtml += '<tr>'
+                + '<td style="font-weight:600">' + btEsc(c.name) + '</td>'
+                + '<td><span style="font-size:10px;padding:2px 7px;border-radius:3px;background:#F3F4F6;font-family:var(--font-m)">' + btEsc(c.type || '&mdash;') + '</span></td>'
+                + '<td style="color:var(--ink-soft);white-space:nowrap">' + dateStr + '</td>'
+                + '<td style="color:var(--ink-faint);font-size:11px">' + (c.scope === 'site' ? 'Site' : 'Brand-wide') + '</td>'
+                + '<td style="text-align:right;font-family:var(--font-m)">' + (c.budget ? '&pound;' + Number(c.budget).toLocaleString() : '&mdash;') + '</td>'
+                + '<td><span style="font-size:10px;padding:2px 7px;border-radius:3px;color:#fff;background:' + sc + ';font-family:var(--font-m)">' + btEsc(c.status || 'planned') + '</span></td>'
+                + '</tr>';
+            });
+            acHtml += '<tr class="bt-accord-total"><td colspan="4">Campaigns total</td>'
+              + '<td style="text-align:right;font-family:var(--font-m)">' + (identifiedCamp > 0 ? '&pound;' + identifiedCamp.toLocaleString() : '&mdash;') + '</td><td></td></tr>';
+            acHtml += '</tbody></table>';
+          }
+
+          if (siteEvs.length > 0) {
+            acHtml += '<div class="bt-accord-section-label" style="margin-top:14px">Events &amp; Placements</div>';
+            acHtml += '<table class="bt-accord-table"><thead><tr>'
+              + '<th>Event</th><th>Date</th><th style="text-align:right">Planned budget</th><th style="text-align:right">Actual spend</th><th>Status</th>'
+              + '</tr></thead><tbody>';
+            siteEvs.forEach(function(ev) {
+              var se = STATUS_E[ev.status] || '#6B7280';
+              var dateStr = ev.start_date ? btFmtDate(ev.start_date) : '&mdash;';
+              if (ev.end_date && ev.end_date !== ev.start_date) dateStr += ' &ndash; ' + btFmtDate(ev.end_date);
+              acHtml += '<tr>'
+                + '<td style="font-weight:600">' + btEsc(ev.title || 'Untitled') + '</td>'
+                + '<td style="color:var(--ink-soft);white-space:nowrap">' + dateStr + '</td>'
+                + '<td style="text-align:right;font-family:var(--font-m)">' + (ev.planned_budget ? '&pound;' + Number(ev.planned_budget).toLocaleString() : '&mdash;') + '</td>'
+                + '<td style="text-align:right;font-family:var(--font-m);' + (ev.actual_spend ? 'font-weight:700;color:#059669' : 'color:var(--ink-faint)') + '">'
+                + (ev.actual_spend ? '&pound;' + Number(ev.actual_spend).toLocaleString() : '&mdash;') + '</td>'
+                + '<td><span style="font-size:10px;padding:2px 7px;border-radius:3px;color:#fff;background:' + se + ';font-family:var(--font-m)">' + btEsc(ev.status || 'draft') + '</span></td>'
+                + '</tr>';
+            });
+            acHtml += '<tr class="bt-accord-total"><td colspan="2">Events total</td>'
+              + '<td style="text-align:right;font-family:var(--font-m)">' + (identifiedEvPl > 0 ? '&pound;' + identifiedEvPl.toLocaleString() : '&mdash;') + '</td>'
+              + '<td style="text-align:right;font-family:var(--font-m);font-weight:700;color:#059669">' + (identifiedEvAc > 0 ? '&pound;' + identifiedEvAc.toLocaleString() : '&mdash;') + '</td>'
+              + '<td></td></tr>';
+            acHtml += '</tbody></table>';
+          }
+
+          // Summary bar
+          if (sitePlan > 0) {
+            var pct = Math.min(100, Math.round(identifiedTotal / sitePlan * 100));
+            var barColor = pct > 90 ? '#DC2626' : pct > 70 ? '#D97706' : '#2563EB';
+            acHtml += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:16px">';
+            acHtml += '<div style="flex:1">';
+            acHtml += '<div style="display:flex;justify-content:space-between;margin-bottom:5px;font-family:var(--font-m);font-size:10px;color:var(--ink-soft)">'
+              + '<span>Identified spend</span><span style="font-weight:700;color:' + barColor + '">' + pct + '% of allocation</span></div>';
+            acHtml += '<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">'
+              + '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:3px"></div></div>';
+            acHtml += '</div>';
+            acHtml += '<div style="font-family:var(--font-m);font-size:11px;color:var(--ink-faint);text-align:right;flex-shrink:0">'
+              + (sitePlan - identifiedTotal > 0 ? '&pound;' + (sitePlan - identifiedTotal).toLocaleString() + ' unallocated' : 'Fully allocated')
+              + '</div></div>';
+          }
+
+          acHtml += '</div></div></td>';
+          rows += '<tr class="bt-accord-row" id="row-' + accordId + '" style="display:none">' + acHtml + '</tr>';
+        }
+
       });
 
     }
   });
+
   tbody.innerHTML = rows;
 
   // Metrics
