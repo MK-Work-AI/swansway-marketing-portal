@@ -767,13 +767,23 @@ function bbRenderPESO() {
       }).join('')}</div>
     </div>
   `).join('');
-  // Re-select saved channels if editing an existing brief
-  if (_savedChannels.length && BB.channels.length === 0) {
+  // If editing an existing brief with saved channels, restore them
+  // by reconciling science-based selection with saved user selection
+  if (_savedChannels.length) {
     BB.channels = _savedChannels;
-    // Visually re-select saved channel cards
-    _savedChannels.forEach(function(chId) {
-      var card = el.querySelector('[data-ch-id="' + chId + '"]');
-      if (card) card.classList.add('bb-ch-active');
+    // Update visual state: active = in saved channels, inactive = not in saved channels
+    el.querySelectorAll('.bb-ch-row').forEach(function(row) {
+      // Extract channel id from onclick: bbToggleCh('id', this)
+      var match = row.getAttribute('onclick') && row.getAttribute('onclick').match(/bbToggleCh\('([^']+)'/);
+      if (match) {
+        var chId = match[1];
+        row.classList.toggle('bb-ch-active', _savedChannels.indexOf(chId) !== -1);
+      }
+    });
+    // Also hide/show the bar fill rows
+    el.querySelectorAll('.bb-ch-bar').forEach(function(bar) {
+      var row = bar.previousElementSibling;
+      if (row) bar.style.display = row.classList.contains('bb-ch-active') ? '' : 'none';
     });
   }
   bbUpdateBrief();
