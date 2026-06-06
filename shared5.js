@@ -18,7 +18,7 @@ var AUTOPSY_LIST = []; var autopsyScore = 0; var COMP_SCANS = [];
 var QUIZ_STATE = {questions:[],current:0,answers:[],score:0,title:''};
 var _navOpen = null; var BUILT_IN_CAMPAIGNS = []; var CAL_CURRENT_QUARTER = 0;
 var _channelChartInst = null; var _updatingGroupChannels = false;
-var BB = {brand:null,ctype:null,objective:null,duration:null,budget:5000,sites:[],audiences:[],channels:[],tone:'',kpi:'',prop:'',step:1};
+var BB = {brand:null,ctype:null,objective:null,duration:null,budget:5000,sites:[],audiences:[],channels:[],tone:'',kpi:'',prop:'',step:1,site_id:'',site_ids:[],site_splits:{},scope:'brand'};
 
 // BRANDS
 const BRANDS = [
