@@ -35,7 +35,15 @@ function bbInit() {
 
 function bbGoStep(n) {
   if(n > BB.step && !bbCanGoTo(n)) return;
-  if (n === 3) { setTimeout(bbRenderBudgetIntel, 100); setTimeout(bbShowSplitStep, 150); }
+  if (n === 3) {
+    setTimeout(bbRenderBudgetIntel, 100);
+    setTimeout(bbShowSplitStep, 150);
+    // Restore date inputs every time step 3 is shown
+    var _sd = document.getElementById('bb-start-date');
+    var _ed = document.getElementById('bb-end-date');
+    if (_sd && BB.start_date) _sd.value = BB.start_date;
+    if (_ed && BB.end_date)   _ed.value = BB.end_date;
+  }
   if (n === 5) setTimeout(bbRenderStep5Context, 100);
   // Always clear any campaign-mode display overrides
   if (window._bbCampModeActive) {
