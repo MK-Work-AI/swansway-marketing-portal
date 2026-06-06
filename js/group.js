@@ -283,7 +283,7 @@ async function calLoadFromSupabase() {
       'jaguar':'Jaguar','honda':'Honda','peugeot':'Peugeot',
       'byd':'BYD','omoda':'OMODA/JAECOO','motormatch':'Motor Match'
     };
-    var resp = await fetch(SUPABASE_URL + '/rest/v1/briefs?select=id,title,brand_id,campaign_type,planned_objective,planned_budget,start_date,end_date,status,scope,site_id,brief_id,confirmed_channels,allocation&order=start_date.asc', {
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/briefs?select=id,title,brand_id,campaign_type,objective,budget,start_date,end_date,status,scope,site_id,confirmed_channels,allocation&order=start_date.asc', {
       headers: getAuthHeaders({'Content-Type':'application/json'})
     });
     if (!resp.ok) { console.warn('calLoadFromSupabase: fetch failed', resp.status); return; }
@@ -298,9 +298,9 @@ async function calLoadFromSupabase() {
         id: r.id, brand: brandName, name: r.title || 'Untitled',
         start: startMonth, end: endMonth, color: color,
         status: r.status || 'planned',
-        budget: r.budget || r.planned_budget || null,
+        budget: r.budget || null,
         type: r.campaign_type,
-        objective: r.objective || r.planned_objective || null,
+        objective: r.objective || null,
         brief_id: r.id || null,
         start_date: r.start_date || null,
         end_date: r.end_date || null,
