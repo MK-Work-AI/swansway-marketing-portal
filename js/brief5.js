@@ -2606,6 +2606,13 @@ async function bbLoadBrief(id) {
   window._lastSavedBriefTitle = brief.title;
 
   // For campaigned briefs — skip the setTimeout restore entirely, go straight to campaign mode
+  // But ALWAYS set scope/site state from brief first so Edit brief works correctly
+  BB.scope     = brief.scope || 'brand';
+  BB.site_ids  = bbParseSiteIds(brief);
+  BB.site_id   = BB.site_ids[0] || '';
+  BB.site_splits = {};
+  BB.start_date = brief.start_date || '';
+  BB.end_date   = brief.end_date   || '';
   if (brief.status === 'campaigned') {
     bbSetUrlBrief(brief.id);
     var _s6c = document.getElementById('bb-step-6');
