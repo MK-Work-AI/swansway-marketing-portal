@@ -1790,14 +1790,14 @@ async function bbSaveBrief() {
     channel_ids:       BB.channels,
     channels:          BB.channels,
     allocation:        bbGetAllocation(),
-    proposition:       document.getElementById('bb-smp')?.value || '',
-    mandatories:       document.getElementById('bb-mandatories')?.value || '',
+    proposition:       (document.getElementById('bb-smp')?.value || BB.proposition || ''),
+    mandatories:       (document.getElementById('bb-mandatories')?.value || BB.mandatories || ''),
     kpi_primary_label: BB.objective?.text || '',
     kpi_primary_value: kpiMap[BB.objective?.id] || '',
     kpi_cpl_meta:      BB.brand?.cpl?.meta || null,
     kpi_cpl_search:    BB.brand?.cpl?.google || null,
     locations:         BB.brand?.locations || [],
-    notes:             '',
+    notes:             BB.notes || '',
     start_date:        BB.start_date || null,
     end_date:          BB.end_date || null,
     site_id:           (BB.scope === 'sites' && BB.site_ids && BB.site_ids.length > 1)
@@ -2635,6 +2635,9 @@ async function bbLoadBrief(id) {
   BB.duration    = brief.duration_weeks ? {weeks:brief.duration_weeks, label:brief.duration_label||''} : null;
   BB.audiences   = brief.audience_ids || [];
   BB.channels    = brief.channel_ids || [];
+  BB.proposition = brief.proposition || '';
+  BB.mandatories = brief.mandatories || '';
+  BB.notes       = brief.notes       || '';
   BB.scope       = (brief.scope === 'site' ? 'sites' : brief.scope) || 'brand';
   BB.site_ids    = bbParseSiteIds(brief);
   BB.site_id     = BB.site_ids[0] || '';
@@ -2668,8 +2671,8 @@ async function bbLoadBrief(id) {
     var titleEl = document.getElementById('bb-brief-title');
     var sdInp   = document.getElementById('bb-start-date');
     var edInp   = document.getElementById('bb-end-date');
-    if (smpEl)   smpEl.value   = brief.proposition || '';
-    if (mandEl)  mandEl.value  = brief.mandatories  || '';
+    if (smpEl)   smpEl.value   = BB.proposition || '';
+    if (mandEl)  mandEl.value  = BB.mandatories || '';
     if (titleEl) titleEl.value = brief.title         || '';
     if (sdInp)   sdInp.value   = BB.start_date;
     if (edInp)   edInp.value   = BB.end_date;
