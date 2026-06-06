@@ -68,8 +68,34 @@ function bbGoStep(n) {
   if(n===4){ bbRenderAudiences(); }
   if(n===5){ bbRenderPESO(); bbRenderToneChips(); bbRenderKPITargets(); }
   if(n===6) bbGenerateBrief();
+  // Re-apply selection highlights whenever a step is shown
+  if(n<=3) bbRestoreSelections();
   const right = document.getElementById('bb-right');
   if(right) right.scrollTop = 0;
+}
+
+function bbRestoreSelections() {
+  // Brand pills
+  document.querySelectorAll('.bb-brand-pill').forEach(function(el) {
+    el.classList.toggle('bb-selected', !!(BB.brand && el.dataset.brand === BB.brand.id));
+  });
+  // Campaign type cards — match by onclick attribute containing the ctype id
+  document.querySelectorAll('.bb-ctype-card').forEach(function(el, i) {
+    el.classList.toggle('bb-selected', !!(BB.ctype && BB_CTYPES[i] && BB_CTYPES[i].id === BB.ctype.id));
+  });
+  // Objective rows
+  document.querySelectorAll('.bb-obj-row').forEach(function(el, i) {
+    el.classList.toggle('bb-selected', !!(BB.objective && BB_OBJECTIVES[i] && BB_OBJECTIVES[i].id === BB.objective.id));
+  });
+  // Duration cards
+  document.querySelectorAll('.bb-dur-card').forEach(function(el, i) {
+    el.classList.toggle('bb-selected', !!(BB.duration && BB_DURATIONS[i] && BB_DURATIONS[i].weeks === BB.duration.weeks));
+  });
+  // Scope buttons
+  var scopeBrand = document.getElementById('scope-brand');
+  var scopeSite  = document.getElementById('scope-site');
+  if (scopeBrand) scopeBrand.classList.toggle('bb-selected', BB.scope !== 'sites');
+  if (scopeSite)  scopeSite.classList.toggle('bb-selected',  BB.scope === 'sites');
 }
 
 
