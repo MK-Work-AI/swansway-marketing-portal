@@ -2649,8 +2649,13 @@ async function bbLoadBrief(id) {
   BB.start_date  = brief.start_date || '';
   BB.end_date    = brief.end_date   || '';
 
-  // Rebuild step DOM (bbInit redraws brand/ctype/obj/dur grids)
+  // Rebuild step DOM — bbInit resets BB.budget to 5000 via bbOnBudget(5000)
+  // so we must restore brief values after it
   bbInit();
+  BB.budget      = brief.budget || 5000;
+  BB.duration    = brief.duration_weeks ? {weeks:brief.duration_weeks, label:brief.duration_label||''} : null;
+  BB.audiences   = brief.audience_ids || [];
+  BB.channels    = brief.channel_ids || [];
   BB.step = 6;
   window._lastSavedBriefId    = brief.id;
   window._lastSavedBriefTitle = brief.title;
