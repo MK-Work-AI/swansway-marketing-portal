@@ -44,7 +44,11 @@ function bbGoStep(n) {
     if (_sd && BB.start_date) _sd.value = BB.start_date;
     if (_ed && BB.end_date)   _ed.value = BB.end_date;
   }
-  if (n === 5) setTimeout(bbRenderStep5Context, 100);
+  if (n === 5) {
+    setTimeout(bbRenderStep5Context, 100);
+    var _notesEl = document.getElementById('bb-notes');
+    if (_notesEl && BB.notes) _notesEl.value = BB.notes;
+  }
   // Always clear any campaign-mode display overrides
   if (window._bbCampModeActive) {
     window._bbCampModeActive = false;
@@ -2673,7 +2677,9 @@ async function bbLoadBrief(id) {
     var edInp   = document.getElementById('bb-end-date');
     if (smpEl)   smpEl.value   = BB.proposition || '';
     if (mandEl)  mandEl.value  = BB.mandatories || '';
-    if (titleEl) titleEl.value = brief.title         || '';
+    if (titleEl) titleEl.value = brief.title || '';
+    var notesEl = document.getElementById('bb-notes');
+    if (notesEl) notesEl.value = BB.notes || '';
     if (sdInp)   sdInp.value   = BB.start_date;
     if (edInp)   edInp.value   = BB.end_date;
 
