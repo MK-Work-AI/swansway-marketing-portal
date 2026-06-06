@@ -2627,6 +2627,295 @@ function bbCheckUrlOnLoad() {
 }
 
 
+// ─────────────────────────────────────────────
+// bbInitFromBrief(brief)
+// Single source of truth for restoring all BB state and DOM from a saved brief.
+// Called by bbLoadBrief (initial load) and bbExitCampaignMode (← Edit brief).
+// ─────────────────────────────────────────────
+function bbInitFromBrief(brief) {
+  // ── Step A: Rebuild DOM grids (bbInit wipes BB.budget via bbOnBudget(5000)) ──
+  bbInit();
+
+  // ── Step B: Set ALL BB state from brief after bbInit ──
+  BB.brand       = BB_BRANDS.find(function(b){ return b.id === brief.brand_id; }) || null;
+  BB.ctype       = BB_CTYPES.find(function(c){ return c.id === brief.campaign_type_id; }) || null;
+  BB.objective   = BB_OBJECTIVES.find(function(o){ return o.id === brief.objective_id; }) || null;
+  BB.budget      = brief.budget || 5000;
+  BB.duration    = brief.duration_weeks ? {weeks: brief.duration_weeks, label: brief.duration_label || ''} : null;
+  BB.audiences   = brief.audience_ids || [];
+  BB.channels    = brief.channel_ids  || [];
+  BB.proposition = brief.proposition  || '';
+  BB.mandatories = brief.mandatories  || '';
+  BB.notes       = brief.notes        || '';
+  BB.scope       = (brief.scope === 'site' ? 'sites' : brief.scope) || 'brand';
+  BB.site_ids    = bbParseSiteIds(brief);
+  BB.site_id     = BB.site_ids[0] || '';
+  BB.site_splits = {};
+  BB.start_date  = brief.start_date || '';
+  BB.end_date    = brief.end_date   || '';
+
+  // ── Step C: Restore DOM — text inputs ──
+  var titleEl = document.getElementById('bb-brief-title');
+  var smpEl   = document.getElementById('bb-smp');
+  var mandEl  = document.getElementById('bb-mandatories');
+  var notesEl = document.getElementById('bb-notes');
+  var sdInp   = document.getElementById('bb-start-date');
+  var edInp   = document.getElementById('bb-end-date');
+  if (titleEl) titleEl.value = brief.title        || '';
+  if (smpEl)   smpEl.value   = BB.proposition;
+  if (mandEl)  mandEl.value  = BB.mandatories;
+  if (notesEl) notesEl.value = BB.notes;
+  if (sdInp)   sdInp.value   = BB.start_date;
+  if (edInp)   edInp.value   = BB.end_date;
+
+  // ── Step D: Restore budget slider ──
+  bbOnBudget(BB.budget);
+
+  // ── Step E: Restore visual selections (brand, ctype, obj, dur, scope) ──
+  bbRestoreSelections();
+
+  // ── Step F: Show scope section + scope picker ──
+  var spSec = document.getElementById('bb-scope-section');
+  var dpSec = document.getElementById('bb-dates-section');
+  if (spSec) spSec.style.display = 'block';
+  if (dpSec) dpSec.style.display = 'block';
+
+  if (BB.scope === 'sites') {
+    var pickr = document.getElementById('bb-site-picker');
+    if (pickr) pickr.style.display = 'block';
+    // Site grid needs a tick to let DOM settle after bbInit
+    setTimeout(function() { bbRenderSiteGrid(); bbUpdateSiteCount(); }, 50);
+  }
+
+  // ── Step G: Restore sidebar ──
+  bbUpdateBrief();
+  setTimeout(bbRenderBrandContext, 100);
+
+  // ── Step H: Enable next buttons based on restored state ──
+  var btn1 = document.getElementById('bb-btn-1-next');
+  var btn2 = document.getElementById('bb-btn-2-next');
+  var btn3 = document.getElementById('bb-btn-3-next');
+  var btn4 = document.getElementById('bb-btn-4-next');
+  if (btn1) btn1.disabled = !BB.brand;
+  if (btn2) btn2.disabled = !(BB.ctype && BB.objective);
+  if (btn3) btn3.disabled = !BB.duration;
+  if (btn4) btn4.disabled = BB.audiences.length === 0;
+}
+
+async function bbLoadBrief(id) {
+  window._bbSuppressNewBrief = true;
+  window._bbBriefLoading = true;
+
+  // Fetch brief (from cache or Supabase)
+  let brief = SB_BRIEFS_CACHE.find(function(b){ return b.id === id; });
+  if (!brief) {
+    try {
+      var resp = await fetch(SUPABASE_URL + '/rest/v1/briefs?id=eq.' + id + '&select=*&limit=1', {
+        headers: getAuthHeaders({'Content-Type':'application/json'})
+      });
+      if (resp.ok) {
+        var rows = await resp.json();
+        if (rows && rows.length) { brief = rows[0]; SB_BRIEFS_CACHE.unshift(brief); }
+      }
+    } catch(e) { console.warn('bbLoadBrief fetch:', e); }
+    if (!brief) { console.warn('bbLoadBrief: not found', id); return; }
+  }
+
+  // Switch to brief view without triggering bbNewBrief reset
+  window._bbLoadingBrief = true;
+  closeBriefsPanel();
+  switchView('brief', document.querySelector('[data-view=brief]'));
+  window._bbLoadingBrief = false;
+
+  // Store session refs
+  window._lastSavedBriefId    = brief.id;
+  window._lastSavedBriefTitle = brief.title;
+  BB.step = 6;
+
+  // ── Restore all BB state + DOM from brief ──
+  bbInitFromBrief(brief);
+  bbSetUrlBrief(brief.id);
+
+  // ── Route by status ──
+  if (brief.status === 'campaigned') {
+    // Hide step UI, go straight to campaign task view
+    var s6  = document.getElementById('bb-step-6');
+    var sbc = document.getElementById('bb-save-bar');
+    var opc = document.getElementById('bb-output');
+    if (s6)  s6.style.display  = 'none';
+    if (sbc) sbc.style.display = 'none';
+    if (opc) opc.innerHTML     = '';
+    bbEnterCampaignMode(brief);
+    return;
+  }
+
+  if (brief.status === 'submitted' || brief.status === 'approved') {
+    // Show step 6 status view — no save bar
+    setTimeout(async function() {
+      document.querySelectorAll('.bb-step').forEach(function(s){ s.classList.remove('bb-active'); });
+      var s6 = document.getElementById('bb-step-6');
+      if (s6) { s6.classList.add('bb-active'); s6.style.display = ''; }
+      var saveBar = document.getElementById('bb-save-bar');
+      if (saveBar) saveBar.style.display = 'none';
+      window.scrollTo(0, 0);
+      if (typeof bbRenderCampaignSection === 'function') await bbRenderCampaignSection(brief);
+    }, 200);
+    return;
+  }
+
+  // Draft — show step 6 with save bar
+  setTimeout(function() {
+    bbGoStep(6);
+    var saveBtn = document.getElementById('bb-save-btn');
+    var saveBar = document.getElementById('bb-save-bar');
+    var titleEl = document.getElementById('bb-brief-title');
+    if (titleEl) titleEl.value = brief.title || '';
+    if (saveBtn) { saveBtn.textContent = '\u2713 Saved'; saveBtn.disabled = true; saveBtn.style.background = '#059669'; }
+    if (saveBar) saveBar.style.display = 'block';
+  }, 150);
+}
+
+
+function bbExitCampaignMode() {
+  window._bbCampModeActive = false;
+
+  // Show step indicator + progress
+  var indicator = document.getElementById('bb-step-indicator');
+  var progress  = document.getElementById('bb-progress-track');
+  if (indicator) indicator.style.display = '';
+  if (progress)  progress.style.display  = '';
+
+  // Hide campaign canvas
+  var canvas = document.getElementById('bb-campaign-canvas');
+  if (canvas) canvas.style.display = 'none';
+
+  // Restore sidebar
+  var left = document.getElementById('bb-left');
+  if (left && typeof BB_LEFT_ORIGINAL_HTML !== 'undefined') {
+    left.innerHTML = BB_LEFT_ORIGINAL_HTML;
+  }
+
+  // Clear step active states
+  document.querySelectorAll('.bb-step').forEach(function(s){
+    s.classList.remove('bb-active');
+    s.style.display = '';
+  });
+
+  // Get brief from cache — BB state already has site_ids etc from bbLoadBrief
+  var brief = window._lastSavedBriefId
+    ? SB_BRIEFS_CACHE.find(function(b){ return b.id === window._lastSavedBriefId; })
+    : null;
+
+  if (brief) {
+    // Re-run full restore so all steps are correct on edit
+    bbInitFromBrief(brief);
+  }
+
+  // Go to step 1
+  bbGoStep(1);
+}
+
+function bbNewBrief() {
+  if (window._bbBriefLoading) { return; }
+  if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; return; }
+  // Restore sidebar to original brief panel HTML (campaign mode overwrites it)
+  var _left = document.getElementById('bb-left');
+  if (_left && typeof BB_LEFT_ORIGINAL_HTML !== 'undefined') {
+    _left.innerHTML = BB_LEFT_ORIGINAL_HTML;
+  }
+  if (window._bbCampModeActive) bbExitCampaignMode();
+  BB.brand = null; BB.ctype = null; BB.budget = 5000; BB.duration = null;
+  BB.audiences = []; BB.channels = []; BB.objective = null;
+  BB.proposition = ''; BB.start_date = ''; BB.end_date = '';
+  BB.site_id = ''; BB.site_ids = []; BB.site_splits = {}; BB.scope = 'brand'; BB.step = 1;
+  BB._calCampaignId = null;
+  window._lastSavedBriefId = null;
+  window._lastSavedBriefTitle = null;
+  history.replaceState(null, '', window.location.pathname + '?view=brief');
+  var titleEl = document.getElementById('bb-brief-title');
+  if (titleEl) titleEl.value = '';
+  var feedback = document.getElementById('bb-save-feedback');
+  if (feedback) { feedback.style.display = 'none'; feedback.innerHTML = ''; }
+  var saveBtn = document.getElementById('bb-save-btn');
+  if (saveBtn) { saveBtn.textContent = 'Save campaign'; saveBtn.disabled = false; saveBtn.style.background = ''; }
+  var saveBar = document.getElementById('bb-save-bar');
+  if (saveBar) saveBar.style.display = 'none';
+  ['bb-brand-context','bb-step2-context','bb-budget-intel','bb-step4-context','bb-step5-context'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) { el.innerHTML = ''; el.style.display = 'none'; }
+  });
+  var canvas = document.getElementById('bb-campaign-canvas');
+  if (canvas) canvas.style.display = 'none';
+  var campSec = document.getElementById('bb-campaign-section');
+  if (campSec) { campSec.style.display = 'none'; campSec.innerHTML = ''; }
+  var output = document.getElementById('bb-output');
+  if (output) output.innerHTML = '';
+  // Reset all step display:none set by campaign mode
+  document.querySelectorAll('.bb-step').forEach(function(s){ s.style.display = ''; s.classList.remove('bb-active'); });
+  // Show step indicator and progress
+  var ind = document.getElementById('bb-step-indicator');
+  var prog = document.getElementById('bb-progress-track');
+  if (ind) ind.style.display = '';
+  if (prog) prog.style.display = '';
+  // Check for deep-link restore (set by bbCheckUrlOnLoad on page load)
+  if (window._deepLinkBriefId) {
+    var _id = window._deepLinkBriefId;
+    window._deepLinkBriefId = null;
+    bbInit();
+    BB.step = 6;
+    setTimeout(function() { bbLoadBrief(_id); }, 200);
+    return; // skip new blank brief
+  }
+  // Reset DOM inputs that bbInit doesn't clear
+  var _sd = document.getElementById('bb-start-date');
+  var _ed = document.getElementById('bb-end-date');
+  if (_sd) _sd.value = '';
+  if (_ed) _ed.value = '';
+  // Reset scope to brand-wide
+  document.querySelectorAll('.bb-scope-btn').forEach(function(b){ b.classList.remove('bb-selected'); });
+  var scopeBrand = document.getElementById('scope-brand');
+  if (scopeBrand) scopeBrand.classList.add('bb-selected');
+  var scopeSec = document.getElementById('bb-scope-section');
+  if (scopeSec) scopeSec.style.display = 'none';
+  var datesSec = document.getElementById('bb-dates-section');
+  if (datesSec) datesSec.style.display = 'none';
+  // Reset site selector
+  var siteSel = document.getElementById('bb-site-select');
+  if (siteSel) siteSel.value = '';
+  // Reset left sidebar
+  var sideTitle = document.getElementById('bb-side-brand');
+  if (sideTitle) sideTitle.textContent = '';
+  var sideDates = document.getElementById('bb-side-dates');
+  if (sideDates) sideDates.textContent = '';
+  bbInit();
+  BB.step = 6; // allow all steps
+  bbGoStep(1);
+  bbUpdateBrief();
+  closeBriefsPanel();
+  showToast('New campaign started 🚀', 'success');
+}
+
+
+function bbSetUrlBrief(briefId) {
+  if (!briefId) return;
+  history.replaceState({briefId: briefId}, '', window.location.pathname + '?view=brief&brief=' + briefId);
+}
+
+
+function bbCheckUrlOnLoad() {
+  var params = new URLSearchParams(window.location.search);
+  var view   = params.get('view');
+  var briefId = params.get('brief');
+  if (view === 'brief') {
+    if (briefId) window._deepLinkBriefId = briefId; // signal to bbNewBrief
+    setTimeout(function() {
+      switchView('brief', document.querySelector('[data-view="brief"]'));
+      // switchView calls bbNewBrief which checks _deepLinkBriefId
+    }, 900);
+  }
+}
+
+
 async function bbLoadBrief(id) {
   window._bbSuppressNewBrief = true;
   window._bbBriefLoading = true;
