@@ -949,7 +949,10 @@ function switchView(id, el) {
   const nonBrandViews = ['group','calendar','channels','kpis','brief','campaigns'];
   if(!nonBrandViews.includes(id)) {
     const brand = BRANDS.find(b=>b.id===id);
-    if(brand) renderBrand(brand);
+    if(brand) {
+      if(typeof renderBrand === 'function') renderBrand(brand);
+      else window.location = 'brand.html?brand=' + id;
+    }
   }
   if(id === 'brief') { if(!window.location.pathname.endsWith('brief.html')) { window.location = 'brief.html'; } return; }
   // Auto-load Q-plan, campaigns and KPIs when a brand page opens
