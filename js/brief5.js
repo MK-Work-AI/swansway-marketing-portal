@@ -2595,7 +2595,7 @@ function bbCheckUrlOnLoad() {
 
 async function bbLoadBrief(id) {
   window._bbSuppressNewBrief = true;
-  window._bbBriefLoading = true; // set synchronously before any await
+  window._bbBriefLoading = true;
   let brief = SB_BRIEFS_CACHE.find(b=>b.id===id);
   if (!brief) {
     try {
@@ -2610,136 +2610,93 @@ async function bbLoadBrief(id) {
     if (!brief) { console.warn('bbLoadBrief: not found', id); return; }
   }
 
-  // Switch to brief builder view — set flag so switchView doesn't reset to new brief
+  // Switch view without triggering bbNewBrief reset
   window._bbLoadingBrief = true;
   closeBriefsPanel();
   switchView('brief', document.querySelector('[data-view=brief]'));
   window._bbLoadingBrief = false;
 
-  // Restore state
-  BB.brand       = BB_BRANDS.find(b=>b.id===brief.brand_id) || null;
-  BB.ctype       = BB_CTYPES.find(c=>c.id===brief.campaign_type_id) || null;
-  BB.objective   = BB_OBJECTIVES.find(o=>o.id===brief.objective_id) || null;
+  // ── Set ALL BB state from brief synchronously ──
+  BB.brand       = BB_BRANDS.find(function(b){ return b.id === brief.brand_id; }) || null;
+  BB.ctype       = BB_CTYPES.find(function(c){ return c.id === brief.campaign_type_id; }) || null;
+  BB.objective   = BB_OBJECTIVES.find(function(o){ return o.id === brief.objective_id; }) || null;
   BB.budget      = brief.budget || 5000;
   BB.duration    = brief.duration_weeks ? {weeks:brief.duration_weeks, label:brief.duration_label||''} : null;
   BB.audiences   = brief.audience_ids || [];
   BB.channels    = brief.channel_ids || [];
+  BB.scope       = (brief.scope === 'site' ? 'sites' : brief.scope) || 'brand';
+  BB.site_ids    = bbParseSiteIds(brief);
+  BB.site_id     = BB.site_ids[0] || '';
+  BB.site_splits = {};
+  BB.start_date  = brief.start_date || '';
+  BB.end_date    = brief.end_date   || '';
 
-  // Re-init and jump to step 5
+  // Rebuild step DOM (bbInit redraws brand/ctype/obj/dur grids)
   bbInit();
   BB.step = 6;
-  window._lastSavedBriefId = brief.id;
+  window._lastSavedBriefId    = brief.id;
   window._lastSavedBriefTitle = brief.title;
 
-  // For campaigned briefs — skip the setTimeout restore entirely, go straight to campaign mode
-  // But ALWAYS set scope/site state from brief first so Edit brief works correctly
-  BB.scope     = brief.scope || 'brand';
-  BB.site_ids  = bbParseSiteIds(brief);
-  BB.site_id   = BB.site_ids[0] || '';
-  BB.site_splits = {};
-  BB.start_date = brief.start_date || '';
-  BB.end_date   = brief.end_date   || '';
+  // Campaigned briefs → go straight to campaign task view
   if (brief.status === 'campaigned') {
     bbSetUrlBrief(brief.id);
-    var _s6c = document.getElementById('bb-step-6');
-    if (_s6c) _s6c.style.display = 'none';
-    var _sbc = document.getElementById('bb-save-bar');
-    if (_sbc) _sbc.style.display = 'none';
+    ['bb-step-6','bb-save-bar'].forEach(function(id2){
+      var el = document.getElementById(id2); if(el) el.style.display = 'none';
+    });
     var _opc = document.getElementById('bb-output');
     if (_opc) _opc.innerHTML = '';
     bbEnterCampaignMode(brief);
     return;
   }
 
-  // Set proposition
-  var _briefRestoreTimer = setTimeout(() => {
-    const smpEl = document.getElementById('bb-smp');
-    const mandEl = document.getElementById('bb-mandatories');
-    const titleEl = document.getElementById('bb-brief-title');
-    if(smpEl)  smpEl.value  = brief.proposition || '';
-    if(mandEl) mandEl.value = brief.mandatories || '';
-    if(titleEl) titleEl.value = brief.title || '';
+  // ── DOM restore (needs small delay for bbInit DOM to settle) ──
+  setTimeout(function() {
+    // Text fields
+    var smpEl   = document.getElementById('bb-smp');
+    var mandEl  = document.getElementById('bb-mandatories');
+    var titleEl = document.getElementById('bb-brief-title');
+    var sdInp   = document.getElementById('bb-start-date');
+    var edInp   = document.getElementById('bb-end-date');
+    if (smpEl)   smpEl.value   = brief.proposition || '';
+    if (mandEl)  mandEl.value  = brief.mandatories  || '';
+    if (titleEl) titleEl.value = brief.title         || '';
+    if (sdInp)   sdInp.value   = BB.start_date;
+    if (edInp)   edInp.value   = BB.end_date;
 
-    // Highlight correct selections visually
-    if(BB.brand) {
-      document.querySelectorAll('.bb-brand-pill').forEach((el,i)=>{
-        if(BB_BRANDS[i]?.id === BB.brand.id) el.classList.add('bb-selected');
-      });
-      document.getElementById('bb-btn-1-next').disabled = false;
+    // Show scope + dates sections
+    var spSec = document.getElementById('bb-scope-section');
+    var dpSec = document.getElementById('bb-dates-section');
+    if (spSec) spSec.style.display = 'block';
+    if (dpSec) dpSec.style.display = 'block';
+
+    // Scope picker
+    if (BB.scope === 'sites') {
+      var ssSiteBtn  = document.getElementById('scope-site');
+      var sbBrandBtn = document.getElementById('scope-brand');
+      if (ssSiteBtn)  ssSiteBtn.classList.add('bb-selected');
+      if (sbBrandBtn) sbBrandBtn.classList.remove('bb-selected');
+      var pickr = document.getElementById('bb-site-picker');
+      if (pickr) pickr.style.display = 'block';
+      setTimeout(function() { bbRenderSiteGrid(); bbUpdateSiteCount(); }, 50);
     }
-    if(BB.ctype) {
-      document.querySelectorAll('.bb-ctype-card').forEach((el,i)=>{
-        if(BB_CTYPES[i]?.id === BB.ctype.id) el.classList.add('bb-selected');
-      });
-    }
-    if(BB.objective) {
-      document.querySelectorAll('.bb-obj-row').forEach((el,i)=>{
-        if(BB_OBJECTIVES[i]?.id === BB.objective.id) el.classList.add('bb-selected');
-      });
-      document.getElementById('bb-btn-2-next').disabled = false;
-    }
-    if(BB.duration) {
-      document.querySelectorAll('.bb-dur-card').forEach((el,i)=>{
-        if(BB_DURATIONS[i]?.weeks === BB.duration.weeks) el.classList.add('bb-selected');
-      });
-      document.getElementById('bb-btn-3-next').disabled = false;
-    }
-    // Restore dates
-    BB.start_date = brief.start_date || '';
-    BB.end_date   = brief.end_date   || '';
-    BB.scope      = brief.scope      || 'brand';
-    BB.site_ids   = bbParseSiteIds(brief);
-    BB.site_id    = BB.site_ids[0] || '';
-    BB.site_splits = {};
-    var _sdInp = document.getElementById('bb-start-date');
-    var _edInp = document.getElementById('bb-end-date');
-    if (_sdInp) _sdInp.value = BB.start_date;
-    if (_edInp) _edInp.value = BB.end_date;
-    // Show scope/dates sections
-    var _spSec = document.getElementById('bb-scope-section');
-    var _dpSec = document.getElementById('bb-dates-section');
-    if (_spSec) _spSec.style.display = 'block';
-    if (_dpSec) _dpSec.style.display = 'block';
-    // Restore scope UI
-    if (BB.scope === 'site' || BB.scope === 'sites') {
-      if (BB.scope === 'site') BB.scope = 'sites'; // migrate old value
-      if (BB.site_id && BB.site_ids.indexOf(BB.site_id) === -1) BB.site_ids = [BB.site_id];
-      var _ssSiteBtn = document.getElementById('scope-site');
-      var _sbBrandBtn = document.getElementById('scope-brand');
-      if (_ssSiteBtn) _ssSiteBtn.classList.add('bb-selected');
-      if (_sbBrandBtn) _sbBrandBtn.classList.remove('bb-selected');
-      var _pickr = document.getElementById('bb-site-picker');
-      if (_pickr) {
-        _pickr.style.display = 'block';
-        setTimeout(function() {
-          bbRenderSiteGrid();
-          bbUpdateSiteCount();
-          bbUpdateBrief(); // re-run after grid render so sidebar reflects selected sites
-        }, 100);
-      }
-    }
+
+    // Budget + context
     bbOnBudget(BB.budget);
-    bbUpdateBrief();
-    setTimeout(bbRenderBrandContext, 200);
 
-    // Go to step 6 to show the full brief
+    // Show brief output at step 6
     bbGoStep(6);
-    // Re-apply brand selection visually (brand pill in step 1)
-    if (BB.brand) {
-      document.querySelectorAll('.bb-brand-pill').forEach(function(p) {
-        p.classList.toggle('bb-selected', p.dataset.brand === BB.brand.id);
-      });
-      var btn1 = document.getElementById('bb-btn-1-next');
-      if (btn1) btn1.disabled = false;
-    }
-    // Lock title for saved brief
+
+    // Update sidebar + budget context
+    bbUpdateBrief();
+    setTimeout(bbRenderBrandContext, 100);
+
+    // Lock save button for saved brief
     setTimeout(function() {
-      var _titleEl = document.getElementById('bb-brief-title');
-      var _saveBtn = document.getElementById('bb-save-btn');
-      var _saveBar = document.getElementById('bb-save-bar');
-      if (_titleEl) _titleEl.value = brief.title || '';
-      if (_saveBtn) { _saveBtn.textContent = '\u2713 Saved'; _saveBtn.disabled = true; _saveBtn.style.background = '#059669'; }
-      if (_saveBar) _saveBar.style.display = 'block';
+      var saveBtn = document.getElementById('bb-save-btn');
+      var saveBar = document.getElementById('bb-save-bar');
+      if (titleEl) titleEl.value = brief.title || '';
+      if (saveBtn) { saveBtn.textContent = '\u2713 Saved'; saveBtn.disabled = true; saveBtn.style.background = '#059669'; }
+      if (saveBar) saveBar.style.display = 'block';
     }, 150);
   }, 100);
 
