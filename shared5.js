@@ -1681,7 +1681,9 @@ async function deleteBriefFromPanel(id) {
   try {
     var base = SUPABASE_URL + '/rest/v1';
     var hdrs = getAuthHeaders({'Content-Type': 'application/json'});
-    // Single delete — cascade removes campaigns + campaign_tasks automatically
+    // Delete budget commitments for this brief first
+    await fetch(base + '/brief_budget_commitments?brief_id=eq.' + id, {method:'DELETE', headers:hdrs});
+    // Delete the brief (cascade removes campaigns + campaign_tasks automatically)
     await fetch(base + '/briefs?id=eq.' + id, {method:'DELETE', headers:hdrs});
     // Update local caches
     SB_BRIEFS_CACHE = SB_BRIEFS_CACHE.filter(function(b) { return b.id !== id; });
