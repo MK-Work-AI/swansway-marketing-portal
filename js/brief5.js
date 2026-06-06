@@ -767,6 +767,15 @@ function bbRenderPESO() {
       }).join('')}</div>
     </div>
   `).join('');
+  // Re-select saved channels if editing an existing brief
+  if (_savedChannels.length && BB.channels.length === 0) {
+    BB.channels = _savedChannels;
+    // Visually re-select saved channel cards
+    _savedChannels.forEach(function(chId) {
+      var card = el.querySelector('[data-ch-id="' + chId + '"]');
+      if (card) card.classList.add('bb-ch-active');
+    });
+  }
   bbUpdateBrief();
   var _b5=document.getElementById('bb-btn-5-next'); if(_b5) _b5.disabled=BB.channels.length===0;
 }
@@ -2635,6 +2644,9 @@ async function bbLoadBrief(id) {
   BB.brand       = BB_BRANDS.find(function(b){ return b.id === brief.brand_id; }) || null;
   BB.ctype       = BB_CTYPES.find(function(c){ return c.id === brief.campaign_type_id; }) || null;
   BB.objective   = BB_OBJECTIVES.find(function(o){ return o.id === brief.objective_id; }) || null;
+  // Rebuild step DOM first — bbInit() calls bbOnBudget(5000) which resets BB.budget
+  bbInit();
+  // Now set ALL BB state from brief (after bbInit so nothing gets overwritten)
   BB.budget      = brief.budget || 5000;
   BB.duration    = brief.duration_weeks ? {weeks:brief.duration_weeks, label:brief.duration_label||''} : null;
   BB.audiences   = brief.audience_ids || [];
@@ -2648,14 +2660,6 @@ async function bbLoadBrief(id) {
   BB.site_splits = {};
   BB.start_date  = brief.start_date || '';
   BB.end_date    = brief.end_date   || '';
-
-  // Rebuild step DOM — bbInit resets BB.budget to 5000 via bbOnBudget(5000)
-  // so we must restore brief values after it
-  bbInit();
-  BB.budget      = brief.budget || 5000;
-  BB.duration    = brief.duration_weeks ? {weeks:brief.duration_weeks, label:brief.duration_label||''} : null;
-  BB.audiences   = brief.audience_ids || [];
-  BB.channels    = brief.channel_ids || [];
   BB.step = 6;
   window._lastSavedBriefId    = brief.id;
   window._lastSavedBriefTitle = brief.title;
