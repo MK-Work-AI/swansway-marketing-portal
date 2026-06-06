@@ -235,9 +235,14 @@ function bbRenderSiteGrid() {
 function bbUpdateSiteCount() {
   var el = document.getElementById('bb-site-count');
   if (!el) return;
-  var n = BB.site_ids.length;
-  el.textContent = n === 0 ? 'No sites selected' : n + ' site' + (n > 1 ? 's' : '') + ' selected';
-  el.style.color = n === 0 ? 'var(--ink-faint)' : 'var(--ink)';
+  var n = (BB.site_ids || []).length;
+  if (n === 0) {
+    el.textContent = 'Select the sites this campaign will run at';
+    el.style.color = 'var(--ink-faint)';
+  } else {
+    el.textContent = n + ' site' + (n > 1 ? 's' : '') + ' selected';
+    el.style.color = 'var(--ink)';
+  }
 }
 
 function bbHideSplitStep() {
