@@ -2676,7 +2676,14 @@ async function bbLoadBrief(id) {
       if (_ssSiteBtn) _ssSiteBtn.classList.add('bb-selected');
       if (_sbBrandBtn) _sbBrandBtn.classList.remove('bb-selected');
       var _pickr = document.getElementById('bb-site-picker');
-      if (_pickr) { _pickr.style.display = 'block'; setTimeout(bbRenderSiteGrid, 100); }
+      if (_pickr) {
+        _pickr.style.display = 'block';
+        setTimeout(function() {
+          bbRenderSiteGrid();
+          bbUpdateSiteCount();
+          bbUpdateBrief(); // re-run after grid render so sidebar reflects selected sites
+        }, 100);
+      }
     }
     bbOnBudget(BB.budget);
     bbUpdateBrief();
