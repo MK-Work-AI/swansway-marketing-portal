@@ -1064,12 +1064,12 @@
       <div class="bb-section-label">Channel activation (pre-recommended, toggle to adjust)</div>
       <div class="bb-peso-grid" id="bb-peso-grid"></div>
       <div class="bb-section-label" style="margin-top:1.5rem">Single-minded proposition</div>
-      <textarea class="bb-textarea" id="bb-smp" placeholder="What's the ONE thing you want the audience to think, feel or do? e.g. 'BYD Seal offers Tesla-level technology at £10K less — and it is ready now.'" oninput="bbUpdateBrief()"></textarea>
+      <textarea class="bb-textarea" id="bb-smp" placeholder="What's the ONE thing you want the audience to think, feel or do? e.g. 'BYD Seal offers Tesla-level technology at £10K less — and it is ready now.'" oninput="BB.proposition=this.value;bbUpdateBrief()"></textarea>
       <div class="bb-prop-hint">Research: A single clear proposition outperforms multi-message campaigns by 3.5× (Binet & Field, IPA Databank)</div>
       <div class="bb-section-label" style="margin-top:1.25rem">Brand tone for this campaign</div>
       <div id="bb-tone-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem"></div>
       <div class="bb-section-label">Mandatories & restrictions</div>
-      <textarea class="bb-textarea" id="bb-mandatories" placeholder="e.g. Must include finance rep example / Manufacturer disclaimer / T&Cs URL / APR required" style="min-height:60px" oninput="bbUpdateBrief()"></textarea>
+      <textarea class="bb-textarea" id="bb-mandatories" placeholder="e.g. Must include finance rep example / Manufacturer disclaimer / T&Cs URL / APR required" style="min-height:60px" oninput="BB.mandatories=this.value;bbUpdateBrief()"></textarea>
       <div class="bb-section-label" style="margin-top:1.25rem">Science-based KPI targets</div>
       <div id="bb-kpi-targets"></div>
       <div class="bb-nav-btns">
