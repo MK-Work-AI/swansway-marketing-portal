@@ -188,7 +188,7 @@ function bbRenderSiteGrid() {
   // Build entirely as HTML to avoid stale DOM / duplicate hint issues
   var html = '';
   sites.forEach(function(s) {
-    var isSel = BB.site_ids.indexOf(s.site_id) !== -1;
+    var isSel = (BB.site_ids || []).indexOf(s.site_id) !== -1;
     html += '<div class="bb-site-tile' + (isSel ? ' bb-selected' : '') + '" data-sid="' + s.site_id + '" '
       + 'style="' + (isSel ? 'border-color:' + brandColor + ';background:' + brandColor + '12' : '') + '">'
       + '<div style="display:flex;justify-content:space-between;align-items:center">'
@@ -203,6 +203,7 @@ function bbRenderSiteGrid() {
     tile.addEventListener('click', function() {
       var sid = this.getAttribute('data-sid');
       var bc  = (typeof BRAND_COLORS !== 'undefined') ? (BRAND_COLORS[BB.brand.id] || '#1A2E4A') : '#1A2E4A';
+      if (!BB.site_ids) BB.site_ids = [];
       var idx = BB.site_ids.indexOf(sid);
       if (idx === -1) {
         BB.site_ids.push(sid);
