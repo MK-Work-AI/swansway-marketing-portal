@@ -2446,6 +2446,15 @@ function bbExitCampaignMode() {
       // Enable next button
       var btn1 = document.getElementById('bb-btn-1-next');
       if (btn1) btn1.disabled = false;
+      // Re-render site grid if scope is sites — DOM was restored from cache so grid is empty
+      if (BB.scope === 'sites' && BB.site_ids && BB.site_ids.length) {
+        var _picker = document.getElementById('bb-site-picker');
+        if (_picker) {
+          _picker.style.display = 'block';
+          bbUpdateSiteCount();
+          setTimeout(bbRenderSiteGrid, 50);
+        }
+      }
     }
   }, 200);
 }
