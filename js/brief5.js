@@ -686,6 +686,9 @@ function bbRenderAudiences() {
       </div>
     </div>
   `).join('');
+  // Enable/disable next button based on current selection
+  var _btn4 = document.getElementById('bb-btn-4-next');
+  if (_btn4) _btn4.disabled = BB.audiences.length === 0;
 }
 
 
