@@ -1292,6 +1292,15 @@ function sbHandleSession(session) {
   window.SB_ACCESS_TOKEN = session.access_token;
   showUserState(SB_USER);
   if(typeof loadBriefs === 'function')         loadBriefs();
+  // Load brief from URL if ID present — must be after auth is confirmed
+  if (typeof bbLoadBrief === 'function') {
+    var _briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.search).get('brief');
+    if (_briefId) {
+      window._bbBriefLoading = true;
+      window._bbSuppressNewBrief = true;
+      bbLoadBrief(_briefId);
+    }
+  }
   if(typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
   if(typeof renderGroupBudgetChart === 'function') setTimeout(renderGroupBudgetChart, 500);
   if(typeof mtLoad === 'function') mtLoad();
