@@ -1296,30 +1296,24 @@ function sbInit() {
 
 function sbHandleSession(session) {
   SB_USER = session.user;
-  // Hide loading overlay — auth confirmed, data starting to load
-  swHideLoader();
-  var _pg = window.location.pathname;
-  var _isIndex  = _pg.endsWith('index.html') || _pg.endsWith('/');
-  var _isBrand  = _pg.endsWith('brand.html');
-  var _isBrief  = _pg.endsWith('brief.html');
-  var _isBudget = _pg.endsWith('budget.html');
   window.SB_ACCESS_TOKEN = session.access_token;
   showUserState(SB_USER);
-  if(_isIndex || _isBrief) if(typeof loadBriefs === 'function') loadBriefs();
+  swHideLoader();
+  if(typeof loadBriefs === 'function')         loadBriefs();
   if(typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
-  if(_isIndex) if(typeof renderGroupBudgetChart === 'function') setTimeout(renderGroupBudgetChart, 500);
-  if(_isIndex || _isBrief) if(typeof mtLoad === 'function') mtLoad();
-  if(_isIndex || _isBudget) if(typeof loadBudgetActuals === 'function') loadBudgetActuals();
+  if(typeof renderGroupBudgetChart === 'function') setTimeout(renderGroupBudgetChart, 500);
+  if(typeof mtLoad === 'function') mtLoad();
+  if(typeof loadBudgetActuals === 'function')  loadBudgetActuals();
   if(typeof loadSiteBudgets === 'function')   loadSiteBudgets();
   if(typeof loadSiteKPIs === 'function')      loadSiteKPIs();
-  if(_isIndex) if(typeof loadAutopsies === 'function') loadAutopsies();
-  if(_isIndex) if(typeof loadCompetitorScans === 'function') loadCompetitorScans();
-  if(_isIndex || _isBrand) if(typeof loadQplanActions === 'function') loadQplanActions();
+  if(typeof loadAutopsies === 'function')      loadAutopsies();
+  if(typeof loadCompetitorScans === 'function') loadCompetitorScans();
+  if(typeof loadQplanActions === 'function')   loadQplanActions();
   if(typeof loadAdminConfig === 'function')    loadAdminConfig();
   if(typeof loadBrandChannels === 'function')  loadBrandChannels();
-  if(_isIndex || _isBrand) if(typeof loadSiteContacts === 'function') loadSiteContacts();
-  if(_isIndex) if(typeof calInit === 'function') calInit();
-  if(_isIndex) if(typeof spLoad === 'function') spLoad();
+  if(typeof loadSiteContacts === 'function')   loadSiteContacts();
+  if(typeof calInit === 'function')            calInit();
+  if(typeof spLoad === 'function')             spLoad();
   // Refresh save bar if brief is open
   const saveBar = document.getElementById('bb-save-bar');
   const saveBtn = document.getElementById('bb-save-btn');
