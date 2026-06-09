@@ -1122,7 +1122,7 @@ function calShowCampaign(cJson) {
   editBtn.style.cssText = 'flex:2;font-size:13px';
   if (c.brief_id) {
     editBtn.textContent = '✏ Edit campaign';
-    editBtn.onclick = function() { overlay.remove(); window.location = 'brief?brief=' + c.brief_id; };
+    editBtn.onclick = function() { overlay.remove(); window.location = 'brief.html?brief=' + c.brief_id; };
   } else {
     editBtn.textContent = '✏ Build campaign';
     editBtn.onclick = function() { overlay.remove(); calBuildBrief(c.brand, c.name, c); };
