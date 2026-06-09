@@ -4,6 +4,22 @@
   <meta charset="UTF-8">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎪</text></svg>">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+// Nav functions — defined early so onclick handlers work before external scripts load
+function navBrand(id) { navCloseAll(); window.location = 'brand.html?brand=' + id; }
+function navToggle(id, e) {
+  if (e) e.stopPropagation();
+  var el = document.getElementById(id);
+  if (!el) return;
+  var isOpen = el.classList.contains('open');
+  navCloseAll();
+  if (!isOpen) el.classList.add('open');
+}
+function navCloseAll() {
+  document.querySelectorAll('.nav-dd-wrap').forEach(function(el){ el.classList.remove('open'); });
+}
+document.addEventListener('click', navCloseAll);
+</script>
   <title>Events & Placements — Swansway Marketing Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter+Tight:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
