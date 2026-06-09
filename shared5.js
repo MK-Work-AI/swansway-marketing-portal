@@ -953,7 +953,7 @@ function switchView(id, el) {
     const brand = BRANDS.find(b=>b.id===id);
     if(brand) {
       if(typeof renderBrand === 'function') renderBrand(brand);
-      else window.location = 'brand.html?brand=' + id;
+      else window.location = 'brand?brand=' + id;
     }
   }
   if(id === 'brief') { if(!window.location.pathname.endsWith('brief.html')) { window.location = 'brief.html'; } return; }
@@ -1507,7 +1507,7 @@ function openBriefFromPanel(id) {
     window._bbLoadingBriefFromPanel = true;
     bbLoadBrief(id);
   } else {
-    window.location = 'brief.html?brief=' + id;
+    window.location = 'brief?brief=' + id;
   }
 }
 
@@ -1629,7 +1629,7 @@ async function openCampaignFromBanner(campId, briefId) {
   if (!brief) return;
   if (!window.SB_BRIEFS_CACHE) window.SB_BRIEFS_CACHE = [];
   if (!SB_BRIEFS_CACHE.find(function(b){return b.id===brief.id;})) SB_BRIEFS_CACHE.push(brief);
-  window.location = 'brief.html?view=brief&brief=' + brief.id;
+  window.location = 'brief?view=brief&brief=' + brief.id;
 }
 
 
@@ -1667,7 +1667,7 @@ async function swEnsureUser() {
             var _path = window.location.pathname;
             var _hasParams = window.location.search.length > 0;
             if (!_hasParams && (_path.endsWith('index.html') || _path.endsWith('/'))) {
-              window.location.href = 'brand.html?brand=' + match.brand_id;
+              window.location.href = 'brand?brand=' + match.brand_id;
             }
           }
         }
