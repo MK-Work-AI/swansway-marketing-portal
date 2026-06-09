@@ -1652,9 +1652,11 @@ async function swEnsureUser() {
           if (sel) sel.value = match.id;
           console.log('swEnsureUser: ' + match.name);
           // Auto-redirect brand-specific team members to their brand page
+          // Only redirect from root/index — never interrupt other page loads
           if (match.brand_id && !match.is_admin && !match.is_leadership) {
             var _path = window.location.pathname;
-            if (_path.endsWith('index.html') || _path.endsWith('/')) {
+            var _hasParams = window.location.search.length > 0;
+            if (!_hasParams && (_path.endsWith('index.html') || _path.endsWith('/'))) {
               window.location.href = 'brand.html?brand=' + match.brand_id;
             }
           }
