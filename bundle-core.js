@@ -1337,6 +1337,8 @@ function showSignInButton() {
   if(signinBtn) signinBtn.style.display = 'flex';
   if(userPill)  userPill.style.display  = 'none';
   if(briefsBtn) briefsBtn.style.display = 'none';
+  // Auto-open login overlay when not authenticated
+  if(typeof openAuth === 'function') openAuth();
 }
 
 
