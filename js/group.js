@@ -694,7 +694,7 @@ function renderBudgetTracker() {
               + identifiedTotal.toLocaleString() + ' committed of &pound;' + sitePlan.toLocaleString() + ' annual allocation</div>' : '')
           : btEsc(site.site_name);
 
-        rows += '<tr id="row-' + accordId + '" style="background:var(--white);border-bottom:' + (hasItems ? 'none' : '1px solid var(--border)') + ';display:none">'
+        rows += '<tr id="row-' + accordId + '" data-brand-rows="bt-sites-' + b.id + '" style="background:var(--white);border-bottom:' + (hasItems ? 'none' : '1px solid var(--border)') + ';display:none">'
           + '<td style="padding:7px 10px 7px 28px;font-size:12px;color:var(--ink);border-left:4px solid ' + b.color + '">' + siteLabel + '</td>'
           + siteCells
           + '<td style="text-align:right;font-size:11px;color:var(--ink-faint);padding:4px 8px">' + (sitePlan > 0 ? '&pound;' + sitePlan.toLocaleString() : '&mdash;') + '</td>'
@@ -796,7 +796,7 @@ function renderBudgetTracker() {
           }
 
           acHtml += '</div></div></td>';
-          rows += '<tr class="bt-accord-row" id="row-' + accordId + '" style="display:none">' + acHtml + '</tr>';
+          rows += '<tr class="bt-accord-row" id="row-' + accordId + '" data-brand-rows="bt-sites-' + b.id + '" style="display:none">' + acHtml + '</tr>';
         }
 
       });
@@ -1600,11 +1600,22 @@ function applyAdminKPITargets() {
 var BT_OPEN = {};
 
 function btToggle(id) {
+  var chv  = document.getElementById('chv-' + id);
+  var open = BT_OPEN[id];
+
+  // Brand-level toggle — show/hide all site rows for this brand
+  var brandRows = document.querySelectorAll('[data-brand-rows="' + id + '"]');
+  if (brandRows.length > 0) {
+    brandRows.forEach(function(r) { r.style.display = open ? 'none' : ''; });
+    if (chv) chv.innerHTML = open ? '&#9654;' : '&#9660;';
+    BT_OPEN[id] = !open;
+    return;
+  }
+
+  // Site-level toggle — show/hide campaign detail panel for this site
   var panel = document.getElementById(id);
   var row   = document.getElementById('row-' + id);
-  var chv   = document.getElementById('chv-' + id);
   if (!panel || !row) return;
-  var open = BT_OPEN[id];
   if (open) {
     panel.style.display = 'none';
     row.style.display = 'none';
