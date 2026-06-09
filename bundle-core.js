@@ -1501,7 +1501,8 @@ function filterBriefs(brandId, el) {
 
 function openBriefFromPanel(id) {
   closeBriefsPanel();
-  if (typeof bbLoadBrief === 'function') {
+  var _onBriefPage = window.location.pathname.endsWith('brief.html') || window.location.pathname.endsWith('/brief');
+  if (_onBriefPage && typeof bbLoadBrief === 'function') {
     window._BRIEF_ID_FROM_URL = id;
     window._bbLoadingBriefFromPanel = true;
     bbLoadBrief(id);
