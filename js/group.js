@@ -1,4 +1,5 @@
 var EV_EVENTS_BUDGET = [];
+var BRIEF_COMMITMENTS = {};
 
 // Parse site_id field from a campaign — may be a JSON array or single string
 function btParseCampSiteIds(c) {
