@@ -75,6 +75,11 @@ function renderBrand(b) {
       <div id="${b.id}-campaigns-list"><div style="padding:20px;text-align:center;color:var(--ink-faint);font-size:13px">Loading campaigns...</div></div>
     </div>
 
+    <div class="inner-section" id="${b.id}-events">
+      <div class="sh"><div><div class="sh-title">Events &amp; Placements</div><div class="sh-sub">All booked events for ${b.name} sites in ${PLAN_YEAR}</div></div></div>
+      <div id="${b.id}-events-list"><div style="padding:20px;text-align:center;color:var(--ink-faint);font-size:13px">Loading events...</div></div>
+    </div>
+
     <div class="inner-section" id="${b.id}-audiences">
       <div class="sh"><div><div class="sh-title">Target Audiences & Messaging</div><div class="sh-sub">Segments with tailored message, channel and creative angle</div></div></div>
       <div class="audience-grid" style="--brand-color:${b.color}">
