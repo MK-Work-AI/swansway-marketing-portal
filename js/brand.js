@@ -10,6 +10,7 @@ function renderBrand(b) {
       if (typeof renderBrandSites === 'function')     renderBrandSites(b.id);
       if (typeof renderBrandCentres === 'function')   renderBrandCentres(b.id);
       if (typeof renderBrandCampaigns === 'function') renderBrandCampaigns(b.id);
+      if (typeof renderBrandEvents === 'function')    renderBrandEvents(b.id);
       if (typeof renderBrandKPIs === 'function')      renderBrandKPIs(b.id);
     }, 50);
     return;
@@ -46,6 +47,7 @@ function renderBrand(b) {
         <button class="inner-tab" onclick="switchInner('${b.id}','sites',this)">Site Budget Breakdown</button>
       <button class="inner-tab" onclick="switchInner('${b.id}','centres',this)">Dealership/s (${b.sites})</button>
       <button class="inner-tab" onclick="switchInner('${b.id}','campaigns',this)">Campaigns</button>
+      <button class="inner-tab" onclick="switchInner('${b.id}','events',this)">Events</button>
       <button class="inner-tab" onclick="switchInner('${b.id}','audiences',this)">Audiences</button>
       <button class="inner-tab" onclick="switchInner('${b.id}','budget',this)">Channel Mix</button>
       <button class="inner-tab" onclick="switchInner('${b.id}','kpis',this)">KPI Framework by Site</button>
@@ -231,6 +233,62 @@ function renderBrandCentres(brandId) {
   el.innerHTML = html;
 }
 
+
+function renderBrandEvents(brandId) {
+  var el = document.getElementById(brandId + '-events-list');
+  if (!el) return;
+  var MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var planYear = parseInt(PLAN_YEAR) || new Date().getFullYear();
+  // Get all sites for this brand
+  var brandSiteIds = (typeof HUB_SITES !== 'undefined')
+    ? HUB_SITES.filter(function(s){ return s.brand_id === brandId; }).map(function(s){ return s.site_id; })
+    : [];
+  // Filter EV_EVENTS_BUDGET for this brand's sites in plan year
+  var events = (EV_EVENTS_BUDGET || []).filter(function(ev) {
+    if (!ev.start_date) return false;
+    if (new Date(ev.start_date + 'T00:00:00').getFullYear() !== planYear) return false;
+    return brandSiteIds.indexOf(ev.site_id) !== -1;
+  });
+  if (!events.length) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink-faint);font-size:13px">No events booked for ' + planYear + '. Add events via Planning → Events &amp; Placements.</div>';
+    return;
+  }
+  // Sort by start date
+  events.sort(function(a,b){ return a.start_date < b.start_date ? -1 : 1; });
+  var totalPlanned = events.reduce(function(s,ev){ return s + (ev.planned_budget||0); }, 0);
+  var totalActual  = events.reduce(function(s,ev){ return s + (ev.actual_spend||0);   }, 0);
+  var html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem">';
+  html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Events booked</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:var(--swansway)">' + events.length + '</div></div>';
+  html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Total planned budget</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:#7C3AED">' + (totalPlanned > 0 ? '£' + totalPlanned.toLocaleString() : '—') + '</div></div>';
+  html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Actual spend</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:#059669">' + (totalActual > 0 ? '£' + totalActual.toLocaleString() : '—') + '</div></div>';
+  html += '</div>';
+  html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">';
+  html += '<thead><tr style="background:var(--swansway);color:#fff">';
+  ['Event','Site','Dates','Planned budget','Actual spend','Status'].forEach(function(h) {
+    html += '<th style="padding:8px 12px;text-align:left;font-family:var(--font-m);font-size:10px;font-weight:500;letter-spacing:0.06em">' + h + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+  var statusColors = {active:'#059669',planned:'#6B7280',approved:'#2563EB',cancelled:'#DC2626',completed:'#374151'};
+  events.forEach(function(ev, idx) {
+    var site = (typeof HUB_SITES !== 'undefined') ? HUB_SITES.find(function(s){ return s.site_id === ev.site_id; }) : null;
+    var siteName = site ? site.site_name : (ev.site_id || '—');
+    var sd = ev.start_date ? new Date(ev.start_date + 'T00:00:00') : null;
+    var ed = ev.end_date   ? new Date(ev.end_date   + 'T00:00:00') : null;
+    var dates = sd ? (sd.getDate() + ' ' + MN[sd.getMonth()] + (ed && ed.getMonth() !== sd.getMonth() ? ' – ' + ed.getDate() + ' ' + MN[ed.getMonth()] : '')) : '—';
+    var sc = statusColors[ev.status] || '#6B7280';
+    var bg = idx % 2 === 0 ? 'var(--white)' : 'var(--surface)';
+    html += '<tr style="background:' + bg + '">';
+    html += '<td style="padding:8px 12px;font-size:13px;font-weight:600">' + (ev.title || 'Untitled') + '</td>';
+    html += '<td style="padding:8px 12px;font-size:12px;color:var(--ink-soft)">' + siteName + '</td>';
+    html += '<td style="padding:8px 12px;font-size:12px;color:var(--ink-soft)">' + dates + '</td>';
+    html += '<td style="padding:8px 12px;font-size:12px;font-family:var(--font-m);color:#7C3AED;font-weight:600">' + (ev.planned_budget > 0 ? '£' + ev.planned_budget.toLocaleString() : '—') + '</td>';
+    html += '<td style="padding:8px 12px;font-size:12px;font-family:var(--font-m);color:#059669">' + (ev.actual_spend > 0 ? '£' + ev.actual_spend.toLocaleString() : '—') + '</td>';
+    html += '<td style="padding:8px 12px"><span style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 8px;border-radius:10px;background:' + sc + '20;color:' + sc + '">' + (ev.status || 'planned') + '</span></td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
 
 function renderBrandCampaigns(brandId) {
   var listEl = document.getElementById(brandId + '-campaigns-list');
