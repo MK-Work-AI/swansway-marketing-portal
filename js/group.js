@@ -297,8 +297,6 @@ function renderChannelChart() {
 
 
 async function calLoadFromSupabase() {
-  var _p = window.location.pathname;
-  if (!_p.endsWith('index.html') && !_p.endsWith('/')) return;
   try {
     var BRAND_COLOR_MAP = {
       'Audi':'#BB0A21','Volkswagen':'#001E50','VW Commercial':'#1B4F72',
@@ -1202,11 +1200,6 @@ function calBuildBrief(brandName, campaignName, campObj) {
 
 
 async function loadSiteBudgets() {
-  // Only run on pages that have the budget tracker or brand site breakdown
-  var _path = window.location.pathname;
-  var _needsBudget = _path.endsWith('index.html') || _path.endsWith('brand.html') || 
-                     _path.endsWith('budget.html') || _path.endsWith('/');
-  if (!_needsBudget) return;
   try {
     var resp = await fetch(SUPABASE_URL + '/rest/v1/site_budgets?select=*', {
       headers: {
@@ -1253,9 +1246,6 @@ async function loadSiteBudgets() {
 
 
 async function loadEventsForBudget() {
-  var _p = window.location.pathname;
-  if (!_p.endsWith('index.html') && !_p.endsWith('brand.html') && 
-      !_p.endsWith('budget.html') && !_p.endsWith('/')) return;
   try {
     var r = await fetch(SUPABASE_URL + '/rest/v1/events?select=id,title,site_id,brand_id,start_date,end_date,planned_budget,actual_spend,status&status=neq.cancelled&order=start_date', {
       headers: getAuthHeaders({'Content-Type':'application/json'})
@@ -1282,9 +1272,6 @@ function getEventBudgetBySite(siteId) {
   return monthly;
 }
 async function loadSiteKPIs() {
-  var _path = window.location.pathname;
-  if (!_path.endsWith('index.html') && !_path.endsWith('brand.html') && 
-      !_path.endsWith('budget.html') && !_path.endsWith('/')) return;
   try {
     var resp = await fetch(SUPABASE_URL + '/rest/v1/site_kpis?select=*', {
       headers: {
