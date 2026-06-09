@@ -1661,3 +1661,14 @@ function btInjectStyles() {
   ].join('');
   document.head.appendChild(s);
 }
+
+// ── Fallback: if auth already fired before group.js loaded, run now ──
+window.addEventListener('load', function() {
+  if (typeof SB_USER !== 'undefined' && SB_USER) {
+    if (typeof loadSiteBudgets === 'function')   loadSiteBudgets();
+    if (typeof loadSiteKPIs === 'function')      loadSiteKPIs();
+    if (typeof calLoadFromSupabase === 'function') calLoadFromSupabase();
+    if (typeof loadBriefCommitmentsForTracker === 'function') loadBriefCommitmentsForTracker();
+    if (typeof loadEventsForBudget === 'function') loadEventsForBudget();
+  }
+});
