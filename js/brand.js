@@ -761,6 +761,8 @@ async function loadBrandChannels() {
       if (el && typeof renderBrandChannelMix === 'function') renderBrandChannelMix(bid);
     });
     updateGroupChannelsFromBrands();
+    // Re-render channel mix after data loads — always, not just when view is active
+    if (typeof renderGroupChannels === 'function') renderGroupChannels();
     window._brandChannelsLoaded = true;
     window._brandChannelsLoading = false;
     console.log('Brand channels loaded: ' + rows.length + ' rows');
