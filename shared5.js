@@ -1667,6 +1667,9 @@ async function swEnsureUser() {
 
 
 async function loadSiteContacts() {
+  var _p = window.location.pathname;
+  if (!_p.endsWith('index.html') && !_p.endsWith('/') &&
+      !_p.endsWith('brand.html')) return;
   try {
     var resp = await fetch(SUPABASE_URL + '/rest/v1/site_contacts?select=*', {
       headers: {
