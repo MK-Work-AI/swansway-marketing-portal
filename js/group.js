@@ -594,13 +594,15 @@ function renderBudgetTracker() {
     }
 
     var accordId = 'bt-sites-' + b.id;
-    var trAttrs = 'style="background:var(--white);border-top:3px solid var(--border)' + (sites.length > 0 ? ';cursor:pointer"' : '"') + (sites.length > 0 ? ' onclick="btToggle(\'' + accordId + '\')"' : '');
-    rows += '<tr ' + trAttrs + '>';
-      + '<td style="padding:12px 10px 10px;border-left:4px solid '+b.color+'"><div style="display:flex;align-items:center;gap:6px;font-family:var(--font-d);font-weight:800;font-size:14px">'
-      + (sites.length > 0 ? '<span id="chv-' + accordId + '" style="font-size:10px;color:var(--ink-soft);width:14px;flex-shrink:0">&#9654;</span>' : '')
+    var trClick = sites.length > 0 ? ' style="background:var(--white);border-top:3px solid var(--border);cursor:pointer" onclick="btToggle(\'' + accordId + '\')"' : ' style="background:var(--white);border-top:3px solid var(--border)"';
+    var chvHtml = sites.length > 0 ? '<span id="chv-' + accordId + '" style="font-size:10px;color:var(--ink-soft);width:14px;flex-shrink:0">&#9654;</span>' : '';
+    var sitesLabel = sites.length > 0 ? '<div style="font-size:10px;color:var(--ink-soft);margin-left:16px;padding-bottom:4px">' + sites.length + (sites.length === 1 ? ' site' : ' sites') + '</div>' : '';
+    rows += '<tr' + trClick + '>'
+      + '<td style="padding:12px 10px 10px;border-left:4px solid ' + b.color + '"><div style="display:flex;align-items:center;gap:6px;font-family:var(--font-d);font-weight:800;font-size:14px">'
+      + chvHtml
       + '<span style="width:10px;height:10px;border-radius:50%;background:' + b.color + ';display:inline-block;flex-shrink:0"></span>'
       + b.name + '</div>'
-      + (sites.length > 0 ? '<div style="font-size:10px;color:var(--ink-soft);margin-left:16px;padding-bottom:4px">' + sites.length + (sites.length === 1 ? ' site' : ' sites') + '</div>' : '')
+      + sitesLabel
       + '</td>'
       + brandCells
       + '<td style="text-align:right;font-size:11px;color:var(--ink-soft);font-weight:700">' + (brandPlan > 0 ? '&pound;' + brandPlan.toLocaleString() : '&mdash;') + '</td>'
