@@ -12,7 +12,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
 // Nav functions — defined early so onclick handlers work before external scripts load
-function navBrand(id) { navCloseAll(); window.location = 'brand?brand=' + id; }
+function navBrand(id) { navCloseAll(); window.location = 'brand.html?brand=' + id; }
 function navToggle(id, e) {
   if (e) e.stopPropagation();
   var el = document.getElementById(id);
