@@ -2687,7 +2687,8 @@ function bbInitFromBrief(brief) {
     setTimeout(function() { bbRenderSiteGrid(); bbUpdateSiteCount(); }, 50);
   }
 
-  // ── Step G: Restore sidebar ──
+  // ── Step G: Update date card + restore sidebar ──
+  if (BB.start_date && BB.end_date) bbOnDateChange();
   bbUpdateBrief();
   setTimeout(bbRenderBrandContext, 100);
 
