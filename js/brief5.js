@@ -3089,6 +3089,12 @@ async function bbDeleteBrief(id) {
 document.addEventListener('DOMContentLoaded', function() {
   var briefView = document.getElementById('view-brief');
   if (briefView) briefView.classList.add('active');
+  // If brief ID in URL, suppress new brief immediately — don't wait for auth
+  var _initBriefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.search).get('brief');
+  if (_initBriefId) {
+    window._bbBriefLoading = true;
+    window._bbSuppressNewBrief = true;
+  }
   // Load brief from URL if ID present
   setTimeout(function() {
     var briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.search).get('brief');
