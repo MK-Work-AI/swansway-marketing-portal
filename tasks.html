@@ -4,6 +4,22 @@
   <meta charset="UTF-8">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+if (typeof navToggle === 'undefined') {
+  function navToggle(id, e) {
+    if (e) e.stopPropagation();
+    var el = document.getElementById(id);
+    if (!el) return;
+    var isOpen = el.classList.contains('open');
+    document.querySelectorAll('.nav-dd-wrap').forEach(function(w){ w.classList.remove('open'); });
+    if (!isOpen) el.classList.add('open');
+  }
+  function navCloseAll() {
+    document.querySelectorAll('.nav-dd-wrap').forEach(function(el){ el.classList.remove('open'); });
+  }
+  document.addEventListener('click', navCloseAll);
+}
+</script>
   <title>Swansway Marketing Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter+Tight:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -17,6 +33,17 @@
   <script src="js/tasks.js?v=4"></script>
 </head>
 <body>
+<!-- Page loading overlay -->
+<div id="sw-page-loader" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#0B1929;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;transition:opacity 0.4s ease,visibility 0.4s ease">
+  <img src="https://npfalcon.b-cdn.net/tenant_d9013b5a-4990-4f3e-beec-4e1fc85990eb/media/uploads/main-logo.svg" alt="Swansway" style="height:48px;width:auto;filter:brightness(0) invert(1);margin-bottom:28px;opacity:0.95">
+  <div style="display:flex;gap:7px;align-items:center">
+    <div style="width:7px;height:7px;border-radius:50%;background:#fff;opacity:0.9;animation:sw-pulse 1.2s ease-in-out infinite"></div>
+    <div style="width:7px;height:7px;border-radius:50%;background:#fff;opacity:0.9;animation:sw-pulse 1.2s ease-in-out 0.2s infinite"></div>
+    <div style="width:7px;height:7px;border-radius:50%;background:#fff;opacity:0.9;animation:sw-pulse 1.2s ease-in-out 0.4s infinite"></div>
+  </div>
+  <div style="margin-top:18px;font-family:'Inter Tight',sans-serif;font-size:12px;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase">Loading</div>
+</div>
+<style>@keyframes sw-pulse{0%,100%{opacity:0.2;transform:scale(0.8)}50%{opacity:1;transform:scale(1.1)}}</style>
 
 <header class="topbar">
   <div class="topbar-inner">
