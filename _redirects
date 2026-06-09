@@ -1,0 +1,13 @@
+# Cloudflare Pages redirects
+/brief          /brief.html          200
+/brand          /brand.html          200
+/budget         /budget.html         200
+/events         /events.html         200
+/channels       /channels.html       200
+/kpis           /kpis.html           200
+/priorities     /priorities.html     200
+/autopsy        /autopsy.html        200
+/competitor     /competitor.html     200
+/tasks          /tasks.html          200
+/admin          /admin.html          200
+/calendar       /calendar.html       200
