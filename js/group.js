@@ -298,8 +298,9 @@ function renderChannelChart() {
 
 async function calLoadFromSupabase() {
   var _p = window.location.pathname;
-  if (!_p.endsWith('index.html') && !_p.endsWith('/') &&
-      !_p.endsWith('brief.html') && !_p.endsWith('calendar.html')) return;
+  if (!_p.endsWith('index.html')  && !_p.endsWith('/') &&
+      !_p.endsWith('brief.html')  && !_p.endsWith('/brief') &&
+      !_p.endsWith('calendar.html') && !_p.endsWith('/calendar')) return;
   try {
     var BRAND_COLOR_MAP = {
       'Audi':'#BB0A21','Volkswagen':'#001E50','VW Commercial':'#1B4F72',
@@ -1205,8 +1206,9 @@ function calBuildBrief(brandName, campaignName, campObj) {
 async function loadSiteBudgets() {
   var _p = window.location.pathname;
   if (!_p.endsWith('index.html') && !_p.endsWith('/') &&
-      !_p.endsWith('brand.html') && !_p.endsWith('budget.html') &&
-      !_p.endsWith('channels.html')) return;
+      !_p.endsWith('brand.html')   && !_p.endsWith('/brand') &&
+      !_p.endsWith('budget.html')  && !_p.endsWith('/budget') &&
+      !_p.endsWith('channels.html')&& !_p.endsWith('/channels')) return;
   try {
     var resp = await fetch(SUPABASE_URL + '/rest/v1/site_budgets?select=*', {
       headers: {
@@ -1282,7 +1284,8 @@ function getEventBudgetBySite(siteId) {
 async function loadSiteKPIs() {
   var _p = window.location.pathname;
   if (!_p.endsWith('index.html') && !_p.endsWith('/') &&
-      !_p.endsWith('brand.html') && !_p.endsWith('kpis.html')) return;
+      !_p.endsWith('brand.html') && !_p.endsWith('/brand') &&
+      !_p.endsWith('kpis.html')  && !_p.endsWith('/kpis')) return;
   try {
     var resp = await fetch(SUPABASE_URL + '/rest/v1/site_kpis?select=*', {
       headers: {
