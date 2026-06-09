@@ -366,7 +366,7 @@ if (typeof navToggle === 'undefined') {
 // On index.html, brand nav buttons go to brand.html?brand=X
 function navBrand(id) {
   navCloseAll();
-  window.location = 'brand.html?brand=' + id;
+  window.location = 'brand?brand=' + id;
 }
 
 window.addEventListener('load', function() {
