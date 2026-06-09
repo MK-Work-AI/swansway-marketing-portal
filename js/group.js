@@ -9,18 +9,21 @@ async function loadBriefCommitmentsForTracker() {
     });
     if (!resp.ok) { console.warn('loadBriefCommitmentsForTracker:', resp.status); return; }
     var rows = await resp.json();
-    BRIEF_COMMITMENTS = {};
+    // Use window. consistently so both declaration and access reference the same object
+    window.BRIEF_COMMITMENTS = {};
     window.BRIEF_SITE_AMOUNTS = {};
+    BRIEF_COMMITMENTS = window.BRIEF_COMMITMENTS; // keep local ref in sync
     if (Array.isArray(rows)) {
       rows.forEach(function(r) {
-        if (!BRIEF_COMMITMENTS[r.site_id]) BRIEF_COMMITMENTS[r.site_id] = {};
-        BRIEF_COMMITMENTS[r.site_id][r.month_index] = (BRIEF_COMMITMENTS[r.site_id][r.month_index] || 0) + (r.amount || 0);
+        if (!window.BRIEF_COMMITMENTS[r.site_id]) window.BRIEF_COMMITMENTS[r.site_id] = {};
+        window.BRIEF_COMMITMENTS[r.site_id][r.month_index] = (window.BRIEF_COMMITMENTS[r.site_id][r.month_index] || 0) + (r.amount || 0);
         if (r.brief_id) {
           if (!window.BRIEF_SITE_AMOUNTS[r.brief_id]) window.BRIEF_SITE_AMOUNTS[r.brief_id] = {};
           window.BRIEF_SITE_AMOUNTS[r.brief_id][r.site_id] = (window.BRIEF_SITE_AMOUNTS[r.brief_id][r.site_id] || 0) + (r.amount || 0);
         }
       });
     }
+    console.log('Commitments loaded:', Object.keys(window.BRIEF_COMMITMENTS).length, 'sites,', rows.length, 'rows');
   } catch(e) { console.warn('loadBriefCommitmentsForTracker:', e); }
 }
 
