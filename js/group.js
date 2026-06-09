@@ -1292,12 +1292,9 @@ async function loadSiteKPIs() {
     if (!rows || !rows.length) { console.log('loadSiteKPIs: no data'); return; }
     rows.forEach(function(row) { SITE_KPIS[row.site_id] = row; });
     updateGroupKPIsFromSites();
-    // Re-render KPIs if that view is currently active
-    var kpiView = document.getElementById('view-kpis');
-    if (kpiView && kpiView.classList.contains('active')) {
-      if (typeof applyAdminKPITargets === 'function') applyAdminKPITargets();
-      if (typeof renderGroupKPIs === 'function') renderGroupKPIs();
-    }
+    // Re-render KPIs after data loads — always, not just when view is active
+    if (typeof applyAdminKPITargets === 'function') applyAdminKPITargets();
+    if (typeof renderGroupKPIs === 'function') renderGroupKPIs();
     console.log('Site KPIs loaded: ' + rows.length + ' sites');
   } catch(e) { console.warn('loadSiteKPIs exception:', e); }
 }
