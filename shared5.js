@@ -1647,6 +1647,13 @@ async function swEnsureUser() {
           var sel = document.getElementById('cb-user-sel');
           if (sel) sel.value = match.id;
           console.log('swEnsureUser: ' + match.name);
+          // Auto-redirect brand-specific team members to their brand page
+          if (match.brand_id && !match.is_admin && !match.is_leadership) {
+            var _path = window.location.pathname;
+            if (_path.endsWith('index.html') || _path.endsWith('/')) {
+              window.location.href = 'brand.html?brand=' + match.brand_id;
+            }
+          }
         }
       }
     } catch(e) { console.warn('swEnsureUser error:', e); }
