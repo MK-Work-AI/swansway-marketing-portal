@@ -399,6 +399,28 @@ function bbSplitEqual() {
 }
 
 
+function bbUpdateDateCard(startDate, endDate) {
+  // Update date card display only — does NOT overwrite BB.start_date/BB.end_date
+  if (!startDate || !endDate) return;
+  var days  = Math.max(1, Math.round((new Date(endDate + 'T00:00:00') - new Date(startDate + 'T00:00:00')) / 86400000) + 1);
+  var weeks = Math.round(days / 7);
+  var partialDays = days % 7;
+  BB.duration_weeks = weeks;
+  BB.campaign_days  = days;
+  BB.duration       = {weeks: weeks, label: weeks === 1 ? '1 week' : weeks + ' weeks'};
+  var bigWeeks = document.getElementById('bb-dur-weeks-big');
+  var bigLabel = document.getElementById('bb-dur-label-big');
+  var bigDays  = document.getElementById('bb-dur-days-big');
+  var btn3     = document.getElementById('bb-btn-3-next');
+  if (bigWeeks) bigWeeks.textContent = weeks;
+  if (bigLabel) bigLabel.textContent = weeks === 1 ? 'week' : 'weeks';
+  if (bigDays)  bigDays.textContent  = days + ' days total' + (partialDays ? ' (' + weeks + ' weeks + ' + partialDays + ' days)' : '');
+  if (btn3)     btn3.disabled = false;
+  bbOnBudget(BB.budget);
+  bbUpdateBrief();
+  bbLoadHeadroom();
+}
+
 function bbOnDateChange() {
   var sd = document.getElementById('bb-start-date');
   var ed = document.getElementById('bb-end-date');
@@ -2666,8 +2688,9 @@ function bbInitFromBrief(brief) {
     setTimeout(function() { bbRenderSiteGrid(); bbUpdateSiteCount(); }, 50);
   }
 
-  // ── Step G: Update date card + restore sidebar ──
-  if (BB.start_date && BB.end_date) bbOnDateChange();
+  // ── Step G: Update date card without re-reading from DOM ──
+  // BB.start_date and BB.end_date are already correct from brief — don't overwrite via DOM read
+  if (BB.start_date && BB.end_date) bbUpdateDateCard(BB.start_date, BB.end_date);
   bbUpdateBrief();
   setTimeout(bbRenderBrandContext, 100);
 
