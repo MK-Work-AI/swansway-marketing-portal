@@ -140,7 +140,7 @@ function renderGroupBrandCards() {
   const g = document.getElementById('group-brand-grid');
   if (!g) return;
   g.innerHTML = BRANDS.map(b=>`
-    <div class="brand-card" style="--brand-color:${b.color}" onclick="window.location='brand.html?brand=${b.id}'">
+    <div class="brand-card" style="--brand-color:${b.color}" onclick="window.location='brand?brand=${b.id}'">
       <div class="brand-card-name">${b.name}</div>
       <div class="brand-card-seg">${b.segment}</div>
       <div class="brand-card-sites">${b.sites} site${b.sites>1?'s':''} · Budget ${b.budget}</div>
@@ -350,7 +350,7 @@ function renderBrandCampaigns(brandId) {
 
       if (camp.brief_id) {
         row.onclick = function() {
-          window.location = 'brief.html?brief=' + camp.brief_id;
+          window.location = 'brief?brief=' + camp.brief_id;
         };
       }
       listEl.appendChild(row);
@@ -381,7 +381,7 @@ function renderBrandCampaigns(brandId) {
         + '</div>'
         + '<span style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 9px;border-radius:10px;background:' + statusCol2 + '20;color:' + statusCol2 + '">' + (brief.status||'draft') + '</span>';
       row.onclick = function() {
-        window.location = 'brief.html?brief=' + brief.id;
+        window.location = 'brief?brief=' + brief.id;
       };
       listEl.appendChild(row);
     });
