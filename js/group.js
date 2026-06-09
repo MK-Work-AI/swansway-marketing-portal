@@ -812,11 +812,17 @@ function renderBudgetTracker() {
   }
   var trueRemaining = totalPlanned - totalCommitted - totalActual - totalEventsPlanned;
   var pct = totalActual > 0 ? Math.round(totalActual/totalPlanned*100) : totalCommitted > 0 ? Math.round(totalCommitted/totalPlanned*100) : 0;
+  // Smart currency format: £M for ≥100k, £K for ≥1k, exact £ for smaller
+  function fmtBudget(v) {
+    if (v >= 100000) return '&pound;' + (v/1000000).toFixed(2) + 'M';
+    if (v >= 1000)   return '&pound;' + (v/1000).toFixed(1) + 'K';
+    return '&pound;' + v.toLocaleString();
+  }
   metricsEl.innerHTML = [
-    {label:'Total planned ' + PLAN_YEAR,  val:'&pound;' + (totalPlanned/1000000).toFixed(2) + 'M',                                        sub:'Across all brands',             color:'var(--swansway)'},
-    {label:'Committed (briefs)',   val:totalCommitted > 0 ? '&pound;' + (totalCommitted/1000000).toFixed(2) + 'M' : '&pound;0',  sub:'From saved briefs',             color:'#D97706'},
-    {label:'Actual spent',         val:totalActual > 0 ? '&pound;' + (totalActual/1000000).toFixed(2) + 'M' : '&pound;0',        sub:'Entered in site budgets',       color:'#059669'},
-    {label:'Remaining headroom',   val:'&pound;' + (Math.max(0,trueRemaining)/1000000).toFixed(2) + 'M',                          sub:'Planned − committed − actual − events', color:'#6B7280'},
+    {label:'Total planned ' + PLAN_YEAR,  val: fmtBudget(totalPlanned),                                                               sub:'Across all brands',             color:'var(--swansway)'},
+    {label:'Committed (briefs)',           val: totalCommitted > 0 ? fmtBudget(totalCommitted) : '&pound;0',                           sub:'From saved briefs',             color:'#D97706'},
+    {label:'Actual spent',                 val: totalActual > 0 ? fmtBudget(totalActual) : '&pound;0',                                 sub:'Entered in site budgets',       color:'#059669'},
+    {label:'Remaining headroom',           val: fmtBudget(Math.max(0, trueRemaining)),                                                 sub:'Planned &minus; committed &minus; actual &minus; events', color:'#6B7280'},
   ].map(function(m) {
     return '<div class="metric" style="border-top-color:' + m.color + '"><div class="metric-label">' + m.label + '</div><div class="metric-val" style="color:' + m.color + '">' + m.val + '</div><div class="metric-sub">' + m.sub + '</div></div>';
   }).join('');
@@ -1211,7 +1217,11 @@ async function loadSiteBudgets() {
     var groupTotal = rows.reduce(function(s, r) { return s + (r.annual_planned || 0); }, 0);
     if (groupTotal > 0) {
       var el = document.getElementById('group-budget-val');
-      if (el) el.textContent = '£' + (groupTotal / 1000000).toFixed(2) + 'M';
+      if (el) {
+      if (groupTotal >= 100000) el.textContent = '£' + (groupTotal/1000000).toFixed(2) + 'M';
+      else if (groupTotal >= 1000) el.textContent = '£' + (groupTotal/1000).toFixed(1) + 'K';
+      else el.textContent = '£' + groupTotal.toLocaleString();
+    }
     }
     if(typeof updateBrandBudgetsFromSites==='function') updateBrandBudgetsFromSites();
     if(typeof syncBrandSitesFromHubSites==='function') syncBrandSitesFromHubSites();
