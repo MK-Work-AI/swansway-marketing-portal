@@ -691,7 +691,7 @@ function renderBudgetTracker() {
               + identifiedTotal.toLocaleString() + ' committed of &pound;' + sitePlan.toLocaleString() + ' annual allocation</div>' : '')
           : btEsc(site.site_name);
 
-        rows += '<tr style="background:var(--white);border-bottom:' + (hasItems ? 'none' : '1px solid var(--border)') + '">'
+        rows += '<tr id="row-' + accordId + '" style="background:var(--white);border-bottom:' + (hasItems ? 'none' : '1px solid var(--border)') + ';display:none">'
           + '<td style="padding:7px 10px 7px 28px;font-size:12px;color:var(--ink);border-left:4px solid ' + b.color + '">' + siteLabel + '</td>'
           + siteCells
           + '<td style="text-align:right;font-size:11px;color:var(--ink-faint);padding:4px 8px">' + (sitePlan > 0 ? '&pound;' + sitePlan.toLocaleString() : '&mdash;') + '</td>'
