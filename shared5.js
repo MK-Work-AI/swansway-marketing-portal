@@ -1291,7 +1291,6 @@ function sbHandleSession(session) {
   SB_USER = session.user;
   window.SB_ACCESS_TOKEN = session.access_token;
   showUserState(SB_USER);
-  swHideLoader();
   if(typeof loadBriefs === 'function')         loadBriefs();
   if(typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
   if(typeof renderGroupBudgetChart === 'function') setTimeout(renderGroupBudgetChart, 500);
