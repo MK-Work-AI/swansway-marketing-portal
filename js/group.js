@@ -593,8 +593,10 @@ function renderBudgetTracker() {
       brandCells += '<td class="budget-cell' + cls + '" style="line-height:1.4">' + inner + '</td>';
     }
 
-    rows += '<tr style="background:var(--white);border-top:3px solid var(--border)">'
+    var accordId = 'bt-sites-' + b.id;
+    rows += '<tr style="background:var(--white);border-top:3px solid var(--border);' + (sites.length > 0 ? 'cursor:pointer" onclick="btToggle(\'' + accordId + '\'")' : '"') + '>'
       + '<td style="padding:12px 10px 10px;border-left:4px solid '+b.color+'"><div style="display:flex;align-items:center;gap:6px;font-family:var(--font-d);font-weight:800;font-size:14px">'
+      + (sites.length > 0 ? '<span id="chv-' + accordId + '" style="font-size:10px;color:var(--ink-soft);width:14px;flex-shrink:0">&#9654;</span>' : '')
       + '<span style="width:10px;height:10px;border-radius:50%;background:' + b.color + ';display:inline-block;flex-shrink:0"></span>'
       + b.name + '</div>'
       + (sites.length > 0 ? '<div style="font-size:10px;color:var(--ink-soft);margin-left:16px;padding-bottom:4px">' + sites.length + (sites.length === 1 ? ' site' : ' sites') + '</div>' : '')
