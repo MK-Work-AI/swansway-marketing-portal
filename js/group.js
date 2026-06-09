@@ -1225,10 +1225,13 @@ async function loadSiteBudgets() {
     }
     if(typeof updateBrandBudgetsFromSites==='function') updateBrandBudgetsFromSites();
     if(typeof syncBrandSitesFromHubSites==='function') syncBrandSitesFromHubSites();
-    if (typeof loadBriefCommitmentsForTracker === 'function') await loadBriefCommitmentsForTracker();
+    // Run commitments + events in parallel — both independent of each other
+    await Promise.all([
+      typeof loadBriefCommitmentsForTracker === 'function' ? loadBriefCommitmentsForTracker() : Promise.resolve(),
+      loadEventsForBudget()
+    ]);
     // Now site budgets are loaded — trigger channel aggregation if brand data ready
     if (Object.keys(BRAND_CHANNELS_DATA).length) updateGroupChannelsFromBrands();
-    await loadEventsForBudget();
     if (typeof renderBudgetTracker === 'function') renderBudgetTracker();
     var _cvEl = document.getElementById('view-channels');
     if (_cvEl && _cvEl.classList.contains('active') && typeof renderGroupChannels === 'function') renderGroupChannels();
