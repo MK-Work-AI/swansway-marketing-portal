@@ -300,7 +300,8 @@ async function calLoadFromSupabase() {
   var _p = window.location.pathname;
   if (!_p.endsWith('index.html')  && !_p.endsWith('/') &&
       !_p.endsWith('brief.html')  && !_p.endsWith('/brief') &&
-      !_p.endsWith('calendar.html') && !_p.endsWith('/calendar')) return;
+      !_p.endsWith('calendar.html') && !_p.endsWith('/calendar') &&
+      !_p.endsWith('budget.html') && !_p.endsWith('/budget')) return;
   try {
     var BRAND_COLOR_MAP = {
       'Audi':'#BB0A21','Volkswagen':'#001E50','VW Commercial':'#1B4F72',
