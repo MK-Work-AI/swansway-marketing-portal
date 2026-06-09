@@ -574,10 +574,10 @@ function renderBudgetTracker() {
       var inner;
       if (act > 0) {
         inner = '&pound;' + act.toLocaleString();
-        if (cmt > 0 && cmt !== act) inner += '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + cmt.toLocaleString() + ' cmt</div>';
+        if (cmt > 0 && cmt !== act) inner += '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + cmt.toLocaleString() + ' committed</div>';
       } else if (act === 0 && cmt > 0 && plan > 0) {
         inner = '<em style="color:var(--ink-faint)">&pound;' + plan.toLocaleString() + '</em>'
-          + '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + cmt.toLocaleString() + ' cmt</div>';
+          + '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + cmt.toLocaleString() + ' committed</div>';
       } else if (cmt > 0) {
         inner = '<span style="color:#D97706;font-weight:600">&pound;' + cmt.toLocaleString() + '</span>';
       } else {
@@ -614,11 +614,11 @@ function renderBudgetTracker() {
           if (sa > 0) {
             // Actual spend — show solid, with committed sub-figure if different
             sinner = '&pound;' + sa.toLocaleString();
-            if (sc > 0 && sc !== sa) sinner += '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + sc.toLocaleString() + ' cmt</div>';
+            if (sc > 0 && sc !== sa) sinner += '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + sc.toLocaleString() + ' committed</div>';
           } else if (sa === 0 && sc > 0 && sp > 0) {
             // Planned + committed — show planned with committed sub-figure
             sinner = '<em style="color:var(--ink-faint)">&pound;' + sp.toLocaleString() + '</em>'
-              + '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + sc.toLocaleString() + ' cmt</div>';
+              + '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + sc.toLocaleString() + ' committed</div>';
           } else if (sc > 0) {
             // Committed only (no plan set)
             sinner = '<span style="color:#D97706;font-weight:600">&pound;' + sc.toLocaleString() + '</span>';
