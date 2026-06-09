@@ -1,6 +1,29 @@
 var EV_EVENTS_BUDGET = [];
 var BRIEF_COMMITMENTS = {};
 
+async function loadBriefCommitmentsForTracker() {
+  var base = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
+  try {
+    var resp = await fetch(base + '/brief_budget_commitments?year=eq.' + PLAN_YEAR + '&select=brief_id,site_id,month_index,amount', {
+      headers: getAuthHeaders()
+    });
+    if (!resp.ok) { console.warn('loadBriefCommitmentsForTracker:', resp.status); return; }
+    var rows = await resp.json();
+    BRIEF_COMMITMENTS = {};
+    window.BRIEF_SITE_AMOUNTS = {};
+    if (Array.isArray(rows)) {
+      rows.forEach(function(r) {
+        if (!BRIEF_COMMITMENTS[r.site_id]) BRIEF_COMMITMENTS[r.site_id] = {};
+        BRIEF_COMMITMENTS[r.site_id][r.month_index] = (BRIEF_COMMITMENTS[r.site_id][r.month_index] || 0) + (r.amount || 0);
+        if (r.brief_id) {
+          if (!window.BRIEF_SITE_AMOUNTS[r.brief_id]) window.BRIEF_SITE_AMOUNTS[r.brief_id] = {};
+          window.BRIEF_SITE_AMOUNTS[r.brief_id][r.site_id] = (window.BRIEF_SITE_AMOUNTS[r.brief_id][r.site_id] || 0) + (r.amount || 0);
+        }
+      });
+    }
+  } catch(e) { console.warn('loadBriefCommitmentsForTracker:', e); }
+}
+
 // Parse site_id field from a campaign — may be a JSON array or single string
 function btParseCampSiteIds(c) {
   if (!c.site_id) return [];
