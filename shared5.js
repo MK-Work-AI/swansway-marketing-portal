@@ -4,6 +4,15 @@ const SUPABASE_URL = 'https://humitzrleflxnlnodpde.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1bWl0enJsZWZseG5sbm9kcGRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0Mzk1NTksImV4cCI6MjA5NTAxNTU1OX0.p-i5P0jAj9M6c0V9cLPP06C5I88laufatX1b2WS-1lE';
 let SB = null; let SB_USER = null; let SB_BRIEFS_CACHE = []; let SB_ACTIVE_FILTER = 'all';
 window.SB_ACCESS_TOKEN = null;
+
+function swHideLoader() {
+  var el = document.getElementById('sw-page-loader');
+  if (!el) return;
+  el.style.opacity = '0';
+  el.style.visibility = 'hidden';
+  setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 450);
+}
+
 var CB_TEAM = {}; var CB_PERMS = {}; var CB_CURRENT_USER = null;
 var CB_CAMPAIGNS = []; var CB_TASKS = {}; var CB_FILTER = 'all'; var CB_CURRENT = null;
 var CB_API = SUPABASE_URL + '/rest/v1';
@@ -1278,7 +1287,7 @@ function sbInit() {
     } else if(_event === 'SIGNED_OUT') {
       sbHandleSignOut();
     } else if(_event === 'INITIAL_SESSION') {
-      if(!session) showSignInButton();
+      if(!session) { showSignInButton(); swHideLoader(); }
     }
   });
   } catch(e) { showSignInButton(); }
@@ -1287,6 +1296,8 @@ function sbInit() {
 
 function sbHandleSession(session) {
   SB_USER = session.user;
+  // Hide loading overlay — auth confirmed, data starting to load
+  swHideLoader();
   var _pg = window.location.pathname;
   var _isIndex  = _pg.endsWith('index.html') || _pg.endsWith('/');
   var _isBrand  = _pg.endsWith('brand.html');
