@@ -518,26 +518,68 @@ function renderBrandSites(brandId) {
   HUB_MONTHS.forEach(function(m) { html += '<th style="padding:8px 6px;text-align:right;font-family:var(--font-m);font-size:9px;font-weight:500;min-width:52px">' + m + '</th>'; });
   html += '</tr></thead><tbody>';
 
+  // Smart format for cell values
+  function fmtCell(v) {
+    if (!v || v === 0) return '—';
+    if (v >= 10000) return '£' + (v/1000).toFixed(0) + 'K';
+    if (v >= 1000)  return '£' + (v/1000).toFixed(1) + 'K';
+    return '£' + v.toLocaleString();
+  }
+
+  var totalCommitted = 0;
+  sites.forEach(function(site) {
+    var sc = window.BRIEF_COMMITMENTS && window.BRIEF_COMMITMENTS[site.site_id]
+      ? Object.values(window.BRIEF_COMMITMENTS[site.site_id]).reduce(function(s,v){ return s+v; }, 0) : 0;
+    totalCommitted += sc;
+  });
+
+  // Update summary row to include committed
+  html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem">';
+  html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Brand planned total</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:var(--swansway)">£' + totalPlan.toLocaleString() + '</div></div>';
+  html += '<div style="background:var(--white);border:1px solid var(--border);border-top:3px solid #D97706;border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Committed (briefs)</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:#D97706">' + (totalCommitted > 0 ? '£' + totalCommitted.toLocaleString() : '—') + '</div></div>';
+  html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">YTD actual</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:#059669">' + (totalActual > 0 ? '£' + totalActual.toLocaleString() : '—') + '</div></div>';
+  var variance = totalActual - totalPlan;
+  html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Variance</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:' + (variance > 0 ? '#DC2626' : '#059669') + '">' + (totalActual > 0 ? (variance >= 0 ? '+' : '') + '£' + Math.abs(variance).toLocaleString() : '—') + '</div></div>';
+  html += '</div>';
+
+  html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">';
+  html += '<thead><tr style="background:var(--swansway);color:#fff">';
+  html += '<th style="padding:8px 12px;text-align:left;font-family:var(--font-m);font-size:10px;font-weight:500;letter-spacing:0.08em">Site</th>';
+  html += '<th style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:10px;font-weight:500">Annual planned</th>';
+  html += '<th style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:10px;font-weight:500;color:#FCD34D">Committed</th>';
+  html += '<th style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:10px;font-weight:500">YTD actual</th>';
+  html += '<th style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:10px;font-weight:500">Variance</th>';
+  HUB_MONTHS.forEach(function(m) { html += '<th style="padding:8px 6px;text-align:right;font-family:var(--font-m);font-size:9px;font-weight:500;min-width:52px">' + m + '</th>'; });
+  html += '</tr></thead><tbody>';
+
   sites.forEach(function(site, idx) {
     var d = SITE_BUDGETS[site.site_id] || {};
     var plan = d.annual_planned || 0;
+    var committed = window.BRIEF_COMMITMENTS && window.BRIEF_COMMITMENTS[site.site_id]
+      ? Object.values(window.BRIEF_COMMITMENTS[site.site_id]).reduce(function(s,v){ return s+v; }, 0) : 0;
     var actual = 0;
     for (var i = 0; i < 12; i++) actual += (d['m' + i + '_actual'] || 0);
     var v = actual - plan;
+    var evData = typeof getEventBudgetBySite === 'function' ? getEventBudgetBySite(site.site_id) : null;
     var bg = idx % 2 === 0 ? 'var(--white)' : 'var(--surface)';
     html += '<tr style="background:' + bg + '">';
     html += '<td style="padding:8px 12px;font-size:13px;font-weight:600">' + site.site_name + '</td>';
     html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:var(--swansway);font-weight:700">' + (plan > 0 ? '£' + plan.toLocaleString() : '—') + '</td>';
+    html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:#D97706;font-weight:600">' + (committed > 0 ? '£' + committed.toLocaleString() : '—') + '</td>';
     html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:#059669">' + (actual > 0 ? '£' + actual.toLocaleString() : '—') + '</td>';
     html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:' + (v > 0 ? '#DC2626' : '#059669') + '">' + (actual > 0 ? (v >= 0 ? '+' : '') + '£' + Math.abs(v).toLocaleString() : '—') + '</td>';
     for (var i = 0; i < 12; i++) {
       var mPlan = d['m' + i + '_planned'] || 0;
       var mAct  = d['m' + i + '_actual']  || 0;
+      var mCmt  = (window.BRIEF_COMMITMENTS && window.BRIEF_COMMITMENTS[site.site_id]) ? (window.BRIEF_COMMITMENTS[site.site_id][i] || 0) : 0;
+      var mEvPl = evData ? (evData[i].planned || 0) : 0;
       var mPct  = mPlan > 0 ? Math.min(100, Math.round(mAct / mPlan * 100)) : 0;
-      html += '<td style="padding:4px 6px;text-align:right;vertical-align:middle">';
-      html += '<div style="font-family:var(--font-m);font-size:10px;color:var(--swansway)">' + (mPlan > 0 ? '£' + (mPlan/1000).toFixed(0) + 'k' : '—') + '</div>';
+      html += '<td style="padding:4px 6px;text-align:right;vertical-align:top;line-height:1.3">';
+      html += '<div style="font-family:var(--font-m);font-size:10px;color:var(--ink-faint)">' + fmtCell(mPlan) + '</div>';
+      if (mCmt > 0) html += '<div style="font-size:9px;color:#D97706;font-weight:600">' + fmtCell(mCmt) + ' cmt</div>';
+      if (mEvPl > 0) html += '<div style="font-size:9px;color:#7C3AED">' + fmtCell(mEvPl) + ' ev</div>';
       if (mAct > 0) {
-        html += '<div style="font-size:9px;color:#059669">' + (mAct/1000).toFixed(0) + 'k</div>';
+        html += '<div style="font-size:9px;color:#059669">' + fmtCell(mAct) + ' act</div>';
         html += '<div style="height:3px;background:var(--border);border-radius:2px;margin-top:2px"><div style="height:3px;background:' + (mPct > 100 ? '#DC2626' : '#059669') + ';width:' + Math.min(100,mPct) + '%;border-radius:2px"></div></div>';
       }
       html += '</td>';
