@@ -797,7 +797,7 @@ function renderBudgetTracker() {
           }
 
           acHtml += '</div></div></td>';
-          rows += '<tr class="bt-accord-row" id="row-' + accordId + '" data-brand-rows="bt-sites-' + b.id + '" style="display:none">' + acHtml + '</tr>';
+          rows += '<tr class="bt-accord-row" id="acrow-' + accordId + '" data-brand-rows="bt-sites-' + b.id + '" style="display:none">' + acHtml + '</tr>';
         }
 
       });
@@ -1615,7 +1615,7 @@ function btToggle(id) {
 
   // Site-level toggle — show/hide campaign detail panel for this site
   var panel = document.getElementById(id);
-  var row   = document.getElementById('row-' + id);
+  var row   = document.getElementById('acrow-' + id);
   if (!panel || !row) return;
   if (open) {
     panel.style.display = 'none';
