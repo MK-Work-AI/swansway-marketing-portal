@@ -548,11 +548,19 @@ function renderBudgetTracker() {
       var cmt  = brandMonthlyCommitted[mi];
       var diff = act - plan;
       var cls  = act === 0 ? '' : (diff > plan * 0.1 ? ' budget-over' : diff < -plan * 0.1 ? ' budget-under' : ' budget-on');
-      var inner = act > 0 ? '&pound;' + act.toLocaleString()
-        : cmt > 0 ? '<span style="color:#D97706;font-weight:600">&pound;' + cmt.toLocaleString() + '</span>'
-        : plan > 0 ? '<em style="color:var(--ink-faint)">&pound;' + plan.toLocaleString() + '</em>'
-        : '<em style="color:var(--ink-faint)">&mdash;</em>';
-      brandCells += '<td class="budget-cell' + cls + '">' + inner + '</td>';
+      var inner;
+      if (act > 0) {
+        inner = '&pound;' + act.toLocaleString();
+        if (cmt > 0 && cmt !== act) inner += '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + cmt.toLocaleString() + ' cmt</div>';
+      } else if (act === 0 && cmt > 0 && plan > 0) {
+        inner = '<em style="color:var(--ink-faint)">&pound;' + plan.toLocaleString() + '</em>'
+          + '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + cmt.toLocaleString() + ' cmt</div>';
+      } else if (cmt > 0) {
+        inner = '<span style="color:#D97706;font-weight:600">&pound;' + cmt.toLocaleString() + '</span>';
+      } else {
+        inner = plan > 0 ? '<em style="color:var(--ink-faint)">&pound;' + plan.toLocaleString() + '</em>' : '<em style="color:var(--ink-faint)">&mdash;</em>';
+      }
+      brandCells += '<td class="budget-cell' + cls + '" style="line-height:1.4">' + inner + '</td>';
     }
 
     rows += '<tr style="background:var(--white);border-top:3px solid var(--border)">'
@@ -580,10 +588,21 @@ function renderBudgetTracker() {
           sitePlan += sp; siteActual += sa; siteCommitted += sc;
           var scls = sa === 0 ? '' : ((sa-sp) > sp*0.1 ? ' budget-over' : (sa-sp) < -sp*0.1 ? ' budget-under' : ' budget-on');
           var sinner;
-          if (sa > 0) { sinner = '&pound;' + sa.toLocaleString(); }
-          else if (sc > 0) { sinner = '<span style="color:#D97706;font-weight:600">&pound;' + sc.toLocaleString() + '</span>'; }
-          else { sinner = sp > 0 ? '<em style="color:var(--ink-faint)">&pound;' + sp.toLocaleString() + '</em>' : '<em style="color:var(--ink-faint)">&mdash;</em>'; }
-          siteCells += '<td class="budget-cell' + scls + '" style="font-size:11px;padding:4px 8px">' + sinner + '</td>';
+          if (sa > 0) {
+            // Actual spend — show solid, with committed sub-figure if different
+            sinner = '&pound;' + sa.toLocaleString();
+            if (sc > 0 && sc !== sa) sinner += '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + sc.toLocaleString() + ' cmt</div>';
+          } else if (sa === 0 && sc > 0 && sp > 0) {
+            // Planned + committed — show planned with committed sub-figure
+            sinner = '<em style="color:var(--ink-faint)">&pound;' + sp.toLocaleString() + '</em>'
+              + '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + sc.toLocaleString() + ' cmt</div>';
+          } else if (sc > 0) {
+            // Committed only (no plan set)
+            sinner = '<span style="color:#D97706;font-weight:600">&pound;' + sc.toLocaleString() + '</span>';
+          } else {
+            sinner = sp > 0 ? '<em style="color:var(--ink-faint)">&pound;' + sp.toLocaleString() + '</em>' : '<em style="color:var(--ink-faint)">&mdash;</em>';
+          }
+          siteCells += '<td class="budget-cell' + scls + '" style="font-size:11px;padding:4px 8px;line-height:1.4">' + sinner + '</td>';
         }
         var sVarStr, sVarStyle;
         if (siteActual > 0) {
