@@ -759,24 +759,25 @@ function renderBudgetTracker() {
           if (siteEvs.length > 0) {
             acHtml += '<div class="bt-accord-section-label" style="margin-top:14px">Events &amp; Placements</div>';
             acHtml += '<table class="bt-accord-table"><thead><tr>'
-              + '<th>Event</th><th>Date</th><th style="text-align:right">Planned budget</th><th style="text-align:right">Actual spend</th><th>Status</th>'
+              + '<th>Event</th><th>Type</th><th>Dates</th><th>Coverage</th><th style="text-align:right">Budget</th><th>Status</th>'
               + '</tr></thead><tbody>';
             siteEvs.forEach(function(ev) {
               var se = STATUS_E[ev.status] || '#6B7280';
               var dateStr = ev.start_date ? btFmtDate(ev.start_date) : '&mdash;';
               if (ev.end_date && ev.end_date !== ev.start_date) dateStr += ' &ndash; ' + btFmtDate(ev.end_date);
+              var budgetCell = ev.planned_budget ? '&pound;' + Number(ev.planned_budget).toLocaleString() : '&mdash;';
+              if (ev.actual_spend) budgetCell += '<div style="font-size:9px;color:#059669;font-weight:600;line-height:1.2">&pound;' + Number(ev.actual_spend).toLocaleString() + ' actual</div>';
               acHtml += '<tr>'
                 + '<td style="font-weight:600">' + btEsc(ev.title || 'Untitled') + '</td>'
+                + '<td><span style="font-size:10px;padding:2px 7px;border-radius:3px;background:#F3F4F6;font-family:var(--font-m)">' + btEsc(ev.event_type || 'Event') + '</span></td>'
                 + '<td style="color:var(--ink-soft);white-space:nowrap">' + dateStr + '</td>'
-                + '<td style="text-align:right;font-family:var(--font-m)">' + (ev.planned_budget ? '&pound;' + Number(ev.planned_budget).toLocaleString() : '&mdash;') + '</td>'
-                + '<td style="text-align:right;font-family:var(--font-m);' + (ev.actual_spend ? 'font-weight:700;color:#059669' : 'color:var(--ink-faint)') + '">'
-                + (ev.actual_spend ? '&pound;' + Number(ev.actual_spend).toLocaleString() : '&mdash;') + '</td>'
+                + '<td style="color:var(--ink-faint);font-size:11px">This site</td>'
+                + '<td style="text-align:right;font-family:var(--font-m);line-height:1.4">' + budgetCell + '</td>'
                 + '<td><span style="font-size:10px;padding:2px 7px;border-radius:3px;color:#fff;background:' + se + ';font-family:var(--font-m)">' + btEsc(ev.status || 'draft') + '</span></td>'
                 + '</tr>';
             });
-            acHtml += '<tr class="bt-accord-total"><td colspan="2">Events total</td>'
+            acHtml += '<tr class="bt-accord-total"><td colspan="4">Events total</td>'
               + '<td style="text-align:right;font-family:var(--font-m)">' + (identifiedEvPl > 0 ? '&pound;' + identifiedEvPl.toLocaleString() : '&mdash;') + '</td>'
-              + '<td style="text-align:right;font-family:var(--font-m);font-weight:700;color:#059669">' + (identifiedEvAc > 0 ? '&pound;' + identifiedEvAc.toLocaleString() : '&mdash;') + '</td>'
               + '<td></td></tr>';
             acHtml += '</tbody></table>';
           }
