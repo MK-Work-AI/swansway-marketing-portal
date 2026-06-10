@@ -5,10 +5,31 @@
   <meta charset="UTF-8">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
   <script>
-    // Capture brief ID at the very first moment — before anything else runs
-    window._BRIEF_ID_FROM_URL = new URLSearchParams(window.location.hash.slice(1)).get('brief');
-    window._bbBriefLoading = false;
-    console.log('INLINE hash=', window.location.hash, 'search=', window.location.search, 'id=', window._BRIEF_ID_FROM_URL);
+    // Capture brief ID immediately — save to sessionStorage before Supabase clears the hash
+    (function() {
+      var _h = window.location.hash.slice(1);
+      var _id = new URLSearchParams(_h).get('brief');
+      if (_id) _id = _id.replace(/[^a-f0-9-]/gi, '');
+      if (_id) {
+        window._BRIEF_ID_FROM_URL = _id;
+        window._bbBriefLoading = true;
+        window._bbSuppressNewBrief = true;
+        try { sessionStorage.setItem('_pendingBriefId', _id); } catch(e) {}
+        console.log('INLINE: saved brief ID', _id);
+      } else {
+        // Also check sessionStorage in case we navigated here before
+        try {
+          var _stored = sessionStorage.getItem('_pendingBriefId');
+          if (_stored) {
+            window._BRIEF_ID_FROM_URL = _stored;
+            window._bbBriefLoading = true;
+            window._bbSuppressNewBrief = true;
+            console.log('INLINE: restored brief ID from sessionStorage', _stored);
+          }
+        } catch(e) {}
+      }
+      window._bbBriefLoading = window._bbBriefLoading || false;
+    })();
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
@@ -1129,17 +1150,18 @@ document.addEventListener('click', navCloseAll);
 function bbCheckUrlOnLoad() {
   // Disabled — brief loading handled by sbHandleSession + hash
 }
-// If brief ID in hash, ensure it loads correctly
+// Restore brief ID from sessionStorage if Supabase cleared the hash
 (function() {
-  var _h = window.location.hash.slice(1);
-  var _id = new URLSearchParams(_h).get('brief');
-  if (_id) {
-    _id = _id.replace(/[^a-f0-9-]/gi, '');
-    if (_id) {
-      window._BRIEF_ID_FROM_URL = _id;
-      window._bbBriefLoading = true;
-      window._bbSuppressNewBrief = true;
-    }
+  if (!window._BRIEF_ID_FROM_URL) {
+    try {
+      var _id = sessionStorage.getItem('_pendingBriefId');
+      if (_id) {
+        window._BRIEF_ID_FROM_URL = _id;
+        window._bbBriefLoading = true;
+        window._bbSuppressNewBrief = true;
+        console.log('BOTTOM: restored brief ID', _id);
+      }
+    } catch(e) {}
   }
 })();
 </script>
