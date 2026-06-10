@@ -1416,6 +1416,8 @@ async function loadEventsForBudget() {
     });
     if (!r.ok) return;
     EV_EVENTS_BUDGET = await r.json();
+    // Re-render calendar now events are loaded
+    if (typeof renderCrossCalendar === 'function') renderCrossCalendar();
   } catch(e) { console.warn('loadEventsForBudget:', e); }
 }
 
