@@ -1294,7 +1294,7 @@ function sbHandleSession(session) {
   if(typeof loadBriefs === 'function')         loadBriefs();
   // Load brief from URL if ID present — must be after auth is confirmed
   if (typeof bbLoadBrief === 'function') {
-    var _briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.search).get('brief');
+    var _briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.hash.slice(1)).get('brief');
     if (_briefId) {
       window._bbBriefLoading = true;
       window._bbSuppressNewBrief = true;
@@ -1507,7 +1507,7 @@ function openBriefFromPanel(id) {
     window._bbLoadingBriefFromPanel = true;
     bbLoadBrief(id);
   } else {
-    window.location = 'brief.html?brief=' + id;
+    window.location = 'brief.html#brief=' + id;
   }
 }
 
@@ -1629,7 +1629,7 @@ async function openCampaignFromBanner(campId, briefId) {
   if (!brief) return;
   if (!window.SB_BRIEFS_CACHE) window.SB_BRIEFS_CACHE = [];
   if (!SB_BRIEFS_CACHE.find(function(b){return b.id===brief.id;})) SB_BRIEFS_CACHE.push(brief);
-  window.location = 'brief?view=brief&brief=' + brief.id;
+  window.location = 'brief.html#brief=' + brief.id;
 }
 
 
@@ -1665,7 +1665,7 @@ async function swEnsureUser() {
           // Only redirect from root/index — never interrupt other page loads
           if (match.brand_id && !match.is_admin && !match.is_leadership) {
             var _path = window.location.pathname;
-            var _hasParams = window.location.search.length > 0;
+            var _hasParams = window.location.search.length > 0 || window.location.hash.length > 0;
             if (!_hasParams && (_path.endsWith('index.html') || _path.endsWith('/'))) {
               window.location.href = 'brand.html?brand=' + match.brand_id;
             }
