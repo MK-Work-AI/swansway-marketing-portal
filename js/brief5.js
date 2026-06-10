@@ -2706,6 +2706,9 @@ function bbInitFromBrief(brief) {
 }
 
 async function bbLoadBrief(id) {
+  // Sanitise ID — strip any non UUID characters (letters, numbers, hyphens only)
+  if (id) id = id.replace(/[^a-f0-9\-]/gi, '');
+  if (!id) return;
   window._bbSuppressNewBrief = true;
   window._bbBriefLoading = true;
 
