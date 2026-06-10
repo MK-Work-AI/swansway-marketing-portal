@@ -1294,7 +1294,9 @@ function sbHandleSession(session) {
   if(typeof loadBriefs === 'function')         loadBriefs();
   // Load brief from URL if ID present — must be after auth is confirmed
   if (typeof bbLoadBrief === 'function') {
-    var _briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.hash.slice(1)).get('brief');
+    var _h = window.location.hash.slice(1);
+    var _briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(_h).get('brief');
+    if (_briefId) _briefId = _briefId.replace(/[^a-f0-9-]/gi, '');
     if (_briefId) {
       window._bbBriefLoading = true;
       window._bbSuppressNewBrief = true;
