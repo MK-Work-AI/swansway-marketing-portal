@@ -104,3 +104,14 @@ function mtToggle(e) {
   dd.style.display = MT_OPEN ? 'block' : 'none';
   if (MT_OPEN) mtLoad();
 }
+
+// Close tasks dropdown when clicking outside
+document.addEventListener('mousedown', function(e) {
+  if (!MT_OPEN) return;
+  var dd = document.getElementById('mt-dropdown');
+  var btn = document.getElementById('mt-btn');
+  if (dd && !dd.contains(e.target) && btn && !btn.contains(e.target)) {
+    MT_OPEN = false;
+    dd.style.display = 'none';
+  }
+});
