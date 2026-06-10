@@ -1467,6 +1467,16 @@ function closeBriefsPanel() {
   var po=document.getElementById('panel-overlay'); if(po) po.classList.remove('open');
 }
 
+// Close briefs panel when clicking outside
+document.addEventListener('mousedown', function(e) {
+  var bp = document.getElementById('briefs-panel');
+  if (!bp || !bp.classList.contains('open')) return;
+  var btn = document.getElementById('briefs-btn');
+  if (!bp.contains(e.target) && (!btn || !btn.contains(e.target))) {
+    closeBriefsPanel();
+  }
+});
+
 
 function openBriefsPanel() {
   var bp = document.getElementById('briefs-panel');
@@ -1870,3 +1880,14 @@ function mtToggle(e) {
   dd.style.display = MT_OPEN ? 'block' : 'none';
   if (MT_OPEN) mtLoad();
 }
+
+// Close tasks dropdown when clicking outside
+document.addEventListener('mousedown', function(e) {
+  if (!MT_OPEN) return;
+  var dd = document.getElementById('mt-dropdown');
+  var btn = document.getElementById('mt-btn');
+  if (dd && !dd.contains(e.target) && btn && !btn.contains(e.target)) {
+    MT_OPEN = false;
+    dd.style.display = 'none';
+  }
+});
