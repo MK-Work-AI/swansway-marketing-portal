@@ -5,9 +5,8 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
   <script>
     // Capture brief ID at the very first moment — before anything else runs
-    window._BRIEF_ID_FROM_URL = new URLSearchParams(window.location.search).get('brief');
+    window._BRIEF_ID_FROM_URL = new URLSearchParams(window.location.hash.slice(1)).get('brief');
     window._bbBriefLoading = false;
-    console.log('INLINE: brief ID captured =', window._BRIEF_ID_FROM_URL, 'search =', window.location.search);
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
