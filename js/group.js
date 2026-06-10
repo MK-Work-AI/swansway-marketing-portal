@@ -442,7 +442,19 @@ function renderCrossCalendar() {
         var safeName = camp.name.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         html += '<div data-cal-idx="' + idx + '" style="border-radius:3px;padding:5px 8px;font-size:11px;color:#fff;font-weight:500;line-height:1.3;cursor:pointer;background:' + sColor + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:none" title="' + safeName + ' (' + (camp.status||'planned') + ')">' + sDot + safeName + '</div>';
       });
-      if (!camps.length) html += '<span style="color:var(--ink-faint);font-size:11px;padding:4px 0">—</span>';
+      // Add event pills for this brand/month
+      var brandSlug = BUDGET_BRANDS ? (BUDGET_BRANDS.find(function(b){ return b.name === brand.id; }) || {}).id : null;
+      var evs = brandSlug && EV_EVENTS_BUDGET ? EV_EVENTS_BUDGET.filter(function(ev) {
+        if (ev.brand_id !== brandSlug) return false;
+        var sm = ev.start_date ? new Date(ev.start_date).getMonth() : -1;
+        var em = ev.end_date ? new Date(ev.end_date).getMonth() : sm;
+        return sm <= m && m <= em;
+      }) : [];
+      evs.forEach(function(ev) {
+        var safeTitle = (ev.title || 'Event').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        html += '<div style="border-radius:3px;padding:4px 8px;font-size:11px;font-weight:500;line-height:1.3;background:#fff;border:1.5px solid ' + brand.color + ';color:' + brand.color + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + safeTitle + ' (event)">◆ ' + safeTitle + '</div>';
+      });
+      if (!camps.length && !evs.length) html += '<span style="color:var(--ink-faint);font-size:11px;padding:4px 0">—</span>';
       html += '</div>';
     });
     html += '</div>';
