@@ -1533,7 +1533,7 @@ function openBriefFromPanel(id) {
     bbLoadBrief(id);
   } else {
     try { sessionStorage.setItem('_pendingBriefId', id); } catch(e) {}
-    window.location = '/brief';
+    window.location = 'brief.html';
   }
 }
 
@@ -1656,7 +1656,7 @@ async function openCampaignFromBanner(campId, briefId) {
   if (!window.SB_BRIEFS_CACHE) window.SB_BRIEFS_CACHE = [];
   if (!SB_BRIEFS_CACHE.find(function(b){return b.id===brief.id;})) SB_BRIEFS_CACHE.push(brief);
   try { sessionStorage.setItem('_pendingBriefId', brief.id); } catch(e) {}
-window.location = '/brief';
+window.location = 'brief.html';
 }
 
 
