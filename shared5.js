@@ -1006,7 +1006,19 @@ function switchInner(brandId, secId, el) {
       if (!SB_BRIEFS_CACHE || !SB_BRIEFS_CACHE.length) {
         if (typeof loadBriefs === 'function') loadBriefs();
       }
-      if(typeof renderBrandCampaigns==='function') renderBrandCampaigns(brandId);
+      if(typeof renderBrandCampaigns==='function') {
+        renderBrandCampaigns(brandId);
+        // If campaigns not yet loaded, retry after they arrive
+        if (!CB_CAMPAIGNS || !CB_CAMPAIGNS.length) {
+          var _retry = setInterval(function() {
+            if (CB_CAMPAIGNS && CB_CAMPAIGNS.length) {
+              clearInterval(_retry);
+              renderBrandCampaigns(brandId);
+            }
+          }, 200);
+          setTimeout(function(){ clearInterval(_retry); }, 5000);
+        }
+      }
     }, 50);
   }
   if(secId === 'centres')   { setTimeout(function(){ if(typeof renderBrandCentres==='function') renderBrandCentres(brandId); }, 50); }
