@@ -1467,6 +1467,16 @@ function closeBriefsPanel() {
   var po=document.getElementById('panel-overlay'); if(po) po.classList.remove('open');
 }
 
+// Close briefs panel when clicking outside
+document.addEventListener('mousedown', function(e) {
+  var bp = document.getElementById('briefs-panel');
+  if (!bp || !bp.classList.contains('open')) return;
+  var btn = document.getElementById('briefs-btn');
+  if (!bp.contains(e.target) && (!btn || !btn.contains(e.target))) {
+    closeBriefsPanel();
+  }
+});
+
 
 function openBriefsPanel() {
   var bp = document.getElementById('briefs-panel');
