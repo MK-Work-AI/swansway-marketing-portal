@@ -1296,8 +1296,13 @@ function sbHandleSession(session) {
   if (typeof bbLoadBrief === 'function') {
     var _h = window.location.hash.slice(1);
     var _briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(_h).get('brief');
+    // Fallback: sessionStorage in case Supabase cleared the hash
+    if (!_briefId) {
+      try { _briefId = sessionStorage.getItem('_pendingBriefId'); } catch(e) {}
+    }
     if (_briefId) _briefId = _briefId.replace(/[^a-f0-9-]/gi, '');
     if (_briefId) {
+      try { sessionStorage.removeItem('_pendingBriefId'); } catch(e) {}
       window._bbBriefLoading = true;
       window._bbSuppressNewBrief = true;
       bbLoadBrief(_briefId);
