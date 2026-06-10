@@ -1124,5 +1124,24 @@ document.addEventListener('click', navCloseAll);
   
   
 
+<script>
+// Override stale cached bbCheckUrlOnLoad with correct version
+function bbCheckUrlOnLoad() {
+  // Disabled — brief loading handled by sbHandleSession + hash
+}
+// If brief ID in hash, ensure it loads correctly
+(function() {
+  var _h = window.location.hash.slice(1);
+  var _id = new URLSearchParams(_h).get('brief');
+  if (_id) {
+    _id = _id.replace(/[^a-f0-9-]/gi, '');
+    if (_id) {
+      window._BRIEF_ID_FROM_URL = _id;
+      window._bbBriefLoading = true;
+      window._bbSuppressNewBrief = true;
+    }
+  }
+})();
+</script>
 </body>
 </html>
