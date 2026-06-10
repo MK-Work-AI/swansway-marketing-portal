@@ -350,7 +350,8 @@ function renderBrandCampaigns(brandId) {
 
       if (camp.brief_id) {
         row.onclick = function() {
-          window.location = '/brief#brief=' + camp.brief_id;
+          try { sessionStorage.setItem('_pendingBriefId', camp.brief_id); } catch(e) {}
+          window.location = '/brief';
         };
       }
       listEl.appendChild(row);
@@ -381,7 +382,8 @@ function renderBrandCampaigns(brandId) {
         + '</div>'
         + '<span style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 9px;border-radius:10px;background:' + statusCol2 + '20;color:' + statusCol2 + '">' + (brief.status||'draft') + '</span>';
       row.onclick = function() {
-        window.location = '/brief#brief=' + brief.id;
+        try { sessionStorage.setItem('_pendingBriefId', brief.id); } catch(e) {}
+        window.location = '/brief';
       };
       listEl.appendChild(row);
     });
