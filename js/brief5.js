@@ -2615,16 +2615,7 @@ function bbSetUrlBrief(briefId) {
 
 
 function bbCheckUrlOnLoad() {
-  var params = new URLSearchParams(window.location.search);
-  var view   = params.get('view');
-  var briefId = params.get('brief');
-  if (view === 'brief') {
-    if (briefId) window._deepLinkBriefId = briefId; // signal to bbNewBrief
-    setTimeout(function() {
-      switchView('brief', document.querySelector('[data-view="brief"]'));
-      // switchView calls bbNewBrief which checks _deepLinkBriefId
-    }, 900);
-  }
+  // Disabled — brief loading now handled entirely by sbHandleSession + hash
 }
 
 
@@ -3092,27 +3083,28 @@ async function bbDeleteBrief(id) {
 document.addEventListener('DOMContentLoaded', function() {
   var briefView = document.getElementById('view-brief');
   if (briefView) briefView.classList.add('active');
-  // If brief ID in URL, suppress new brief immediately — don't wait for auth
-  var _initBriefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.hash.slice(1)).get('brief');
+
+  // Read brief ID from hash immediately — before any other code runs
+  var _initBriefId = window._BRIEF_ID_FROM_URL;
+  if (!_initBriefId) {
+    var _h = window.location.hash.slice(1);
+    _initBriefId = new URLSearchParams(_h).get('brief');
+    if (_initBriefId) _initBriefId = _initBriefId.replace(/[^a-f0-9-]/gi, '');
+    if (_initBriefId) window._BRIEF_ID_FROM_URL = _initBriefId;
+  }
+
   if (_initBriefId) {
+    // Brief ID found — suppress blank brief, wait for sbHandleSession to load it
     window._bbBriefLoading = true;
     window._bbSuppressNewBrief = true;
+  } else {
+    // No brief ID — start blank brief after short delay
+    setTimeout(function() {
+      if (window._bbBriefLoading) return;
+      if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; return; }
+      if (window._bbLoadingBriefFromPanel) { window._bbLoadingBriefFromPanel = false; return; }
+      if (typeof BB !== 'undefined' && BB.brand) return;
+      if (typeof bbNewBrief === 'function') bbNewBrief();
+    }, 800);
   }
-  // Load brief from URL if ID present
-  setTimeout(function() {
-    var briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.hash.slice(1)).get('brief');
-    if (briefId && typeof bbLoadBrief === 'function') {
-      window._bbBriefLoading = true;
-      bbLoadBrief(briefId);
-    }
-  }, 400);
-
-  // Start new blank brief only if nothing has loaded after 1500ms
-  setTimeout(function() {
-    if (window._bbBriefLoading) { return; }
-    if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; return; }
-    if (window._bbLoadingBriefFromPanel) { window._bbLoadingBriefFromPanel = false; return; }
-    if (typeof BB !== 'undefined' && BB.brand) { return; }
-    if (typeof bbNewBrief === 'function') bbNewBrief();
-  }, 1500);
 });
