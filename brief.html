@@ -436,7 +436,18 @@ document.addEventListener('click', navCloseAll);
 <script src="config.js?v=2"></script>
 <script src="bundle-core.js?v=9"></script>
 <script src="js/group.js?v=18"></script>
-<script src="js/brief7.js"></script>
+<script src="js/brief7.js">
+  <script>
+    // Override bbCheckUrlOnLoad AFTER brief7.js loads
+    function bbCheckUrlOnLoad() { /* disabled */ }
+    var _origBbNewBrief = window.bbNewBrief;
+    window.bbNewBrief = function() {
+      if (window._bbBriefLoading) { return; }
+      if (window._bbSuppressNewBrief) { window._bbSuppressNewBrief = false; return; }
+      if (_origBbNewBrief) _origBbNewBrief.apply(this, arguments);
+    };
+    console.log('POST-LOAD: bbCheckUrlOnLoad and bbNewBrief overridden');
+  </script></script>
 </head>
 <body>
 
