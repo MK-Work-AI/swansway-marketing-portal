@@ -994,7 +994,13 @@ function switchInner(brandId, secId, el) {
       if (!CB_CAMPAIGNS || !CB_CAMPAIGNS.length) {
         var anon = SUPABASE_ANON_KEY, base = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
         var rows = await fetch(base+'/campaigns?select=*&order=created_at.desc',{headers:getAuthHeaders()}).then(function(r){return r.json();});
-        if (Array.isArray(rows)) CB_CAMPAIGNS = rows;
+        if (Array.isArray(rows)) {
+          CB_CAMPAIGNS = rows;
+          // Re-render brand campaigns if on brand page — ensures onclicks are attached
+          if (typeof renderBrandCampaigns === 'function' && typeof activeBrandId !== 'undefined' && activeBrandId) {
+            renderBrandCampaigns(activeBrandId);
+          }
+        }
       }
       // Ensure SB_BRIEFS_CACHE is loaded
       if (!SB_BRIEFS_CACHE || !SB_BRIEFS_CACHE.length) {
