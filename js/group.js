@@ -454,7 +454,15 @@ function renderCrossCalendar() {
         var safeTitle = (ev.title || 'Event').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         var evIdx = window._calEvs.length;
         window._calEvs.push(ev);
-        html += '<div data-cal-ev-idx="' + evIdx + '" style="border-radius:3px;padding:4px 8px;font-size:11px;font-weight:500;line-height:1.3;background:#fff;border:1.5px solid ' + brand.color + ';color:' + brand.color + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" title="' + safeTitle + ' (event)">◆ ' + safeTitle + '</div>';
+        var evDateStr = '';
+        if (ev.start_date) {
+          var _sd = new Date(ev.start_date + 'T00:00:00');
+          var _ed = ev.end_date ? new Date(ev.end_date + 'T00:00:00') : _sd;
+          var _mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          evDateStr = ' · ' + _sd.getDate() + ' ' + _mo[_sd.getMonth()];
+          if (ev.end_date && ev.end_date !== ev.start_date) evDateStr += '–' + _ed.getDate() + ' ' + _mo[_ed.getMonth()];
+        }
+        html += '<div data-cal-ev-idx="' + evIdx + '" style="border-radius:3px;padding:4px 8px;font-size:11px;font-weight:500;line-height:1.3;background:#fff;border:1.5px solid ' + brand.color + ';color:' + brand.color + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" title="' + safeTitle + ' (event)">◆ ' + safeTitle + evDateStr + '</div>';
       });
       if (!camps.length && !evs.length) html += '<span style="color:var(--ink-faint);font-size:11px;padding:4px 0">—</span>';
       html += '</div>';
