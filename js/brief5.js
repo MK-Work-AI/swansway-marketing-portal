@@ -2610,7 +2610,7 @@ function bbNewBrief() {
 
 function bbSetUrlBrief(briefId) {
   if (!briefId) return;
-  history.replaceState({briefId: briefId}, '', window.location.pathname + '?view=brief&brief=' + briefId);
+  history.replaceState({briefId: briefId}, '', window.location.pathname + '?view=brief#brief=' + briefId);
 }
 
 
@@ -2901,7 +2901,7 @@ function bbNewBrief() {
 
 function bbSetUrlBrief(briefId) {
   if (!briefId) return;
-  history.replaceState({briefId: briefId}, '', window.location.pathname + '?view=brief&brief=' + briefId);
+  history.replaceState({briefId: briefId}, '', window.location.pathname + '?view=brief#brief=' + briefId);
 }
 
 
@@ -3090,14 +3090,14 @@ document.addEventListener('DOMContentLoaded', function() {
   var briefView = document.getElementById('view-brief');
   if (briefView) briefView.classList.add('active');
   // If brief ID in URL, suppress new brief immediately — don't wait for auth
-  var _initBriefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.search).get('brief');
+  var _initBriefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.hash.slice(1)).get('brief');
   if (_initBriefId) {
     window._bbBriefLoading = true;
     window._bbSuppressNewBrief = true;
   }
   // Load brief from URL if ID present
   setTimeout(function() {
-    var briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.search).get('brief');
+    var briefId = window._BRIEF_ID_FROM_URL || new URLSearchParams(window.location.hash.slice(1)).get('brief');
     if (briefId && typeof bbLoadBrief === 'function') {
       window._bbBriefLoading = true;
       bbLoadBrief(briefId);
