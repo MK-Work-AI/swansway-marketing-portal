@@ -365,7 +365,7 @@ function calNextQuarter() { CAL_CURRENT_QUARTER = (CAL_CURRENT_QUARTER + 1) % 4;
 
 
 function renderCrossCalendar() {
-  window._calCamps = []; // Reset camp lookup array
+  window._calCamps = []; window._calEvs = []; // Reset lookup arrays
   var el = document.getElementById('crosscal-grid');
   var legendEl = document.getElementById('crosscal-legend');
   if (!el) return;
@@ -452,7 +452,9 @@ function renderCrossCalendar() {
       }) : [];
       evs.forEach(function(ev) {
         var safeTitle = (ev.title || 'Event').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        html += '<div style="border-radius:3px;padding:4px 8px;font-size:11px;font-weight:500;line-height:1.3;background:#fff;border:1.5px solid ' + brand.color + ';color:' + brand.color + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + safeTitle + ' (event)">◆ ' + safeTitle + '</div>';
+        var evIdx = window._calEvs.length;
+        window._calEvs.push(ev);
+        html += '<div data-cal-ev-idx="' + evIdx + '" style="border-radius:3px;padding:4px 8px;font-size:11px;font-weight:500;line-height:1.3;background:#fff;border:1.5px solid ' + brand.color + ';color:' + brand.color + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" title="' + safeTitle + ' (event)">◆ ' + safeTitle + '</div>';
       });
       if (!camps.length && !evs.length) html += '<span style="color:var(--ink-faint);font-size:11px;padding:4px 0">—</span>';
       html += '</div>';
@@ -468,13 +470,19 @@ function renderCrossCalendar() {
   el.onclick = function(e) {
     var pill = e.target;
     while (pill && pill !== el) {
-      if (pill.hasAttribute && pill.hasAttribute('data-cal-idx')) break;
+      if (pill.hasAttribute && (pill.hasAttribute('data-cal-idx') || pill.hasAttribute('data-cal-ev-idx'))) break;
       pill = pill.parentNode;
     }
     if (!pill || pill === el) return;
-    var idx = parseInt(pill.getAttribute('data-cal-idx'), 10);
-    var camp = window._calCamps && window._calCamps[idx];
-    if (camp) { calShowCampaign(camp); }
+    if (pill.hasAttribute('data-cal-ev-idx')) {
+      var evIdx = parseInt(pill.getAttribute('data-cal-ev-idx'), 10);
+      var ev = window._calEvs && window._calEvs[evIdx];
+      if (ev) calShowEvent(ev);
+    } else {
+      var idx = parseInt(pill.getAttribute('data-cal-idx'), 10);
+      var camp = window._calCamps && window._calCamps[idx];
+      if (camp) calShowCampaign(camp);
+    }
   };
 
   if (legendEl) {
@@ -1273,6 +1281,124 @@ async function loadSiteBudgets() {
   } catch(e) { console.warn('loadSiteBudgets exception:', e); }
 }
 
+
+
+function calShowEvent(ev) {
+  var existing = document.getElementById('cal-modal');
+  if (existing) existing.remove();
+
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var fmt = function(d){ return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear(); };
+  var dates = '—';
+  if (ev.start_date) {
+    var sd = new Date(ev.start_date + 'T00:00:00');
+    var ed = ev.end_date ? new Date(ev.end_date + 'T00:00:00') : sd;
+    dates = fmt(sd) + (ev.end_date && ev.end_date !== ev.start_date ? ' – ' + fmt(ed) : '');
+  }
+
+  var brandData = BUDGET_BRANDS ? (BUDGET_BRANDS.find(function(b){ return b.id === ev.brand_id; }) || {}) : {};
+  var brandColor = brandData.color || '#374151';
+  var brandName = brandData.name || ev.brand_id || '';
+
+  var statusColors = {draft:'#6B7280', confirmed:'#2563EB', active:'#059669', completed:'#374151', cancelled:'#C8102E'};
+  var statusColor = statusColors[ev.status || 'draft'] || '#6B7280';
+
+  var overlay = document.createElement('div');
+  overlay.id = 'cal-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:8px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.22)';
+
+  // Header
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'background:' + brandColor + ';padding:22px 24px 18px;position:relative';
+
+  var brandLbl = document.createElement('div');
+  brandLbl.style.cssText = 'font-family:var(--font-m);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-bottom:6px';
+  brandLbl.textContent = brandName + ' · Event';
+
+  var nameLbl = document.createElement('div');
+  nameLbl.style.cssText = 'font-family:var(--font-d);font-size:20px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:6px';
+  nameLbl.textContent = ev.title || 'Untitled Event';
+
+  var datesLbl = document.createElement('div');
+  datesLbl.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.8)';
+  datesLbl.textContent = dates;
+
+  var xBtn = document.createElement('button');
+  xBtn.style.cssText = 'position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1';
+  xBtn.innerHTML = '&times;';
+  xBtn.onclick = function() { overlay.remove(); };
+
+  hdr.appendChild(brandLbl); hdr.appendChild(nameLbl); hdr.appendChild(datesLbl); hdr.appendChild(xBtn);
+
+  // Body
+  var body = document.createElement('div');
+  body.style.cssText = 'padding:20px 24px 24px';
+
+  // Status badge
+  var topRow = document.createElement('div');
+  topRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap';
+  var statusBadge = document.createElement('span');
+  statusBadge.style.cssText = 'display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;font-family:var(--font-m);text-transform:uppercase;letter-spacing:0.06em;color:#fff;background:' + statusColor;
+  statusBadge.textContent = ev.status || 'draft';
+  topRow.appendChild(statusBadge);
+  if (ev.event_type) {
+    var typeBadge = document.createElement('span');
+    typeBadge.style.cssText = 'display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;font-family:var(--font-m);background:var(--surface);color:var(--ink)';
+    typeBadge.textContent = ev.event_type;
+    topRow.appendChild(typeBadge);
+  }
+
+  // Info grid
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px';
+
+  function makeCell(label, value, full) {
+    if (!value) return null;
+    var d = document.createElement('div');
+    d.style.cssText = 'padding:10px 14px;background:var(--surface);border-radius:4px' + (full ? ';grid-column:1/-1' : '');
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px';
+    lbl.textContent = label;
+    var val = document.createElement('div');
+    val.style.cssText = 'font-size:13px;font-weight:600;color:var(--ink)';
+    val.textContent = value;
+    d.appendChild(lbl); d.appendChild(val);
+    return d;
+  }
+
+  // Site name lookup
+  var siteName = '';
+  if (ev.site_id && typeof HUB_SITES !== 'undefined') {
+    var site = HUB_SITES.find(function(s){ return s.site_id === ev.site_id; });
+    if (site) siteName = site.site_name;
+  }
+
+  [
+    makeCell('Dates', dates),
+    makeCell('Site', siteName || null),
+    makeCell('Planned budget', ev.planned_budget ? '£' + Number(ev.planned_budget).toLocaleString() : null),
+    makeCell('Actual spend', ev.actual_spend ? '£' + Number(ev.actual_spend).toLocaleString() : null),
+  ].forEach(function(cl) { if (cl) grid.appendChild(cl); });
+
+  // Close button
+  var actions = document.createElement('div');
+  actions.style.cssText = 'display:flex;gap:8px;margin-top:4px';
+  var closeBtn = document.createElement('button');
+  closeBtn.className = 'btn';
+  closeBtn.style.cssText = 'flex:1;font-size:13px';
+  closeBtn.textContent = 'Close';
+  closeBtn.onclick = function() { overlay.remove(); };
+  actions.appendChild(closeBtn);
+
+  body.appendChild(topRow); body.appendChild(grid); body.appendChild(actions);
+  box.appendChild(hdr); box.appendChild(body);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
 
 
 async function loadEventsForBudget() {
