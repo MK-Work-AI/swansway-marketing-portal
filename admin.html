@@ -112,32 +112,7 @@ if (typeof navToggle === 'undefined') {
 </header>
 <nav class="brand-nav" id="brand-nav">
   <div class="brand-nav-inner" id="brand-nav-inner">
-    <div class="nav-dd-wrap" id="nav-intel">
-      <button class="nav-dd-btn" onclick="navToggle('nav-intel',event)">Intel <span class="nav-dd-chevron">▾</span></button>
-      <div class="nav-dd-panel">
-        <button class="nav-dd-item" onclick="window.location='index.html'">Overview</button>
-        <button class="nav-dd-item" onclick="window.location='channels.html'">Channels</button>
-        <button class="nav-dd-item" onclick="window.location='kpis.html'">KPIs</button>
-        <button class="nav-dd-item" onclick="window.location='priorities.html'">Priorities</button>
-        <button class="nav-dd-item" onclick="window.location='competitor.html'">Competitors</button>
-        <button class="nav-dd-item" onclick="window.location='news.html'">News</button>
-      </div>
-    </div>
-    <div class="nav-dd-wrap" id="nav-planning">
-      <button class="nav-dd-btn" onclick="navToggle('nav-planning',event)">Planning <span class="nav-dd-chevron">▾</span></button>
-      <div class="nav-dd-panel">
-        <button class="nav-dd-item" onclick="window.location='calendar.html'">Campaign Calendar</button>
-        <button class="nav-dd-item nav-item-cta" onclick="window.location='brief.html'">Campaign Builder</button>
-      </div>
-    </div>
-    <div class="nav-dd-wrap" id="nav-review">
-      <button class="nav-dd-btn" onclick="navToggle('nav-review',event)">Review <span class="nav-dd-chevron">▾</span></button>
-      <div class="nav-dd-panel">
-        <button class="nav-dd-item" onclick="window.location='budget.html'">Budget</button>
-        <button class="nav-dd-item" onclick="window.location='autopsy.html'">Autopsy</button>
-      </div>
-    </div>
-    <button class="nav-dd-btn" style="color:var(--swansway);font-weight:700">⚙ Admin</button>
+    <button class="nav-dd-btn" onclick="window.location='index.html'" style="display:flex;align-items:center;gap:6px">← Portal Overview</button>
   </div>
 </nav>
 
