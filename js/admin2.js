@@ -300,8 +300,10 @@ function renderBrandEditor(id) {
   if (!b) return;
   // Highlight active brand tab
   document.querySelectorAll('[data-brand-tab]').forEach(function(t){
-    t.style.fontWeight = t.dataset.brandTab === id ? '800' : '';
-    t.style.color = t.dataset.brandTab === id ? BRAND_COLORS[id] : '';
+    var isActive = t.dataset.brandTab === id;
+    t.style.fontWeight = '';
+    t.style.color = '';
+    if (isActive) { t.classList.add('active'); } else { t.classList.remove('active'); }
   });
   var c = document.getElementById('brand-page-content');
   if (!c) return;
