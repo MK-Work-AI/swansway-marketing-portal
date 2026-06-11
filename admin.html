@@ -37,8 +37,8 @@ if (typeof navToggle === 'undefined') {
     .snav { display:block;width:100%;text-align:left;padding:8px 20px;font-family:var(--font-b);font-size:13px;font-weight:500;background:none;border:none;cursor:pointer;color:var(--ink-soft);transition:all .15s; }
     .snav:hover { background:var(--surface);color:var(--ink); }
     .snav.active { background:rgba(26,46,74,0.06);color:var(--swansway);font-weight:700;border-left:3px solid var(--swansway); }
-    .admin-main { flex:1;overflow-y:auto;min-width:0; }
-    .admin-page { display:none;padding:1.5rem 2rem;height:calc(100vh - 120px);overflow-y:auto; }
+    .admin-main { flex:1;overflow:hidden; }
+    .admin-page { display:none;padding:1.5rem 2rem;max-height:calc(100vh - 120px);overflow-y:auto; }
     .admin-page-header { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px; }
     .admin-page-title { font-family:var(--font-d);font-size:22px;font-weight:800;color:var(--ink); }
     .admin-page-sub { font-size:13px;color:var(--ink-soft);margin-top:2px; }
