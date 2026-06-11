@@ -28,7 +28,7 @@ if (typeof navToggle === 'undefined') {
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js?v=2"></script>
   <script src="bundle-core.js?v=12"></script>
-  <script src="js/news.js?v=1" defer></script>
+  <script src="js/news.js?v=2" defer></script>
 
   <style>
     /* ── News page local styles ── */
@@ -307,7 +307,7 @@ if (typeof navToggle === 'undefined') {
   <div class="page-strip">
     <div>
       <div class="page-title">Automotive News</div>
-      <div class="page-subtitle">Latest headlines from UK and European automotive press</div>
+      <div class="page-subtitle">Latest headlines from UK and European automotive press — powered by Google News</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <span class="nw-status-bar" id="nw-last-updated"></span>
@@ -317,10 +317,11 @@ if (typeof navToggle === 'undefined') {
 
   <!-- Filter bar -->
   <div class="nw-filters">
-    <button class="nw-filter-tab active" onclick="nwSetFilter('all',this)">All sources</button>
-    <button class="nw-filter-tab" onclick="nwSetFilter('uk-press',this)">UK Press</button>
-    <button class="nw-filter-tab" onclick="nwSetFilter('trade',this)">Trade</button>
+    <button class="nw-filter-tab active" onclick="nwSetFilter('all',this)">All</button>
+    <button class="nw-filter-tab" onclick="nwSetFilter('uk-auto',this)">UK Auto</button>
     <button class="nw-filter-tab" onclick="nwSetFilter('ev',this)">EV</button>
+    <button class="nw-filter-tab" onclick="nwSetFilter('trade',this)">Trade</button>
+    <button class="nw-filter-tab" onclick="nwSetFilter('industry',this)">Industry</button>
   </div>
 
   <!-- Status message (loading / error) -->
