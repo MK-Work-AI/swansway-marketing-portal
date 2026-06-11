@@ -1,9 +1,9 @@
-/* ─── news.js v3 — Swansway Marketing Portal ─── */
+/* ─── news.js v4 — Swansway Marketing Portal ─── */
 /* Routes RSS fetches through Vercel proxy         */
 /* (direct fetch blocked by CORS on both rss2json  */
 /*  and Google News)                               */
 
-var NW_PROXY = 'https://swansway-marketing-hub.vercel.app/api/rss?url=';
+var NW_PROXY = 'https://swansway-rss-proxy.mkworkgmail.workers.dev/?url=';
 
 var NW_FEEDS = [
   {
