@@ -1,4 +1,4 @@
-/* ─── news.js v5 — Swansway Marketing Portal ─── */
+/* ─── news.js v6 — Swansway Marketing Portal ─── */
 /* Routes RSS fetches through Vercel proxy         */
 /* (direct fetch blocked by CORS on both rss2json  */
 /*  and Google News)                               */
@@ -79,7 +79,7 @@ function nwLoadAll() {
           };
         });
       })
-      .catch(function() { return []; });
+      .catch(function(e) { console.warn("NW feed failed:", feed.label, e.message); return []; });
   });
 
   Promise.allSettled(promises).then(function(results) {
@@ -96,6 +96,7 @@ function nwLoadAll() {
     });
 
     NW_ALL.sort(function(a, b) { return b.ts - a.ts; });
+    console.log("NW: total articles loaded:", NW_ALL.length);
     NW_LOADED_AT = new Date();
     NW_PAGE = 0;
 
