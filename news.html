@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+if (typeof navToggle === 'undefined') {
+  function navToggle(id, e) {
+    if (e) e.stopPropagation();
+    var el = document.getElementById(id);
+    if (!el) return;
+    var isOpen = el.classList.contains('open');
+    document.querySelectorAll('.nav-dd-wrap').forEach(function(w){ w.classList.remove('open'); });
+    if (!isOpen) el.classList.add('open');
+  }
+  function navCloseAll() {
+    document.querySelectorAll('.nav-dd-wrap').forEach(function(el){ el.classList.remove('open'); });
+  }
+  document.addEventListener('click', navCloseAll);
+}
+</script>
+  <title>Automotive News — Swansway Marketing Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter+Tight:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter+Tight:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="shared.css?v=2">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js?v=2"></script>
+  <script src="bundle-core.js?v=12"></script>
+  <script src="js/news.js?v=1" defer></script>
+
+  <style>
+    /* ── News page local styles ── */
+
+    /* Filter tabs */
+    .nw-filters {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .nw-filter-tab {
+      font-family: var(--font-b);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border: 1px solid var(--border-med);
+      border-radius: 2px;
+      background: var(--white);
+      color: var(--ink-soft);
+      cursor: pointer;
+      transition: all .15s;
+      letter-spacing: 0.02em;
+    }
+    .nw-filter-tab:hover { background: var(--surface-2); color: var(--ink); }
+    .nw-filter-tab.active {
+      background: var(--swansway);
+      color: #fff;
+      border-color: var(--swansway);
+    }
+
+    /* Article grid */
+    .nw-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 1.25rem;
+    }
+    @media (max-width: 900px) { .nw-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .nw-grid { grid-template-columns: 1fr; } }
+
+    /* Article card */
+    .nw-card {
+      display: flex;
+      flex-direction: column;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      transition: box-shadow .2s, transform .2s;
+    }
+    .nw-card:hover {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    .nw-card-body {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      flex: 1;
+    }
+    .nw-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nw-source-badge {
+      font-family: var(--font-m);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 2px;
+    }
+    .nw-age {
+      font-size: 11px;
+      color: var(--ink-faint);
+      margin-left: auto;
+      white-space: nowrap;
+    }
+    .nw-card-title {
+      font-family: var(--font-d);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.35;
+      letter-spacing: -0.01em;
+    }
+    .nw-card:hover .nw-card-title { color: var(--swansway); }
+    .nw-card-excerpt {
+      font-size: 12px;
+      color: var(--ink-soft);
+      line-height: 1.5;
+    }
+
+    /* Skeleton loader */
+    .nw-skeleton {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      padding-bottom: 14px;
+    }
+    .nw-skel-img {
+      height: 100px;
+      background: var(--surface-2);
+      margin-bottom: 12px;
+    }
+    .nw-skel-line {
+      height: 12px;
+      background: var(--surface-2);
+      border-radius: 3px;
+      margin: 0 14px 6px;
+      animation: nwPulse 1.4s ease-in-out infinite;
+    }
+    @keyframes nwPulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.45; }
+    }
+
+    /* Load more button */
+    .nw-load-more-wrap {
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+
+    /* Status bar */
+    .nw-status-bar {
+      font-size: 12px;
+      color: var(--ink-soft);
+      font-family: var(--font-m);
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo-wrap" style="display:flex;align-items:center;gap:14px">
+      <a href="index.html" style="display:flex;align-items:center;text-decoration:none">
+        <img src="https://npfalcon.b-cdn.net/tenant_d9013b5a-4990-4f3e-beec-4e1fc85990eb/media/uploads/main-logo.svg" alt="Swansway Motor Group" style="height:46px;width:auto;object-fit:contain;filter:brightness(0) invert(1)">
+      </a>
+      <div style="border-left:1px solid rgba(255,255,255,0.2);padding-left:14px">
+        <div style="font-family:var(--font-d);font-size:15px;font-weight:700;color:#fff;line-height:1.2;letter-spacing:-0.01em">Automotive News <span id="topbar-year"></span></div>
+      </div>
+    </div>
+    <div class="topbar-meta">
+      <span class="topbar-pill" id="topbar-env-pill">Live <span class="year-ref"></span> Plan</span>
+      <button class="user-pill" id="user-pill" onclick="handleUserPillClick()" style="display:none">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="user-name">Loading…</span>
+      </button>
+      <div style="position:relative;display:inline-flex;align-items:center">
+        <button id="mt-btn" onclick="mtToggle(event)" style="font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 14px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:2px;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px">
+          MY TASKS
+          <span id="mt-badge" style="display:none;background:#C8102E;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:1">0</span>
+        </button>
+        <div id="mt-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:340px;background:var(--white);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:500;overflow:hidden">
+          <div id="mt-header" style="padding:14px 18px;border-bottom:1px solid var(--border);font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--ink)">Your tasks</div>
+          <div id="mt-list" style="max-height:400px;overflow-y:auto"></div>
+          <div style="padding:12px 18px;border-top:1px solid var(--border)">
+            <button onclick="window.location='index.html#tasks'" style="width:100%;font-family:var(--font-b);font-size:12px;font-weight:700;padding:8px;background:var(--swansway);color:#fff;border:none;border-radius:4px;cursor:pointer">View all tasks →</button>
+          </div>
+        </div>
+      </div>
+      <button id="briefs-btn" onclick="openBriefsPanel()" style="font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 14px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:2px;color:#fff;cursor:pointer">CAMPAIGNS</button>
+      <button id="signin-btn" onclick="openAuth()" style="display:none;font-family:var(--font-b);font-size:11px;font-weight:700;padding:6px 16px;background:#fff;color:var(--swansway);border:none;border-radius:2px;cursor:pointer">Sign in</button>
+    </div>
+  </div>
+</header>
+
+<nav class="brand-nav" id="brand-nav">
+  <div class="brand-nav-inner" id="brand-nav-inner">
+
+    <!-- INTEL dropdown -->
+    <div class="nav-dd-wrap" id="nav-intel">
+      <button class="nav-dd-btn" onclick="navToggle('nav-intel',event)">
+        Intel <span class="nav-dd-chevron">▾</span>
+      </button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item" onclick="window.location='index.html'">Overview</button>
+        <button class="nav-dd-item" onclick="window.location='channels.html'">Channels</button>
+        <button class="nav-dd-item" onclick="window.location='kpis.html'">KPIs</button>
+        <button class="nav-dd-item" onclick="window.location='priorities.html'">Priorities</button>
+        <button class="nav-dd-item" onclick="window.location='competitor.html'">Competitors</button>
+        <button class="nav-dd-item active" onclick="window.location='news.html'">News</button>
+        <div class="nav-dd-sep"></div>
+        <div class="nav-dd-section-label">Brand plans</div>
+        <button class="dd-brand-btn" onclick="navBrand('audi')"><span class="nav-dot" style="background:#BB0A21"></span>Audi</button>
+        <button class="dd-brand-btn" onclick="navBrand('vw')"><span class="nav-dot" style="background:#001E50"></span>Volkswagen</button>
+        <button class="dd-brand-btn" onclick="navBrand('vwcv')"><span class="nav-dot" style="background:#1B4F72"></span>VW Commercial</button>
+        <button class="dd-brand-btn" onclick="navBrand('seat')"><span class="nav-dot" style="background:#E2231A"></span>SEAT</button>
+        <button class="dd-brand-btn" onclick="navBrand('cupra')"><span class="nav-dot" style="background:#C8920A"></span>CUPRA</button>
+        <button class="dd-brand-btn" onclick="navBrand('landrover')"><span class="nav-dot" style="background:#1D4E1D"></span>Land Rover</button>
+        <button class="dd-brand-btn" onclick="navBrand('jaguar')"><span class="nav-dot" style="background:#1B2631"></span>Jaguar</button>
+        <button class="dd-brand-btn" onclick="navBrand('honda')"><span class="nav-dot" style="background:#CC0000"></span>Honda</button>
+        <button class="dd-brand-btn" onclick="navBrand('peugeot')"><span class="nav-dot" style="background:#1B3A6B"></span>Peugeot</button>
+        <button class="dd-brand-btn" onclick="navBrand('byd')"><span class="nav-dot" style="background:#0066CC"></span>BYD</button>
+        <button class="dd-brand-btn" onclick="navBrand('omoda')"><span class="nav-dot" style="background:#6B21A8"></span>OMODA / JAECOO</button>
+        <button class="dd-brand-btn" onclick="navBrand('motormatch')"><span class="nav-dot" style="background:#374151"></span>Motor Match</button>
+      </div>
+    </div>
+
+    <!-- PLANNING dropdown -->
+    <div class="nav-dd-wrap" id="nav-planning">
+      <button class="nav-dd-btn" onclick="navToggle('nav-planning',event)">
+        Planning <span class="nav-dd-chevron">▾</span>
+      </button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item" onclick="window.location='calendar.html'">Campaign Calendar</button>
+        <button class="nav-dd-item nav-item-cta" onclick="window.location='brief.html'">Campaign Builder</button>
+        <button class="nav-dd-item" onclick="window.location='events.html'">Events &amp; Placements</button>
+      </div>
+    </div>
+
+    <!-- REVIEW dropdown -->
+    <div class="nav-dd-wrap" id="nav-review">
+      <button class="nav-dd-btn" onclick="navToggle('nav-review',event)">
+        Review <span class="nav-dd-chevron">▾</span>
+      </button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item" onclick="window.location='budget.html'">Budget</button>
+        <button class="nav-dd-item" onclick="window.location='autopsy.html'">Autopsy</button>
+      </div>
+    </div>
+
+    <button class="nav-dd-btn" style="color:var(--swansway);font-weight:700" onclick="window.location='admin.html'">⚙ Admin</button>
+  </div>
+</nav>
+
+<!-- Auth overlay -->
+<div class="auth-overlay" id="auth-overlay" onclick="if(event.target===this)closeAuth()">
+  <div class="auth-box" style="max-width:380px">
+    <div class="auth-header">
+      <div class="auth-header-title">Swansway Marketing Hub</div>
+      <div class="auth-header-sub">Sign in to access your team workspace</div>
+    </div>
+    <div style="padding:28px 24px;text-align:center">
+      <div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:var(--ink);margin-bottom:6px">Welcome back</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:24px">Sign in with your Swansway Google account</div>
+      <button onclick="authGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 16px;border:1.5px solid #dadce0;border-radius:4px;background:#fff;cursor:pointer;font-family:var(--font-b);font-size:14px;font-weight:600;color:#3c4043;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 1px 8px rgba(0,0,0,0.15)'" onmouseout="this.style.boxShadow='none'">
+        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.16C6.51 42.62 14.62 48 24 48z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.16C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.16C12.43 13.72 17.74 9.5 24 9.5z"/></svg>
+        Continue with Google
+      </button>
+      <div style="font-size:11px;color:var(--ink-faint);margin-top:16px">Access is restricted to authorised Swansway team members</div>
+    </div>
+  </div>
+</div>
+
+<!-- Briefs panel -->
+<div class="briefs-panel" id="briefs-panel">
+  <div class="briefs-panel-header">
+    <div class="briefs-panel-title">📋 My Campaigns</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button onclick="window.location='brief.html'" style="font-family:var(--font-b);font-size:11px;font-weight:700;padding:5px 12px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer">+ New campaign</button>
+      <button class="briefs-panel-close" onclick="closeBriefsPanel()">×</button>
+    </div>
+  </div>
+  <div class="briefs-panel-body">
+    <div class="brief-filters" id="brief-filters">
+      <div class="brief-filter active" data-brand="all" onclick="filterBriefs('all',this)">All brands</div>
+    </div>
+    <div id="briefs-list"><div style="text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:13px">Loading your campaigns…</div></div>
+  </div>
+  <div class="briefs-panel-footer">
+    <button class="btn btn-accent" style="width:100%" onclick="window.location='brief.html'">✏ New Campaign</button>
+  </div>
+</div>
+
+<main id="main-content" class="main">
+
+  <div class="page-strip">
+    <div>
+      <div class="page-title">Automotive News</div>
+      <div class="page-subtitle">Latest headlines from UK and European automotive press</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="nw-status-bar" id="nw-last-updated"></span>
+      <button class="btn" onclick="nwRefresh()" title="Refresh news">↻ Refresh</button>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="nw-filters">
+    <button class="nw-filter-tab active" onclick="nwSetFilter('all',this)">All sources</button>
+    <button class="nw-filter-tab" onclick="nwSetFilter('uk-press',this)">UK Press</button>
+    <button class="nw-filter-tab" onclick="nwSetFilter('trade',this)">Trade</button>
+    <button class="nw-filter-tab" onclick="nwSetFilter('ev',this)">EV</button>
+  </div>
+
+  <!-- Status message (loading / error) -->
+  <div id="nw-status" style="display:none;padding:12px 0;font-size:13px;color:var(--ink-soft)"></div>
+
+  <!-- Article grid -->
+  <div class="nw-grid" id="nw-grid"></div>
+
+  <!-- Load more -->
+  <div class="nw-load-more-wrap" id="nw-load-more" style="display:none">
+    <button class="btn btn-primary" onclick="nwLoadMore()">Load more articles</button>
+  </div>
+
+</main>
+
+<script>
+function navBrand(id) { navCloseAll(); window.location = 'brand.html?brand=' + id; }
+
+window.addEventListener('load', function() {
+  if (typeof nwInit === 'function') nwInit();
+});
+</script>
+</body>
+</html>
