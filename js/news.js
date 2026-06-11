@@ -1,4 +1,4 @@
-/* ─── news.js v6 — Swansway Marketing Portal ─── */
+/* ─── news.js v7 — Swansway Marketing Portal ─── */
 /* Routes RSS fetches through Vercel proxy         */
 /* (direct fetch blocked by CORS on both rss2json  */
 /*  and Google News)                               */
@@ -22,14 +22,14 @@ var NW_FEEDS = [
     tag:   'trade'
   },
   {
-    url:   'https://www.fleetnews.co.uk/rss',
-    label: 'Fleet News',
-    tag:   'trade'
+    url:   'https://www.carmagazine.co.uk/feed',
+    label: 'Car Magazine',
+    tag:   'uk-auto'
   },
   {
-    url:   'https://www.electrifying.com/feed',
-    label: 'Electrifying',
-    tag:   'ev'
+    url:   'https://www.whatcar.com/news/feed/',
+    label: 'What Car',
+    tag:   'uk-auto'
   }
 ];
 
