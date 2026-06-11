@@ -1,4 +1,4 @@
-/* ─── news.js v4 — Swansway Marketing Portal ─── */
+/* ─── news.js v5 — Swansway Marketing Portal ─── */
 /* Routes RSS fetches through Vercel proxy         */
 /* (direct fetch blocked by CORS on both rss2json  */
 /*  and Google News)                               */
@@ -7,24 +7,29 @@ var NW_PROXY = 'https://swansway-rss-proxy.mkworkgmail.workers.dev/?url=';
 
 var NW_FEEDS = [
   {
-    url:   'https://news.google.com/rss/search?q=UK+automotive+car+dealer+motor&hl=en-GB&gl=GB&ceid=GB:en',
-    label: 'UK Auto',
+    url:   'https://www.autocar.co.uk/rss',
+    label: 'Autocar',
     tag:   'uk-auto'
   },
   {
-    url:   'https://news.google.com/rss/search?q=electric+car+EV+UK+charging&hl=en-GB&gl=GB&ceid=GB:en',
-    label: 'EV',
-    tag:   'ev'
+    url:   'https://www.autoexpress.co.uk/feed/all',
+    label: 'Auto Express',
+    tag:   'uk-auto'
   },
   {
-    url:   'https://news.google.com/rss/search?q=car+dealer+motor+trade+UK+dealership&hl=en-GB&gl=GB&ceid=GB:en',
-    label: 'Trade',
+    url:   'https://cardealermagazine.co.uk/feed',
+    label: 'Car Dealer',
     tag:   'trade'
   },
   {
-    url:   'https://news.google.com/rss/search?q=car+manufacturer+automotive+industry+UK&hl=en-GB&gl=GB&ceid=GB:en',
-    label: 'Industry',
-    tag:   'industry'
+    url:   'https://www.fleetnews.co.uk/rss',
+    label: 'Fleet News',
+    tag:   'trade'
+  },
+  {
+    url:   'https://www.electrifying.com/feed',
+    label: 'Electrifying',
+    tag:   'ev'
   }
 ];
 
