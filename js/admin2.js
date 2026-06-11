@@ -1161,7 +1161,7 @@ function piRender() {
   var html = '';
   Object.keys(byCat).sort().forEach(function(cat) {
     html += '<div style="margin-bottom:1rem"><div style="font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-faint);padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:4px">' + evAdminEsc(cat) + '</div>';
-    html += '<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Name</th><th>Category</th><th>Default unit cost</th><th>Active</th><th></th></tr></thead><tbody>';
+    html += '<div class="admin-table-wrap"><table class="admin-table" style="table-layout:fixed;width:100%"><colgroup><col style="width:35%"><col style="width:25%"><col style="width:20%"><col style="width:10%"><col style="width:10%"></colgroup><thead><tr><th>Name</th><th>Category</th><th>Default unit cost</th><th>Active</th><th></th></tr></thead><tbody>';
     byCat[cat].forEach(function(item) {
       html += '<tr>'
         + '<td><strong>' + evAdminEsc(item.name) + '</strong></td>'
