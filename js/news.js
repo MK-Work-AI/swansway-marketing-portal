@@ -1,6 +1,9 @@
-/* ─── news.js v2 — Swansway Marketing Portal ─── */
-/* Google News RSS (XML) — no API key, no proxy   */
-/* Browser parses XML natively via DOMParser       */
+/* ─── news.js v3 — Swansway Marketing Portal ─── */
+/* Routes RSS fetches through Vercel proxy         */
+/* (direct fetch blocked by CORS on both rss2json  */
+/*  and Google News)                               */
+
+var NW_PROXY = 'https://swansway-marketing-hub.vercel.app/api/rss?url=';
 
 var NW_FEEDS = [
   {
@@ -25,13 +28,13 @@ var NW_FEEDS = [
   }
 ];
 
-var NW_ALL      = [];   // merged, deduped, sorted articles
+var NW_ALL      = [];
 var NW_FILTER   = 'all';
 var NW_PAGE     = 0;
 var NW_PER      = 20;
 var NW_LOADED_AT = null;
 
-/* ── Guard: only run on news page ── */
+/* ── Guard ── */
 function nwOnPage() {
   var _p = window.location.pathname;
   return _p.endsWith('news.html') || _p.endsWith('/news');
@@ -43,7 +46,7 @@ function nwInit() {
   nwLoadAll();
 }
 
-/* ── Fetch all feeds in parallel ── */
+/* ── Fetch all feeds via proxy ── */
 function nwLoadAll() {
   var grid   = document.getElementById('nw-grid');
   var status = document.getElementById('nw-status');
@@ -51,13 +54,25 @@ function nwLoadAll() {
   if (grid)   { grid.innerHTML = nwSkeletons(6); }
 
   var promises = NW_FEEDS.map(function(feed) {
-    return fetch(feed.url)
+    var proxyUrl = NW_PROXY + encodeURIComponent(feed.url);
+    return fetch(proxyUrl)
       .then(function(r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.text();
+        return r.json();
       })
-      .then(function(xml) {
-        return nwParseXML(xml, feed.label, feed.tag);
+      .then(function(data) {
+        if (data.status !== 'ok') return [];
+        return (data.items || []).map(function(item) {
+          return {
+            title:       item.title || '',
+            link:        item.link  || '',
+            pubDate:     item.pubDate || '',
+            description: item.description || '',
+            source:      item.source || feed.label,
+            tag:         feed.tag,
+            ts:          item.pubDate ? new Date(item.pubDate).getTime() : 0
+          };
+        });
       })
       .catch(function() { return []; });
   });
@@ -65,21 +80,17 @@ function nwLoadAll() {
   Promise.allSettled(promises).then(function(results) {
     var seen = {};
     NW_ALL = [];
-
     results.forEach(function(r) {
       if (r.status !== 'fulfilled') return;
       r.value.forEach(function(item) {
-        // Dedupe by link
-        if (!seen[item.link]) {
+        if (item.link && !seen[item.link]) {
           seen[item.link] = true;
           NW_ALL.push(item);
         }
       });
     });
 
-    // Sort newest first
     NW_ALL.sort(function(a, b) { return b.ts - a.ts; });
-
     NW_LOADED_AT = new Date();
     NW_PAGE = 0;
 
@@ -89,54 +100,7 @@ function nwLoadAll() {
   });
 }
 
-/* ── Parse RSS XML into article array ── */
-function nwParseXML(xmlStr, feedLabel, feedTag) {
-  var articles = [];
-  try {
-    var parser = new DOMParser();
-    var doc    = parser.parseFromString(xmlStr, 'text/xml');
-    var items  = doc.querySelectorAll('item');
-
-    items.forEach(function(item) {
-      var title   = nwText(item, 'title');
-      var link    = nwText(item, 'link') || nwGuid(item);
-      var pubDate = nwText(item, 'pubDate');
-      var desc    = nwText(item, 'description');
-      var source  = nwText(item, 'source') || feedLabel;
-
-      // Google News wraps the real link — extract it
-      // link element in Google News RSS is the article URL directly
-      var ts = pubDate ? new Date(pubDate).getTime() : 0;
-
-      if (!title || !link) return;
-
-      articles.push({
-        title:       nwStripHtml(title),
-        link:        link,
-        pubDate:     pubDate,
-        description: nwStripHtml(desc || '').substring(0, 160),
-        source:      source,
-        tag:         feedTag,
-        ts:          ts
-      });
-    });
-  } catch(e) {
-    // parse failure — return empty
-  }
-  return articles;
-}
-
-/* ── XML helpers ── */
-function nwText(el, tag) {
-  var found = el.querySelector(tag);
-  return found ? (found.textContent || '').trim() : '';
-}
-function nwGuid(el) {
-  var found = el.querySelector('guid');
-  return found ? (found.textContent || '').trim() : '';
-}
-
-/* ── Render articles ── */
+/* ── Render ── */
 function nwRender() {
   var grid = document.getElementById('nw-grid');
   var more = document.getElementById('nw-load-more');
@@ -156,15 +120,12 @@ function nwRender() {
   }
 
   if (NW_PAGE === 0) grid.innerHTML = '';
-
-  slice.forEach(function(article) {
-    grid.insertAdjacentHTML('beforeend', nwBuildCard(article));
-  });
+  slice.forEach(function(a) { grid.insertAdjacentHTML('beforeend', nwBuildCard(a)); });
 
   if (more) more.style.display = ((page0 + NW_PER) < filtered.length) ? 'block' : 'none';
 }
 
-/* ── Build a single card ── */
+/* ── Card ── */
 function nwBuildCard(a) {
   var age      = nwTimeAgo(a.ts);
   var tagColor = nwTagColor(a.tag);
@@ -195,26 +156,18 @@ function nwSetFilter(tag, el) {
 }
 
 /* ── Load more ── */
-function nwLoadMore() {
-  NW_PAGE++;
-  nwRender();
-}
+function nwLoadMore() { NW_PAGE++; nwRender(); }
 
 /* ── Refresh ── */
-function nwRefresh() {
-  NW_ALL = [];
-  NW_PAGE = 0;
-  nwLoadAll();
-}
+function nwRefresh() { NW_ALL = []; NW_PAGE = 0; nwLoadAll(); }
 
-/* ── Last updated timestamp ── */
+/* ── Last updated ── */
 function nwUpdateLastUpdated() {
   var el = document.getElementById('nw-last-updated');
-  if (!el || !NW_LOADED_AT) return;
-  el.textContent = 'Updated ' + nwTimeAgo(NW_LOADED_AT.getTime());
+  if (el && NW_LOADED_AT) el.textContent = 'Updated ' + nwTimeAgo(NW_LOADED_AT.getTime());
 }
 
-/* ── Skeleton loaders ── */
+/* ── Skeletons ── */
 function nwSkeletons(n) {
   var html = '';
   for (var i = 0; i < n; i++) {
@@ -227,35 +180,16 @@ function nwSkeletons(n) {
   return html;
 }
 
-/* ── Strip HTML ── */
-function nwStripHtml(html) {
-  if (!html) return '';
-  return html
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .trim();
-}
-
-/* ── Escape for HTML ── */
+/* ── Utilities ── */
 function nwEsc(s) {
   if (!s) return '';
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ── Relative time ── */
 function nwTimeAgo(ts) {
   if (!ts) return '';
   var diff  = Date.now() - ts;
-  if (diff < 0)    return 'just now';
+  if (diff < 0)   return 'just now';
   var mins  = Math.floor(diff / 60000);
   var hours = Math.floor(diff / 3600000);
   var days  = Math.floor(diff / 86400000);
@@ -264,16 +198,15 @@ function nwTimeAgo(ts) {
   if (hours < 24) return hours + 'h ago';
   if (days === 1) return 'Yesterday';
   if (days < 7)   return days + 'd ago';
-  return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return new Date(ts).toLocaleDateString('en-GB', { day:'numeric', month:'short' });
 }
 
-/* ── Tag colour mapping ── */
 function nwTagColor(tag) {
   var map = {
-    'uk-auto':  { bg: '#EFF6FF', fg: '#1E3A8A' },
-    'ev':       { bg: '#F0FDF4', fg: '#14532D' },
-    'trade':    { bg: '#FFF7ED', fg: '#7C2D12' },
-    'industry': { bg: '#F5F3FF', fg: '#4C1D95' }
+    'uk-auto':  { bg:'#EFF6FF', fg:'#1E3A8A' },
+    'ev':       { bg:'#F0FDF4', fg:'#14532D' },
+    'trade':    { bg:'#FFF7ED', fg:'#7C2D12' },
+    'industry': { bg:'#F5F3FF', fg:'#4C1D95' }
   };
-  return map[tag] || { bg: '#F4F2EF', fg: '#3D3D3D' };
+  return map[tag] || { bg:'#F4F2EF', fg:'#3D3D3D' };
 }
