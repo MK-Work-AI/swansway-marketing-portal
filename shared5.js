@@ -1039,6 +1039,24 @@ function switchInner(brandId, secId, el) {
   }
   if(secId === 'sites') { setTimeout(function(){ if(typeof renderBrandSites==='function') renderBrandSites(brandId); }, 50); }
   if(secId === 'kpis') { setTimeout(function(){ if(typeof renderBrandKPIs==='function') renderBrandKPIs(brandId);  }, 50); }
+  if(secId === 'events') {
+    setTimeout(function(){
+      if (typeof renderBrandEvents === 'function') {
+        if (EV_EVENTS_BUDGET && EV_EVENTS_BUDGET.length) {
+          renderBrandEvents(brandId);
+        } else {
+          // Events not loaded yet — wait for them
+          var _evRetry = setInterval(function() {
+            if (EV_EVENTS_BUDGET && EV_EVENTS_BUDGET.length) {
+              clearInterval(_evRetry);
+              renderBrandEvents(brandId);
+            }
+          }, 200);
+          setTimeout(function(){ clearInterval(_evRetry); }, 5000);
+        }
+      }
+    }, 50);
+  }
   var sec = document.getElementById(brandId+'-'+secId);
   sec.classList.add('active');
 }
