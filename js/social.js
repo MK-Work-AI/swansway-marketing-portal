@@ -76,7 +76,17 @@ function slAfterAuth() {
   var params = new URLSearchParams(window.location.search);
   var openId = params.get('post');
   if (openId) {
-    setTimeout(function() { slOpenPost(openId); }, 800);
+    // Wait for posts to load then open — retry up to 3s
+    var _attempts = 0;
+    var _tryOpen = function() {
+      _attempts++;
+      if (SL_POSTS.length || _attempts > 6) {
+        slOpenPost(openId);
+      } else {
+        setTimeout(_tryOpen, 500);
+      }
+    };
+    setTimeout(_tryOpen, 600);
   }
 
   // Listen for generate-from-event / generate-from-brief calls
@@ -769,25 +779,26 @@ async function slDeletePost(postId) {
   if (!postId) return;
   if (!confirm('Delete this post? This cannot be undone.')) return;
   try {
-    // Delete platform rows first
-    await fetch(SL_BASE + '/social_post_platforms?post_id=eq.' + postId, {
-      method: 'DELETE', headers: getAuthHeaders()
-    });
-    // Delete comments
-    await fetch(SL_BASE + '/social_comments?post_id=eq.' + postId, {
-      method: 'DELETE', headers: getAuthHeaders()
-    });
-    // Delete the post
+    // Try to delete related rows — ignore errors if tables don't exist yet
+    try { await fetch(SL_BASE + '/social_post_platforms?post_id=eq.' + postId, { method:'DELETE', headers:getAuthHeaders() }); } catch(e) {}
+    try { await fetch(SL_BASE + '/social_comments?post_id=eq.' + postId, { method:'DELETE', headers:getAuthHeaders() }); } catch(e) {}
+    // Delete the post itself
     var r = await fetch(SL_BASE + '/social_posts?id=eq.' + postId, {
-      method: 'DELETE', headers: getAuthHeaders()
+      method: 'DELETE',
+      headers: getAuthHeaders({'Prefer': 'return=minimal'})
     });
-    if (!r.ok) throw new Error(await r.text());
+    if (!r.ok) {
+      var errText = await r.text();
+      throw new Error(errText);
+    }
     slClosePanel();
     slShowToast('Post deleted', 'success');
-    await slLoadPosts();
+    // Remove from local array immediately for instant UI update
+    SL_POSTS = SL_POSTS.filter(function(p){ return p.id !== postId; });
     slApplyFilters();
   } catch(e) {
     slShowToast('Delete failed: ' + e.message, 'error');
+    console.error('slDeletePost:', e);
   }
 }
 
