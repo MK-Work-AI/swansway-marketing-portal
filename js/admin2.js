@@ -1379,11 +1379,19 @@ async function saSave() {
   var statusEl = document.getElementById('sa-status');
   if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
   try {
-    // admin_config for social_approvers uses key/value rows (not the user_id/config blob)
+    // admin_config requires user_id (NOT NULL) — fetch current user
+    var sess = await SB.auth.getUser();
+    var uid = sess.data.user.id;
+    // First delete any existing social_approvers row, then insert fresh
+    // (merge-duplicates on key requires a unique index on key which may not exist)
+    await fetch(SUPA + '/admin_config?key=eq.social_approvers', {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
     var r = await fetch(SUPA + '/admin_config', {
       method: 'POST',
-      headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
-      body: JSON.stringify([{ key: 'social_approvers', value: SA_DATA, updated_at: new Date().toISOString() }])
+      headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
+      body: JSON.stringify([{ user_id: uid, key: 'social_approvers', value: SA_DATA, updated_at: new Date().toISOString() }])
     });
     if (!r.ok) throw new Error(await r.text());
     showToast('Social approvers saved ✓', 'success');
