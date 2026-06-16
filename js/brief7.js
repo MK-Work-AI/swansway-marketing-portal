@@ -1107,7 +1107,8 @@ function bbShowPostSave(briefId, status, jobRef) {
     var _refHtml = (jobRef || window._lastJobRef) ? '<div style="display:inline-block;margin-bottom:10px;padding:4px 12px;background:#F1F5F9;border:1.5px solid #CBD5E1;border-radius:4px;font-family:var(--font-m);font-size:12px;color:#475569;letter-spacing:0.05em">Job ref: <strong style="color:var(--ink);font-size:13px">' + (jobRef || window._lastJobRef) + '</strong></div>' : '';
     if (_canLaunchNow) {
       var _hasSocial = BB && BB.channels && (BB.channels.indexOf('social_organic') !== -1 || BB.channels.indexOf('social_paid') !== -1);
-      var _socialBtn = '<div style="margin-top:8px"><button class="bb-s6-submit-btn" style="background:#1E3A8A;margin-top:4px" onclick="slPromptFromBrief(window._lastSavedBriefId||\'' + briefId + '\', BB||{})">📱 ' + (_hasSocial ? 'Social is a channel on this campaign — build your posts' : 'Generate social posts') + '</button></div>';
+      window._pendingSocialBrief = { brand_id: BB&&BB.brand?BB.brand.id:null, title: window._lastSavedBriefTitle||'', start_date: BB&&BB.start_date?BB.start_date:'', end_date: BB&&BB.end_date?BB.end_date:'', budget: BB&&BB.budget?BB.budget:0, job_ref: window._lastJobRef||'' };
+      var _socialBtn = '<div style="margin-top:10px"><button class="bb-s6-submit-btn" style="background:#1E3A8A;border-color:#1E3A8A" onclick="swSocialFromBrief(window._lastSavedBriefId,window._pendingSocialBrief)">📱 ' + (_hasSocial ? 'Social is a channel — build your posts now' : 'Generate social posts') + '</button></div>';
       fb.innerHTML = '<div class="bb-s6-confirm">'
         + '<div class="bb-s6-tick">✓</div>'
         + _refHtml
@@ -1117,7 +1118,8 @@ function bbShowPostSave(briefId, status, jobRef) {
         + '</div>';
     } else {
       var _hasSocial2 = BB && BB.channels && (BB.channels.indexOf('social_organic') !== -1 || BB.channels.indexOf('social_paid') !== -1);
-      var _socialBtn2 = '<div style="margin-top:8px"><button class="bb-s6-submit-btn" style="background:#1E3A8A;margin-top:4px" onclick="slPromptFromBrief(window._lastSavedBriefId||\'' + briefId + '\', BB||{})">📱 ' + (_hasSocial2 ? 'Social is a channel — build your posts' : 'Generate social posts') + '</button></div>';
+      window._pendingSocialBrief = { brand_id: BB&&BB.brand?BB.brand.id:null, title: window._lastSavedBriefTitle||'', start_date: BB&&BB.start_date?BB.start_date:'', end_date: BB&&BB.end_date?BB.end_date:'', budget: BB&&BB.budget?BB.budget:0, job_ref: window._lastJobRef||'' };
+      var _socialBtn2 = '<div style="margin-top:10px"><button class="bb-s6-submit-btn" style="background:#1E3A8A;border-color:#1E3A8A" onclick="swSocialFromBrief(window._lastSavedBriefId,window._pendingSocialBrief)">📱 ' + (_hasSocial2 ? 'Social is a channel — build your posts now' : 'Generate social posts') + '</button></div>';
       fb.innerHTML = '<div class="bb-s6-confirm">'
         + '<div class="bb-s6-tick">✓</div>'
         + _refHtml
