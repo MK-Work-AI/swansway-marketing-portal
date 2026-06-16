@@ -747,12 +747,47 @@ function slRenderPanel() {
     pubBtn.onclick = function() { slSetStatus('published'); };
     footer.appendChild(pubBtn);
   }
+  if (!isNew && ['draft','rejected'].includes(p.status)) {
+    var delBtn = document.createElement('button');
+    delBtn.className = 'sl-btn sl-btn--ghost';
+    delBtn.style.cssText = 'color:#DC2626;margin-left:auto';
+    delBtn.textContent = '🗑 Delete';
+    delBtn.onclick = function() { slDeletePost(p.id); };
+    footer.appendChild(delBtn);
+  }
   if (!isNew) {
     var closeBtn = document.createElement('button');
     closeBtn.className = 'sl-btn sl-btn--ghost';
     closeBtn.textContent = 'Close';
     closeBtn.onclick = slClosePanel;
     footer.appendChild(closeBtn);
+  }
+}
+
+
+async function slDeletePost(postId) {
+  if (!postId) return;
+  if (!confirm('Delete this post? This cannot be undone.')) return;
+  try {
+    // Delete platform rows first
+    await fetch(SL_BASE + '/social_post_platforms?post_id=eq.' + postId, {
+      method: 'DELETE', headers: getAuthHeaders()
+    });
+    // Delete comments
+    await fetch(SL_BASE + '/social_comments?post_id=eq.' + postId, {
+      method: 'DELETE', headers: getAuthHeaders()
+    });
+    // Delete the post
+    var r = await fetch(SL_BASE + '/social_posts?id=eq.' + postId, {
+      method: 'DELETE', headers: getAuthHeaders()
+    });
+    if (!r.ok) throw new Error(await r.text());
+    slClosePanel();
+    slShowToast('Post deleted', 'success');
+    await slLoadPosts();
+    slApplyFilters();
+  } catch(e) {
+    slShowToast('Delete failed: ' + e.message, 'error');
   }
 }
 
