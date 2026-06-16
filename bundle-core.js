@@ -1612,19 +1612,21 @@ function renderBriefsList() {
     }
     const site = siteLabel;
     const chips = [brief.campaign_type, brief.budget ? '£'+Number(brief.budget).toLocaleString() : '', brief.duration_label||(brief.duration_weeks?brief.duration_weeks+' wks':''), dateStr, site].filter(Boolean).map(t=>`<span style="background:var(--surface);padding:2px 7px;border-radius:4px;font-size:10px;white-space:nowrap">${t}</span>`).join('');
+    const refChip = brief.job_ref ? `<span style="background:var(--surface);padding:2px 7px;border-radius:4px;font-size:10px;font-family:var(--font-m);color:var(--ink-soft);letter-spacing:0.04em;white-space:nowrap">${brief.job_ref}</span>` : '';
     return `<div class="brief-card" style="--card-color:${color}" onclick="openBriefFromPanel('${brief.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
         <div class="brief-card-brand" style="color:${color};margin-bottom:0">${brief.brand_name}</div>
         <span style="font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.06em;padding:2px 8px;border-radius:10px;flex-shrink:0;${ss}">${status}</span>
       </div>
       <div class="brief-card-title">${brief.title}</div>
-      ${chips?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${chips}</div>`:''}
+      ${(chips||refChip)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${refChip}${chips}</div>`:''}
       ${brief.objective?`<div class="brief-card-meta" style="margin-top:5px">${brief.objective}</div>`:''}
       ${brief.proposition?`<div class="brief-card-meta" style="margin-top:4px;font-style:italic">“${brief.proposition.substring(0,70)}${brief.proposition.length>70?'…':''}”</div>`:''}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
         <span style="font-size:10px;color:var(--ink-faint)">Updated ${updated}</span>
         <div class="brief-card-actions" onclick="event.stopPropagation()" style="margin-top:0;padding-top:0;border-top:none">
           <button class="brief-card-btn" onclick="openBriefFromPanel('${brief.id}')">&#8617; Open</button>
+          ${typeof slPromptFromBrief === 'function' ? `<button class="brief-card-btn" style="background:#1E3A8A;color:#fff;border-color:#1E3A8A" onclick="event.stopPropagation();slPromptFromBrief('${brief.id}',{brand_id:'${brief.brand_id}',title:'${brief.title}',start_date:'${brief.start_date||''}',end_date:'${brief.end_date||''}',budget:${brief.budget||0},job_ref:'${brief.job_ref||''}'})">📱 Social</button>` : ''}
           <button class="brief-card-btn" onclick="if(typeof bbArchiveBrief==='function'){bbArchiveBrief('${brief.id}');}else{alert('Open the campaign first to archive it.');}">Archive</button>
           <button class="brief-card-btn danger" onclick="if(typeof bbDeleteBrief==='function'){bbDeleteBrief('${brief.id}');}else{deleteBriefFromPanel('${brief.id}');}">Delete</button>
         </div>
@@ -1762,6 +1764,134 @@ async function swGetInheritedRef(briefId, eventId) {
     }
   } catch(e) { console.warn('swGetInheritedRef:', e); }
   return null;
+}
+
+
+async function swCreateSocialPlaceholder(briefId, briefData) {
+  // Auto-create a draft social post 2 days before campaign start
+  // If one already exists (linked to this brief, still draft) update its date instead
+  try {
+    var base = SUPABASE_URL + '/rest/v1';
+    var hdrs = getAuthHeaders({'Content-Type': 'application/json'});
+    var startDate = briefData.start_date || briefData.start || null;
+    if (!startDate) return; // No date — skip
+
+    // Calculate scheduled_at = start_date minus 2 days at 09:00
+    var d = new Date(startDate + 'T00:00:00');
+    d.setDate(d.getDate() - 2);
+    var scheduledAt = d.getFullYear() + '-' +
+      String(d.getMonth()+1).padStart(2,'0') + '-' +
+      String(d.getDate()).padStart(2,'0') + 'T09:00:00';
+
+    // Check for existing draft placeholder linked to this brief
+    var existing = await fetch(base + '/social_posts?brief_id=eq.' + briefId + '&status=eq.draft&select=id,scheduled_at&limit=1', { headers: hdrs });
+    if (existing.ok) {
+      var rows = await existing.json();
+      if (rows && rows[0]) {
+        // Update scheduled_at if date has changed
+        if (rows[0].scheduled_at !== scheduledAt) {
+          await fetch(base + '/social_posts?id=eq.' + rows[0].id, {
+            method: 'PATCH',
+            headers: hdrs,
+            body: JSON.stringify({ scheduled_at: scheduledAt, updated_at: new Date().toISOString() })
+          });
+        }
+        return; // Already exists — done
+      }
+    }
+
+    // Generate job ref for the placeholder
+    var jobRef = briefData.job_ref || null;
+    if (!jobRef && typeof swGetInheritedRef === 'function') {
+      jobRef = await swGetInheritedRef(briefId, null);
+    }
+    if (!jobRef && typeof swGenerateJobRef === 'function') {
+      jobRef = await swGenerateJobRef(CB_CURRENT_USER);
+    }
+
+    var payload = {
+      title:        (briefData.title || 'Social — ' + (briefData.brand_name || '')).trim(),
+      brand_id:     briefData.brand_id || null,
+      brief_id:     briefId,
+      status:       'draft',
+      post_type:    'brand_story',
+      platform_ids: [],
+      scheduled_at: scheduledAt,
+      job_ref:      jobRef,
+      created_by:   typeof slAsUUID === 'function' ? slAsUUID(CB_CURRENT_USER) : null,
+      created_at:   new Date().toISOString(),
+      updated_at:   new Date().toISOString()
+    };
+
+    await fetch(base + '/social_posts', {
+      method: 'POST',
+      headers: hdrs,
+      body: JSON.stringify([payload])
+    });
+    console.log('Social placeholder created for brief', briefId, 'scheduled', scheduledAt);
+  } catch(e) {
+    console.warn('swCreateSocialPlaceholder:', e);
+  }
+}
+
+async function swCreateEventSocialPlaceholder(eventId, eventData) {
+  // Same as above but linked to an event — 2 days before event start
+  try {
+    var base = SUPABASE_URL + '/rest/v1';
+    var hdrs = getAuthHeaders({'Content-Type': 'application/json'});
+    var startDate = eventData.start_date || null;
+    if (!startDate) return;
+
+    var d = new Date(startDate + 'T00:00:00');
+    d.setDate(d.getDate() - 2);
+    var scheduledAt = d.getFullYear() + '-' +
+      String(d.getMonth()+1).padStart(2,'0') + '-' +
+      String(d.getDate()).padStart(2,'0') + 'T09:00:00';
+
+    // Check for existing
+    var existing = await fetch(base + '/social_posts?event_id=eq.' + eventId + '&status=eq.draft&select=id,scheduled_at&limit=1', { headers: hdrs });
+    if (existing.ok) {
+      var rows = await existing.json();
+      if (rows && rows[0]) {
+        if (rows[0].scheduled_at !== scheduledAt) {
+          await fetch(base + '/social_posts?id=eq.' + rows[0].id, {
+            method: 'PATCH',
+            headers: hdrs,
+            body: JSON.stringify({ scheduled_at: scheduledAt, updated_at: new Date().toISOString() })
+          });
+        }
+        return;
+      }
+    }
+
+    var jobRef = eventData.job_ref || null;
+    if (!jobRef && typeof swGetInheritedRef === 'function') {
+      jobRef = await swGetInheritedRef(null, eventId);
+    }
+
+    var payload = {
+      title:        ('Social — ' + (eventData.title || '')).trim(),
+      brand_id:     eventData.brand_id || null,
+      event_id:     eventId,
+      status:       'draft',
+      post_type:    'event',
+      platform_ids: [],
+      scheduled_at: scheduledAt,
+      job_ref:      jobRef,
+      created_by:   typeof slAsUUID === 'function' ? slAsUUID(CB_CURRENT_USER) : null,
+      created_at:   new Date().toISOString(),
+      updated_at:   new Date().toISOString()
+    };
+
+    await fetch(base + '/social_posts', {
+      method: 'POST',
+      headers: hdrs,
+      body: JSON.stringify([payload])
+    });
+    console.log('Social placeholder created for event', eventId, 'scheduled', scheduledAt);
+  } catch(e) {
+    console.warn('swCreateEventSocialPlaceholder:', e);
+  }
 }
 
 async function swEnsureUser() {
