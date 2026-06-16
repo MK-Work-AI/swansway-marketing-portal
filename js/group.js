@@ -316,7 +316,7 @@ async function calLoadFromSupabase() {
       'jaguar':'Jaguar','honda':'Honda','peugeot':'Peugeot',
       'byd':'BYD','omoda':'OMODA/JAECOO','motormatch':'Motor Match'
     };
-    var resp = await fetch(SUPABASE_URL + '/rest/v1/briefs?select=id,title,brand_id,campaign_type,objective,budget,start_date,end_date,status,scope,site_id,confirmed_channels,allocation&order=start_date.asc', {
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/briefs?select=id,title,brand_id,campaign_type,objective,budget,start_date,end_date,status,scope,site_id,confirmed_channels,allocation,job_ref&order=start_date.asc', {
       headers: getAuthHeaders({'Content-Type':'application/json'})
     });
     if (!resp.ok) { console.warn('calLoadFromSupabase: fetch failed', resp.status); return; }
@@ -340,7 +340,8 @@ async function calLoadFromSupabase() {
         scope: r.scope || 'brand',
         site_id: r.site_id || null,
         brand_id: r.brand_id || null,
-        channels: r.confirmed_channels || []
+        channels: r.confirmed_channels || [],
+        job_ref: r.job_ref || null
       };
     });
     console.log('calLoadFromSupabase: loaded ' + BUILT_IN_CAMPAIGNS.length + ' campaigns');
@@ -1120,6 +1121,13 @@ function calShowCampaign(cJson) {
   datesLbl.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.8)';
   datesLbl.textContent = dates;
 
+  if (c.job_ref) {
+    var refLbl = document.createElement('div');
+    refLbl.style.cssText = 'margin-top:6px;display:inline-block;padding:2px 10px;background:rgba(0,0,0,0.25);border-radius:4px;font-family:var(--font-m);font-size:10px;color:rgba(255,255,255,0.9);letter-spacing:0.06em';
+    refLbl.textContent = c.job_ref;
+    hdr.appendChild(refLbl);
+  }
+
   var xBtn = document.createElement('button');
   xBtn.style.cssText = 'position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1';
   xBtn.innerHTML = '&times;';
@@ -1231,6 +1239,17 @@ function calShowCampaign(cJson) {
   closeBtn.textContent = 'Close';
   closeBtn.onclick = function() { overlay.remove(); };
 
+  if (typeof slPromptFromBrief === 'function' && c.brief_id) {
+    var socialBtn = document.createElement('button');
+    socialBtn.className = 'btn';
+    socialBtn.style.cssText = 'flex:1;font-size:13px;background:#1E3A8A;color:#fff;border-color:#1E3A8A';
+    socialBtn.textContent = '📱 Social post';
+    socialBtn.onclick = function() {
+      overlay.remove();
+      slPromptFromBrief(c.brief_id, { brand_id: c.brand_id, title: c.name, start_date: c.start_date, end_date: c.end_date, budget: c.budget, job_ref: c.job_ref });
+    };
+    actions.appendChild(socialBtn);
+  }
   actions.appendChild(editBtn); actions.appendChild(delBtn); actions.appendChild(closeBtn);
   body.appendChild(topRow); body.appendChild(grid); body.appendChild(actions);
   box.appendChild(hdr); box.appendChild(body);
