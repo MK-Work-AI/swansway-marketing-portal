@@ -206,6 +206,7 @@ async function loadAdminCfg() {
     if (cfg.brands && cfg.brands.length)   STATE.brands   = cfg.brands;
     if (cfg.channels && cfg.channels.length) STATE.channels = cfg.channels;
     if (cfg.kpis && cfg.kpis.length)     STATE.kpis     = cfg.kpis;
+    if (cfg.social_approvers)            SA_DATA        = cfg.social_approvers;
   } catch(e) { console.warn('loadAdminCfg:', e); }
 }
 
@@ -214,7 +215,7 @@ async function saveAll() {
   if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
   collectGroupForm();
   collectChannelForm();
-  var payload = { group: STATE.group, brands: STATE.brands, channels: STATE.channels, kpis: STATE.kpis };
+  var payload = { group: STATE.group, brands: STATE.brands, channels: STATE.channels, kpis: STATE.kpis, social_approvers: SA_DATA };
   try {
     var sess = await SB.auth.getUser();
     var uid = sess.data.user.id;
@@ -1379,24 +1380,22 @@ async function saSave() {
   var statusEl = document.getElementById('sa-status');
   if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
   try {
-    // admin_config requires user_id (NOT NULL) — fetch current user
+    // social_approvers lives inside the main config blob (admin_config PK is user_id — one row per user)
+    // Build the full payload including all existing STATE fields plus updated SA_DATA
+    collectGroupForm();
+    collectChannelForm();
+    var payload = { group: STATE.group, brands: STATE.brands, channels: STATE.channels, kpis: STATE.kpis, social_approvers: SA_DATA };
     var sess = await SB.auth.getUser();
     var uid = sess.data.user.id;
-    // First delete any existing social_approvers row, then insert fresh
-    // (merge-duplicates on key requires a unique index on key which may not exist)
-    await fetch(SUPA + '/admin_config?key=eq.social_approvers', {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    });
     var r = await fetch(SUPA + '/admin_config', {
       method: 'POST',
-      headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
-      body: JSON.stringify([{ user_id: uid, key: 'social_approvers', value: SA_DATA, updated_at: new Date().toISOString() }])
+      headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify([{ user_id: uid, config: payload, updated_at: new Date().toISOString() }])
     });
     if (!r.ok) throw new Error(await r.text());
     showToast('Social approvers saved ✓', 'success');
     if (statusEl) statusEl.textContent = 'Last saved: ' + new Date().toLocaleTimeString('en-GB');
-    saBuildBrandTabs(); // refresh counts
+    saBuildBrandTabs();
   } catch(e) {
     showToast('Save failed: ' + e.message, 'error');
   }
