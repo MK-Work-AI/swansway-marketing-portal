@@ -1,3 +1,4 @@
+// v100
 // Swansway Marketing Portal — Brief Builder JS
 
 // Snapshot of original bb-left sidebar HTML — restored on bbNewBrief
