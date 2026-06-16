@@ -191,6 +191,7 @@ function showPage(id) {
   if (id === 'data')         { renderDataPage(); }
   if (id === 'eventtypes')   { etLoad(); }
   if (id === 'positems')     { piLoad(); }
+  if (id === 'socialapprovers') { saLoad(); }
 }
 
 /* ══ ADMIN CONFIG (brands + group + channels) ══ */
@@ -1236,4 +1237,160 @@ async function piDelete(id) {
 function evAdminEsc(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   SOCIAL APPROVERS  (Task 5)
+   Stored in admin_config table as: { key: 'social_approvers', value: { brandId: ['name',...], default: [...] } }
+   CB_CURRENT_USER is a name string — approver list stores names, not UUIDs.
+══════════════════════════════════════════════════════════ */
+
+var SA_DATA = {};            // { brandId: ['name', ...], default: ['name', ...] }
+var SA_CURRENT_BRAND = 'audi';
+var SA_MEMBERS = [];         // [ { id, name } ] — populated from campaign_team
+
+async function saLoad() {
+  // Load team members for the picker
+  try {
+    var r = await fetch(SUPA + '/campaign_team?select=id,name&order=name&active=eq.true', { headers: getAuthHeaders() });
+    if (r.ok) {
+      var rows = await r.json();
+      SA_MEMBERS = (rows || []).filter(function(m) { return m.id !== 'leadership' && m.name; });
+    }
+  } catch(e) { console.warn('saLoad members:', e); }
+
+  // Load existing approver config
+  try {
+    var r2 = await fetch(SUPA + '/admin_config?key=eq.social_approvers&select=value', { headers: getAuthHeaders() });
+    if (r2.ok) {
+      var rows2 = await r2.json();
+      SA_DATA = (rows2 && rows2[0] && rows2[0].value) ? rows2[0].value : {};
+    }
+  } catch(e) { console.warn('saLoad config:', e); }
+
+  saRender();
+}
+
+function saRender() {
+  saPopulatePicker('sa-default-add');
+  saRenderPills('default', 'sa-default-pills', 'sa-default-add');
+  saBuildBrandTabs();
+  saRenderBrandContent(SA_CURRENT_BRAND);
+}
+
+function saPopulatePicker(selectId) {
+  var sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— add approver —</option>';
+  SA_MEMBERS.forEach(function(m) {
+    var opt = document.createElement('option');
+    opt.value = m.name;
+    opt.textContent = m.name;
+    sel.appendChild(opt);
+  });
+}
+
+function saRenderPills(key, pillsId, pickerId) {
+  var container = document.getElementById(pillsId);
+  if (!container) return;
+  var list = SA_DATA[key] || [];
+  container.innerHTML = '';
+  if (!list.length) {
+    container.innerHTML = '<span style="font-size:12px;color:var(--ink-faint);padding:2px 4px">None set — will use full approvers from Campaign Team</span>';
+    return;
+  }
+  list.forEach(function(name) {
+    var pill = document.createElement('span');
+    pill.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:var(--swansway);color:#fff;border-radius:12px;padding:3px 10px 3px 12px;font-family:var(--font-m);font-size:11px;font-weight:600;letter-spacing:0.03em';
+    pill.innerHTML = name + '<button onclick="saRemoveApprover(\'' + key + '\',\'' + name.replace(/'/g,"\\'") + '\')" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;line-height:1;padding:0;display:flex;align-items:center;justify-content:center">✕</button>';
+    container.appendChild(pill);
+  });
+}
+
+function saBuildBrandTabs() {
+  var tabs = document.getElementById('sa-brand-tabs');
+  if (!tabs) return;
+  tabs.innerHTML = '';
+  BRAND_IDS.forEach(function(id) {
+    var btn = document.createElement('button');
+    btn.className = 'brand-tab-btn' + (id === SA_CURRENT_BRAND ? ' active' : '');
+    btn.setAttribute('data-brand', id);
+    var dot = '<span class="brand-dot" style="background:' + (BRAND_COLORS[id] || '#999') + '"></span>';
+    var count = (SA_DATA[id] || []).length;
+    btn.innerHTML = dot + BRAND_NAMES[id] + (count ? ' <span style="font-size:9px;background:rgba(255,255,255,0.3);border-radius:8px;padding:0 4px;margin-left:3px">' + count + '</span>' : '');
+    btn.onclick = function() {
+      SA_CURRENT_BRAND = id;
+      tabs.querySelectorAll('.brand-tab-btn').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-brand') === id); });
+      saRenderBrandContent(id);
+    };
+    tabs.appendChild(btn);
+  });
+}
+
+function saRenderBrandContent(brandId) {
+  var el = document.getElementById('sa-brand-content');
+  if (!el) return;
+  var pillsId  = 'sa-brand-pills-' + brandId;
+  var pickerId = 'sa-brand-add-' + brandId;
+  el.innerHTML =
+    '<div style="margin-bottom:8px">' +
+      '<div class="admin-field-label" style="margin-bottom:6px">' + BRAND_NAMES[brandId] + ' approvers</div>' +
+      '<div id="' + pillsId + '" style="display:flex;flex-wrap:wrap;gap:6px;min-height:36px;align-items:center;padding:8px;background:var(--surface);border:1.5px solid var(--border);border-radius:4px;margin-bottom:8px"></div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' +
+        '<select id="' + pickerId + '" class="admin-input" style="min-width:200px"><option value="">— add approver —</option></select>' +
+        '<button class="btn-sm" onclick="saAddApprover(\'' + brandId + '\')">Add</button>' +
+      '</div>' +
+    '</div>';
+  saPopulatePicker(pickerId);
+  saRenderPills(brandId, pillsId, pickerId);
+}
+
+function saAddApprover(key) {
+  var pickerId = key === 'default' ? 'sa-default-add' : 'sa-brand-add-' + key;
+  var sel = document.getElementById(pickerId);
+  var name = sel ? sel.value.trim() : '';
+  if (!name) return;
+  if (!SA_DATA[key]) SA_DATA[key] = [];
+  if (SA_DATA[key].includes(name)) { showToast(name + ' already added', 'info'); return; }
+  SA_DATA[key].push(name);
+  sel.value = '';
+  if (key === 'default') {
+    saRenderPills('default', 'sa-default-pills', 'sa-default-add');
+  } else {
+    saRenderBrandContent(key);
+    saBuildBrandTabs(); // refresh badge counts
+  }
+}
+
+function saRemoveApprover(key, name) {
+  if (!SA_DATA[key]) return;
+  SA_DATA[key] = SA_DATA[key].filter(function(n){ return n !== name; });
+  if (key === 'default') {
+    saRenderPills('default', 'sa-default-pills', 'sa-default-add');
+  } else {
+    saRenderBrandContent(key);
+    saBuildBrandTabs();
+  }
+}
+
+async function saSave() {
+  var btn = document.getElementById('sa-save-btn');
+  var statusEl = document.getElementById('sa-status');
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+  try {
+    // admin_config for social_approvers uses key/value rows (not the user_id/config blob)
+    var r = await fetch(SUPA + '/admin_config', {
+      method: 'POST',
+      headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify([{ key: 'social_approvers', value: SA_DATA, updated_at: new Date().toISOString() }])
+    });
+    if (!r.ok) throw new Error(await r.text());
+    showToast('Social approvers saved ✓', 'success');
+    if (statusEl) statusEl.textContent = 'Last saved: ' + new Date().toLocaleTimeString('en-GB');
+    saBuildBrandTabs(); // refresh counts
+  } catch(e) {
+    showToast('Save failed: ' + e.message, 'error');
+  }
+  if (btn) { btn.textContent = 'Save approvers'; btn.disabled = false; }
 }
