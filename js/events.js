@@ -1,3 +1,4 @@
+// v100
 /* ══════════════════════════════════════════════════════════
    events.js — Events & Product Placements
    Swansway Marketing Portal v2
