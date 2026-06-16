@@ -1688,6 +1688,82 @@ window.location = 'brief.html';
 }
 
 
+
+/* ══════════════════════════════════════════════════════════
+   SHARED JOB REF GENERATOR
+   Format: SW-DDMMYY-NNNN-XX
+   e.g. SW-160626-0042-MK
+   Sequential number is cross-table (briefs + events + social_posts) per day
+   Inherited by social posts from their parent brief or event
+══════════════════════════════════════════════════════════ */
+
+function swGetInitials(userId) {
+  var member = CB_TEAM[userId];
+  if (!member || !member.name) return 'XX';
+  return member.name.split(' ')
+    .map(function(n) { return n[0] || ''; })
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
+}
+
+function swDateStamp() {
+  var d = new Date();
+  var dd = String(d.getDate()).padStart(2, '0');
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  var yy = String(d.getFullYear()).substring(2);
+  return dd + mm + yy;
+}
+
+async function swGenerateJobRef(creatorId) {
+  var dateStamp = swDateStamp();
+  var prefix = 'SW-' + dateStamp + '-';
+  var initials = swGetInitials(creatorId) || 'XX';
+  var base = SUPABASE_URL + '/rest/v1';
+  var hdrs = getAuthHeaders();
+
+  try {
+    // Query all three tables for refs matching today's prefix — highest number wins
+    var results = await Promise.allSettled([
+      fetch(base + '/briefs?select=job_ref&job_ref=like.' + prefix + '*&order=job_ref.desc&limit=1', { headers: hdrs }).then(function(r) { return r.json(); }),
+      fetch(base + '/events?select=job_ref&job_ref=like.' + prefix + '*&order=job_ref.desc&limit=1', { headers: hdrs }).then(function(r) { return r.json(); }),
+      fetch(base + '/social_posts?select=job_ref&job_ref=like.' + prefix + '*&order=job_ref.desc&limit=1', { headers: hdrs }).then(function(r) { return r.json(); })
+    ]);
+
+    var maxNum = 0;
+    results.forEach(function(result) {
+      if (result.status === 'fulfilled' && Array.isArray(result.value) && result.value[0] && result.value[0].job_ref) {
+        // Extract the number portion — SW-DDMMYY-NNNN-XX → NNNN
+        var parts = result.value[0].job_ref.split('-');
+        var num = parseInt(parts[2], 10) || 0;
+        if (num > maxNum) maxNum = num;
+      }
+    });
+
+    return prefix + String(maxNum + 1).padStart(4, '0') + '-' + initials;
+  } catch(e) {
+    console.warn('swGenerateJobRef:', e);
+    return prefix + '0001-' + initials;
+  }
+}
+
+async function swGetInheritedRef(briefId, eventId) {
+  // Returns the job_ref from the parent brief or event, or null if not found
+  var base = SUPABASE_URL + '/rest/v1';
+  var hdrs = getAuthHeaders();
+  try {
+    if (briefId) {
+      var r = await fetch(base + '/briefs?id=eq.' + briefId + '&select=job_ref', { headers: hdrs });
+      if (r.ok) { var rows = await r.json(); if (rows[0] && rows[0].job_ref) return rows[0].job_ref; }
+    }
+    if (eventId) {
+      var r2 = await fetch(base + '/events?id=eq.' + eventId + '&select=job_ref', { headers: hdrs });
+      if (r2.ok) { var rows2 = await r2.json(); if (rows2[0] && rows2[0].job_ref) return rows2[0].job_ref; }
+    }
+  } catch(e) { console.warn('swGetInheritedRef:', e); }
+  return null;
+}
+
 async function swEnsureUser() {
   if (CB_CURRENT_USER) return CB_CURRENT_USER;
   if (SW_INIT_PROMISE) return SW_INIT_PROMISE;
