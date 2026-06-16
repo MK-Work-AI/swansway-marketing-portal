@@ -1,4 +1,4 @@
-// v29 — inline swSocialFrom* so this works regardless of bundle-core cache state
+// v100
 if (typeof swSocialFromBrief === 'undefined') {
   window.swSocialFromBrief = function(briefId, briefData) {
     var brandId = briefData.brand_id || (briefData.brand && briefData.brand.id) || null;
