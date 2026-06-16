@@ -795,7 +795,17 @@ document.addEventListener('click', navCloseAll);
 .bb-dur-weeks { font-family:var(--font-d); font-size:22px; font-weight:700; color:var(--ink); line-height:1; }
 .bb-dur-label { font-family:var(--font-m); font-size:9px; color:var(--ink-soft); margin-top:4px; letter-spacing:0.06em; }
 
-/* Allocation bars */
+/* Channel split rows */
+    .bb-ch-split-row { display:grid; grid-template-columns:16px 1fr 90px 55px 50px; gap:10px; align-items:center; padding:8px 12px; background:var(--white); border:1.5px solid var(--border); border-radius:4px; margin-bottom:6px; }
+    .bb-ch-split-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .bb-ch-split-name { font-size:12px; font-weight:600; color:var(--ink); }
+    .bb-ch-split-track { height:4px; background:var(--surface); border-radius:2px; overflow:hidden; position:relative; }
+    .bb-ch-split-fill { position:absolute; left:0; top:0; height:100%; border-radius:2px; transition:width 0.3s; }
+    .bb-ch-split-input { font-family:var(--font-m); font-size:13px; font-weight:600; border:1.5px solid var(--border); border-radius:4px; padding:4px 8px; text-align:right; width:100%; color:var(--ink); }
+    .bb-ch-split-input:focus { border-color:var(--accent); outline:none; }
+    .bb-ch-split-pct { font-family:var(--font-m); font-size:11px; color:var(--ink-soft); text-align:right; }
+
+    /* Allocation bars */
 .bb-alloc-list { display:flex; flex-direction:column; gap:6px; margin-bottom:1.75rem; }
 .bb-alloc-row { display:grid; grid-template-columns:170px 1fr 50px 75px; gap:10px; align-items:center; }
 .bb-alloc-name { font-size:11px; color:var(--ink); }
@@ -1117,6 +1127,18 @@ document.addEventListener('click', navCloseAll);
       </div>
       <div class="bb-section-label">Channel activation (pre-recommended, toggle to adjust)</div>
       <div class="bb-peso-grid" id="bb-peso-grid"></div>
+      <!-- Channel budget split — populated by bbRenderChannelSplit() after channels are selected -->
+      <div id="bb-channel-split-section" style="display:none;margin-top:1.5rem">
+        <div class="bb-section-label">How is your budget split across channels?</div>
+        <div id="bb-channel-split-list" style="margin-bottom:10px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border-radius:4px;margin-bottom:6px">
+          <span style="font-family:var(--font-m);font-size:11px;font-weight:700;color:var(--ink)">Total allocated</span>
+          <span id="bb-split-total" style="font-family:var(--font-m);font-size:13px;font-weight:700;color:var(--ink)">£0</span>
+          <span id="bb-split-status" style="font-size:11px;font-family:var(--font-m)"></span>
+          <button onclick="bbAutoSplitChannels()" style="font-family:var(--font-m);font-size:11px;padding:4px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--white);cursor:pointer;color:var(--ink-soft)">Auto-split equally</button>
+        </div>
+      </div>
+
       <div class="bb-section-label" style="margin-top:1.5rem">Single-minded proposition</div>
       <textarea class="bb-textarea" id="bb-smp" placeholder="What's the ONE thing you want the audience to think, feel or do? e.g. 'BYD Seal offers Tesla-level technology at £10K less — and it is ready now.'" oninput="BB.proposition=this.value;bbUpdateBrief()"></textarea>
       <div class="bb-prop-hint">Research: A single clear proposition outperforms multi-message campaigns by 3.5× (Binet & Field, IPA Databank)</div>
