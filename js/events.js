@@ -348,6 +348,7 @@ function evFmtGBP(n) {
 function evOpenDetail(id) {
   var ev = EV_EVENTS.find(function(e){ return e.id === id; });
   if (!ev) return;
+  window._evDetailCurrent = ev; // Store for onclick handlers
   var type = EV_TYPES.find(function(t){ return t.id === ev.event_type_id; });
   var site = SB_SITES.find(function(s){ return s.site_id === ev.site_id; });
   var vehicles = EV_VEHICLES[ev.id] || [];
@@ -420,7 +421,7 @@ function evOpenDetail(id) {
     + '<div class="ev-modal-footer">'
     + (ev.job_ref ? '<span style="font-family:var(--font-m);font-size:10px;color:var(--ink-soft);letter-spacing:0.05em;padding:4px 8px;background:var(--surface);border-radius:4px;margin-right:auto">' + evEsc(ev.job_ref) + '</span>' : '')
     + '<button class="btn" onclick="evOpenForm(\'' + ev.id + '\')">\u270F Edit</button>'
-    + '<button class="btn" style="background:#1E3A8A;color:#fff;border-color:#1E3A8A" onclick="swSocialFromEvent([\''+ev.id+'\'],{title:ev.title||\'\',' + 'brand_id:ev.brand_id,start_date:ev.start_date,end_date:ev.end_date,location:ev.location||\'\',' + 'job_ref:ev.job_ref||\'\'});">\uD83D\uDCF1 Social post</button>'
+    + '<button class="btn" style="background:#1E3A8A;color:#fff;border-color:#1E3A8A" onclick="swSocialFromEvent([window._evDetailCurrent.id],{title:window._evDetailCurrent.title||\'\',brand_id:window._evDetailCurrent.brand_id,start_date:window._evDetailCurrent.start_date,end_date:window._evDetailCurrent.end_date,location:window._evDetailCurrent.location||\'\',job_ref:window._evDetailCurrent.job_ref||\'\'});">\uD83D\uDCF1 Social post</button>'
     + (isLeadership && ev.status === 'draft'     ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'confirmed\')">\u2713 Confirm</button>' : '')
     + (isLeadership && ev.status === 'confirmed' ? '<button class="btn" onclick="evChangeStatus(\'' + ev.id + '\',\'draft\')">\u21A9 Unconfirm</button>' : '')
     + (isLeadership && ev.status === 'confirmed' ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'completed\')">&#x2705; Mark Complete</button>' : '')
