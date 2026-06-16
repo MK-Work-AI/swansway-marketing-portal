@@ -1105,6 +1105,24 @@ async function slConfirmGenerate(payload) {
     slShowToast('Pick at least one platform', 'error');
     return;
   }
+
+  // Dedup check — if a post already exists for this brief/event, warn
+  try {
+    var dupQuery = null;
+    if (payload.brief_id) dupQuery = SL_BASE + '/social_posts?brief_id=eq.' + payload.brief_id + '&select=id,title&limit=5';
+    else if (payload.event_ids && payload.event_ids[0]) dupQuery = SL_BASE + '/social_posts?event_id=eq.' + payload.event_ids[0] + '&select=id,title&limit=5';
+    if (dupQuery) {
+      var dupResp = await fetch(dupQuery, { headers: getAuthHeaders() });
+      if (dupResp.ok) {
+        var dups = await dupResp.json();
+        if (dups && dups.length) {
+          var dupNames = dups.map(function(d){ return '"' + (d.title||'Untitled') + '"'; }).join(', ');
+          var _dupMsg = 'Social posts already exist for this campaign: ' + dupNames + '. Create another one?'; if (!confirm(_dupMsg)) return;
+        }
+      }
+    }
+  } catch(e) { /* non-fatal — continue */ }
+
   if (modal) modal.remove();
 
   // Create one post per platform (or one post covering all selected)
