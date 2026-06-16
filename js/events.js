@@ -290,6 +290,7 @@ function evRenderCard(ev) {
     + '<span class="ev-badge ev-badge--outline" style="border-color:' + statusColor + ';color:' + statusColor + '">' + ev.status.charAt(0).toUpperCase() + ev.status.slice(1) + '</span>'
     + (ev.coop_funded ? '<span class="ev-badge" style="background:#0891B2">Co-op</span>' : '')
     + '</div>'
+    + (ev.job_ref ? '<div style="font-size:10px;font-family:var(--font-m);color:var(--ink-soft);letter-spacing:0.06em;margin-bottom:2px">' + evEsc(ev.job_ref) + '</div>' : '')
     + '<div class="ev-card-title">' + evEsc(ev.title) + '</div>'
     + '<div class="ev-card-meta">'
     + (dateStr ? '<span class="ev-card-meta-item">\uD83D\uDCC5 ' + dateStr + '</span>' : '')
@@ -340,6 +341,7 @@ function evOpenDetail(id) {
     + '<span class="ev-badge ev-badge--outline" style="border-color:' + statusColor + ';color:' + statusColor + '">' + ev.status.charAt(0).toUpperCase() + ev.status.slice(1) + '</span>'
     + (ev.coop_funded ? '<span class="ev-badge" style="background:#0891B2">Co-op funded</span>' : '')
     + '</div>'
+    + (ev.job_ref ? '<div style="font-size:11px;font-family:var(--font-m);color:rgba(255,255,255,0.7);letter-spacing:0.06em;margin-bottom:4px">' + evEsc(ev.job_ref) + '</div>' : '')
     + '<div class="ev-modal-title">' + evEsc(ev.title) + '</div>'
     + '<div class="ev-modal-site">' + (site ? evEsc(site.site_name) : ev.site_id || '') + '</div>'
     + '</div>'
