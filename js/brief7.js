@@ -1102,15 +1102,18 @@ function bbShowPostSave(briefId, status) {
     fb.style.display = 'block';
     var _perms = CB_PERMS[CB_CURRENT_USER] || {};
     var _canLaunchNow = _perms.can_approve_all || _perms.can_approve_digital;
+    var _refHtml = (briefRef || window._lastJobRef) ? '<div style="display:inline-block;margin-bottom:10px;padding:4px 12px;background:#F1F5F9;border:1.5px solid #CBD5E1;border-radius:4px;font-family:var(--font-m);font-size:12px;color:#475569;letter-spacing:0.05em">Job ref: <strong style="color:var(--ink);font-size:13px">' + (briefRef || window._lastJobRef) + '</strong></div>' : '';
     if (_canLaunchNow) {
       fb.innerHTML = '<div class="bb-s6-confirm">'
         + '<div class="bb-s6-tick">✓</div>'
+        + _refHtml
         + '<div class="bb-s6-msg"><strong>Saved, ' + firstName + '.</strong> Ready to go live.</div>'
         + '<button class="bb-s6-launch" onclick="bbSubmitAndLaunch()">LAUNCH CAMPAIGN</button>'
         + '</div>';
     } else {
       fb.innerHTML = '<div class="bb-s6-confirm">'
         + '<div class="bb-s6-tick">✓</div>'
+        + _refHtml
         + '<div class="bb-s6-msg"><strong>Saved, ' + firstName + '.</strong> When ready, submit for approval.</div>'
         + '<button class="bb-s6-submit-btn" onclick="bbSubmitBrief()">Submit for approval →</button>'
         + '<div style="margin-top:8px"><button class="bb-s6-submit-btn" style="background:#1E3A8A;margin-top:4px" onclick="slPromptFromBrief(window._lastSavedBriefId||\'' + briefId + '\', BB||{})">📱 Generate social posts</button></div>'
@@ -1638,6 +1641,7 @@ async function bbOpenBriefPanel(briefId) {
     + '<span style="background:rgba(255,255,255,0.2);color:#fff;padding:3px 10px;border-radius:10px;font-size:12px">' + (brief.brand_name||'') + '</span>'
     + '<span style="background:rgba(255,255,255,0.2);color:#fff;padding:3px 10px;border-radius:10px;font-size:12px">' + (brief.campaign_type||'') + '</span>'
     + '<span style="background:rgba(255,255,255,0.2);color:#fff;padding:3px 10px;border-radius:10px;font-size:12px">' + (brief.status.charAt(0).toUpperCase()+brief.status.slice(1)) + '</span>'
+    + (brief.job_ref ? '<span style="background:rgba(0,0,0,0.25);color:#fff;padding:3px 10px;border-radius:10px;font-size:11px;font-family:var(--font-m);letter-spacing:0.06em">' + brief.job_ref + '</span>' : '')
     + '</div>'
     + '</div>'
 
@@ -1764,6 +1768,26 @@ async function bbSubmitNote() {
 }
 
 
+async function bbGenerateJobRef() {
+  // Format: SW-YYYY-NNNN (e.g. SW-2026-0042)
+  // Queries briefs for the highest ref number this year, increments by 1
+  try {
+    var year = new Date().getFullYear();
+    var prefix = 'SW-' + year + '-';
+    var r = await fetch('https://humitzrleflxnlnodpde.supabase.co/rest/v1/briefs?select=job_ref&job_ref=like.' + prefix + '*&order=job_ref.desc&limit=1', {
+      headers: getAuthHeaders()
+    });
+    if (r.ok) {
+      var rows = await r.json();
+      if (rows && rows[0] && rows[0].job_ref) {
+        var lastNum = parseInt(rows[0].job_ref.replace(prefix, ''), 10) || 0;
+        return prefix + String(lastNum + 1).padStart(4, '0');
+      }
+    }
+  } catch(e) { console.warn('bbGenerateJobRef:', e); }
+  return 'SW-' + new Date().getFullYear() + '-0001';
+}
+
 async function bbSaveBrief() {
   if(!SB_USER) {
     openAuth();
@@ -1846,6 +1870,9 @@ async function bbSaveBrief() {
         body: JSON.stringify(record)
       });
     } else {
+      // Generate job ref for new briefs only
+      record.job_ref = await bbGenerateJobRef();
+      window._lastJobRef = record.job_ref;
       _bbResp = await fetch(_bbBase + '/briefs', {
         method: 'POST',
         headers: _bbHdrs,
@@ -2333,6 +2360,7 @@ function bbRenderCampaignSidebar(el, brief, camp, tasks) {
   el.innerHTML =
     '<div style="height:4px;background:'+brandColor+';margin:-1.5rem -1.5rem 1.25rem;border-radius:0"></div>'
     + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px">Live campaign</div>'
+    + (brief.job_ref ? '<div style="font-size:10px;font-family:var(--font-m);color:rgba(255,255,255,0.65);letter-spacing:0.08em;margin-bottom:4px">' + brief.job_ref + '</div>' : '')
     + '<div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:1rem;letter-spacing:-0.01em">'+(brief.title||brand.name||'Campaign')+'</div>'
 
     // Stage progress bar
