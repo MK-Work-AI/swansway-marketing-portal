@@ -762,6 +762,8 @@ function bbRenderPESO() {
   if(!el) return;
   const ct  = BB.ctype?.id || 'launch';
   const bid = BB.brand?.id || '';
+  // Capture any previously saved channels before resetting (used to restore when editing)
+  var _savedChannels = BB.channels ? BB.channels.slice() : [];
   BB.channels = [];
 
   el.innerHTML = Object.entries(BB_PESO).map(([key,quad])=>`
