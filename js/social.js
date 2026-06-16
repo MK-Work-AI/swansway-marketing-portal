@@ -1119,8 +1119,9 @@ async function slConfirmGenerate(payload) {
     event_id:        payload.event_ids ? payload.event_ids[0] : null,
     brief_id:        payload.brief_id || null,
     scheduled_at:    schedDate,
-    budget_allocated: payload.budget ? Math.round(payload.budget * 0.05) : null,  // 5% of event budget as default
+    budget_allocated: null,  // Left blank — team sets social budget explicitly
     location:        payload.location || null,
+    job_ref:         payload.job_ref   || null,
     created_by:      slAsUUID(CB_CURRENT_USER),
     created_at:      new Date().toISOString(),
     updated_at:      new Date().toISOString(),
