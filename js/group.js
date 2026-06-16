@@ -647,6 +647,8 @@ function renderBudgetTracker() {
         var d = SITE_BUDGETS[site.site_id] || {};
         var sitePlan = 0, siteActual = 0, siteCommitted = 0;
         var siteCells = '';
+        // Declare siteSocialData here so it's available inside the month loop below
+        var siteSocialData = typeof getSocialBudgetBySite === 'function' ? getSocialBudgetBySite(site.site_id, site.brand_id) : { months: {}, posts: [] };
         for (var mi = 0; mi < 12; mi++) {
           var sp = d['m' + mi + '_planned'] || 0;
           var sa = d['m' + mi + '_actual']  || 0;
@@ -721,8 +723,7 @@ function renderBudgetTracker() {
         }, 0);
         var identifiedEvPl  = siteEvs.reduce(function(s,e){ return s + (e.planned_budget || 0); }, 0);
         var identifiedEvAc  = siteEvs.reduce(function(s,e){ return s + (e.actual_spend   || 0); }, 0);
-        // Social budgets for this site
-        var siteSocialData = typeof getSocialBudgetBySite === 'function' ? getSocialBudgetBySite(site.site_id, site.brand_id) : { months: {}, posts: [] };
+        // siteSocialData already declared before the month loop above
         var siteSocialTotal = Object.values(siteSocialData.months).reduce(function(s,v){ return s+v; }, 0);
         var siteSocialPosts = siteSocialData.posts || [];
         var identifiedTotal = identifiedCamp + identifiedEvPl + siteSocialTotal;
