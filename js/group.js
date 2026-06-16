@@ -25,7 +25,7 @@ if (typeof swSocialFromEvent === 'undefined') {
   };
 }
 
-ar EV_EVENTS_BUDGET = [];
+var EV_EVENTS_BUDGET = [];
 var BRIEF_COMMITMENTS = {};
 var SOCIAL_BUDGETS = {}; // { site_id: { month: totalBudget } } — from social_posts.budget_allocated
 
