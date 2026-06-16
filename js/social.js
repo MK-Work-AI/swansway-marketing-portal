@@ -43,6 +43,7 @@ var SL_PANEL_POST   = null; // current post object in panel
 var SL_APPROVERS    = {};   // { brandId: [userId, ...] } from admin_config
 var SL_COMMENTS     = [];   // comments for current panel post
 var SL_ACTIVE_PREVIEW_TAB = null;
+var SL_DRAG_POST_ID = null;  // id of post being dragged
 
 /* ══════════════════════════════════════════════════════════
    INIT
@@ -317,7 +318,9 @@ function slRenderCalendar() {
         var plat = SL_PLATFORMS.find(function(pl){ return (p.platform_ids||[]).includes(pl.id); });
         var color = plat ? plat.color : '#6B6560';
         var st = SL_STATUSES[p.status] || SL_STATUSES.draft;
-        postsHtml += '<button class="sl-cal-pill" style="background:' + st.bg + ';color:' + st.color + '" onclick="event.stopPropagation();slOpenPost(\'' + p.id + '\')">'
+        // Only draft/approved/scheduled posts can be rescheduled by dragging
+        var canDrag = ['draft','approved','scheduled'].includes(p.status);
+        postsHtml += '<button class="sl-cal-pill" draggable="' + (canDrag?'true':'false') + '" data-post-id="' + p.id + '" style="background:' + st.bg + ';color:' + st.color + '" onclick="event.stopPropagation();slOpenPost(\'' + p.id + '\')" onmousedown="event.stopPropagation()" ondragstart="slDragStart(event,\'' + p.id + '\')" ondragend="slDragEnd(event)">'
           + '<span class="sl-cal-pill-dot" style="background:' + color + '"></span>'
           + '<span class="sl-cal-pill-text">' + slEscape(p.title) + '</span>'
           + '</button>';
@@ -331,7 +334,10 @@ function slRenderCalendar() {
       ? '<button class="sl-cal-add" title="Add post on this date" onclick="event.stopPropagation();slOpenPost(null,\'' + (cell.dateStr||'') + '\')">+</button>'
       : '';
 
-    html += '<div class="' + cls + '" onclick="' + (cell.thisMonth ? 'slOpenPost(null,\'' + (cell.dateStr||'') + '\')' : '') + '">'
+    var dropHandlers = cell.thisMonth && cell.dateStr
+      ? ' ondragover="slDragOver(event)" ondragleave="slDragLeave(event)" ondrop="slDrop(event,\'' + cell.dateStr + '\')"'
+      : '';
+    html += '<div class="' + cls + '"' + dropHandlers + ' onclick="' + (cell.thisMonth ? 'slOpenPost(null,\'' + (cell.dateStr||'') + '\')' : '') + '">'
       + dayNum + postsHtml + addBtn + '</div>';
   });
 
@@ -1157,6 +1163,88 @@ async function slConfirmGenerate(payload) {
 /* ══════════════════════════════════════════════════════════
    UTILITIES
 ══════════════════════════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════════════════════════
+   DRAG-TO-RESCHEDULE
+══════════════════════════════════════════════════════════ */
+
+function slDragStart(e, postId) {
+  SL_DRAG_POST_ID = postId;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', postId);
+  // Slight delay so the drag image captures before the style change
+  setTimeout(function() {
+    var el = e.target;
+    if (el) { el.style.opacity = '0.4'; }
+  }, 0);
+}
+
+function slDragEnd(e) {
+  SL_DRAG_POST_ID = null;
+  var el = e.target;
+  if (el) { el.style.opacity = ''; }
+  // Clean up any lingering drag-over highlights
+  document.querySelectorAll('.sl-cal-cell--drag-over').forEach(function(c) {
+    c.classList.remove('sl-cal-cell--drag-over');
+  });
+}
+
+function slDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  var cell = e.currentTarget;
+  if (!cell.classList.contains('sl-cal-cell--drag-over')) {
+    cell.classList.add('sl-cal-cell--drag-over');
+  }
+}
+
+function slDragLeave(e) {
+  // Only remove highlight if leaving the cell itself, not a child element
+  var cell = e.currentTarget;
+  if (!cell.contains(e.relatedTarget)) {
+    cell.classList.remove('sl-cal-cell--drag-over');
+  }
+}
+
+async function slDrop(e, newDateStr) {
+  e.preventDefault();
+  e.stopPropagation();
+  var cell = e.currentTarget;
+  cell.classList.remove('sl-cal-cell--drag-over');
+
+  var postId = e.dataTransfer.getData('text/plain') || SL_DRAG_POST_ID;
+  if (!postId || !newDateStr) return;
+
+  // Find the post and preserve existing time, just swap the date
+  var post = SL_POSTS.find(function(p) { return p.id === postId; });
+  if (!post) return;
+
+  // Build new scheduled_at: keep existing time if set, default to 09:00
+  var existingTime = post.scheduled_at ? post.scheduled_at.substring(11,16) : '09:00';
+  var newScheduledAt = newDateStr + 'T' + existingTime + ':00';
+
+  // Optimistic update in local array
+  post.scheduled_at = newScheduledAt;
+  slApplyFilters();
+  slRenderCalendar();
+
+  // Persist to Supabase
+  try {
+    var r = await fetch(SL_BASE + '/social_posts?id=eq.' + postId, {
+      method: 'PATCH',
+      headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ scheduled_at: newScheduledAt, updated_at: new Date().toISOString() })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    slShowToast('Rescheduled ✓', 'success');
+  } catch(e) {
+    // Revert optimistic update on failure
+    slShowToast('Reschedule failed: ' + e.message, 'error');
+    await slLoadPosts();
+    slRenderCalendar();
+  }
+}
 
 function slEscape(str) {
   if (!str) return '';
