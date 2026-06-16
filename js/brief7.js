@@ -1891,16 +1891,6 @@ async function bbSaveBrief() {
     feedback.style.display = 'none';
     window._lastSavedBriefId = data ? data.id : null;
     window._lastSavedBriefTitle = title;
-    // Auto-create/update social placeholder 2 days before campaign start
-    if (data && data.id && typeof swCreateSocialPlaceholder === 'function') {
-      swCreateSocialPlaceholder(data.id, {
-        title: title,
-        brand_id: record.brand_id || null,
-        brand_name: record.brand_name || null,
-        start_date: record.start_date || null,
-        job_ref: data.job_ref || window._lastJobRef || null
-      });
-    }
     // Link brief back to calendar campaign if opened from one
     if (BB && BB._calCampaignId && window._lastSavedBriefId) {
       fetch('https://humitzrleflxnlnodpde.supabase.co/rest/v1/campaigns?id=eq.'+BB._calCampaignId, {
