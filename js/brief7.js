@@ -1768,26 +1768,6 @@ async function bbSubmitNote() {
 }
 
 
-async function bbGenerateJobRef() {
-  // Format: SW-YYYY-NNNN (e.g. SW-2026-0042)
-  // Queries briefs for the highest ref number this year, increments by 1
-  try {
-    var year = new Date().getFullYear();
-    var prefix = 'SW-' + year + '-';
-    var r = await fetch('https://humitzrleflxnlnodpde.supabase.co/rest/v1/briefs?select=job_ref&job_ref=like.' + prefix + '*&order=job_ref.desc&limit=1', {
-      headers: getAuthHeaders()
-    });
-    if (r.ok) {
-      var rows = await r.json();
-      if (rows && rows[0] && rows[0].job_ref) {
-        var lastNum = parseInt(rows[0].job_ref.replace(prefix, ''), 10) || 0;
-        return prefix + String(lastNum + 1).padStart(4, '0');
-      }
-    }
-  } catch(e) { console.warn('bbGenerateJobRef:', e); }
-  return 'SW-' + new Date().getFullYear() + '-0001';
-}
-
 async function bbSaveBrief() {
   if(!SB_USER) {
     openAuth();
@@ -1871,7 +1851,7 @@ async function bbSaveBrief() {
       });
     } else {
       // Generate job ref for new briefs only
-      record.job_ref = await bbGenerateJobRef();
+      record.job_ref = await swGenerateJobRef(CB_CURRENT_USER);
       window._lastJobRef = record.job_ref;
       _bbResp = await fetch(_bbBase + '/briefs', {
         method: 'POST',
