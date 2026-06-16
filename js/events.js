@@ -393,7 +393,7 @@ function evOpenDetail(id) {
     + '<div class="ev-modal-footer">'
     + (ev.job_ref ? '<span style="font-family:var(--font-m);font-size:10px;color:var(--ink-soft);letter-spacing:0.05em;padding:4px 8px;background:var(--surface);border-radius:4px;margin-right:auto">' + evEsc(ev.job_ref) + '</span>' : '')
     + '<button class="btn" onclick="evOpenForm(\'' + ev.id + '\')">\u270F Edit</button>'
-    + (typeof slPromptFromEvent === 'function' ? '<button class="btn" style="background:#1E3A8A;color:#fff;border-color:#1E3A8A" onclick="slPromptFromEvent([\''+ev.id+'\'],{title:evEsc(ev.title),brand_id:ev.brand_id,start_date:ev.start_date,end_date:ev.end_date,location:ev.location,job_ref:ev.job_ref})">\uD83D\uDCF1 Social post</button>' : '')
+    + '<button class="btn" style="background:#1E3A8A;color:#fff;border-color:#1E3A8A" onclick="swSocialFromEvent([\''+ev.id+'\'],{title:ev.title||\'\',' + 'brand_id:ev.brand_id,start_date:ev.start_date,end_date:ev.end_date,location:ev.location||\'\',' + 'job_ref:ev.job_ref||\'\'});">\uD83D\uDCF1 Social post</button>'
     + (isLeadership && ev.status === 'draft'     ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'confirmed\')">\u2713 Confirm</button>' : '')
     + (isLeadership && ev.status === 'confirmed' ? '<button class="btn" onclick="evChangeStatus(\'' + ev.id + '\',\'draft\')">\u21A9 Unconfirm</button>' : '')
     + (isLeadership && ev.status === 'confirmed' ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'completed\')">&#x2705; Mark Complete</button>' : '')
@@ -1145,16 +1145,7 @@ async function evSave(saveAsConfirmed) {
     // Social Hub: prompt to generate posts for new events
     if (!EV_EDITING_ID && typeof _newEventIds !== 'undefined' && _newEventIds.length) {
       var _evSocialData = { title: d.title, brand_id: d.brand_id, site_ids: d.site_ids, start_date: d.start_date, end_date: d.end_date, planned_budget: d.planned_budget, location: d.location };
-      if (typeof slPromptFromEvent === 'function') {
-        setTimeout(function() { slPromptFromEvent(_newEventIds, _evSocialData); }, 400);
-      } else {
-        setTimeout(function() {
-          if (confirm('Generate social posts for this event?\n\nThis will create draft posts in the Social Hub pre-filled with the event details.')) {
-            try { sessionStorage.setItem('_slGenPayload', JSON.stringify({ source: 'event', event_ids: _newEventIds, title: _evSocialData.title, brand_id: _evSocialData.brand_id, site_ids: _evSocialData.site_ids, start_date: _evSocialData.start_date, end_date: _evSocialData.end_date, budget: _evSocialData.planned_budget, location: _evSocialData.location })); } catch(e) {}
-            window.location = 'social.html';
-          }
-        }, 500);
-      }
+      setTimeout(function() { swSocialFromEvent(_newEventIds, _evSocialData); }, 400);
     }
   } catch(e) {
     evFormError('Save failed: ' + e.message);
