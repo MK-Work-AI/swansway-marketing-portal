@@ -1081,7 +1081,7 @@ function bbGenerateBrief() {
 // loadBriefCommitmentsForTracker is defined in group.js
 
 
-function bbShowPostSave(briefId, status) {
+function bbShowPostSave(briefId, status, jobRef) {
   var fb = document.getElementById('bb-save-feedback');
   if (!fb) return;
 
@@ -1102,7 +1102,7 @@ function bbShowPostSave(briefId, status) {
     fb.style.display = 'block';
     var _perms = CB_PERMS[CB_CURRENT_USER] || {};
     var _canLaunchNow = _perms.can_approve_all || _perms.can_approve_digital;
-    var _refHtml = (briefRef || window._lastJobRef) ? '<div style="display:inline-block;margin-bottom:10px;padding:4px 12px;background:#F1F5F9;border:1.5px solid #CBD5E1;border-radius:4px;font-family:var(--font-m);font-size:12px;color:#475569;letter-spacing:0.05em">Job ref: <strong style="color:var(--ink);font-size:13px">' + (briefRef || window._lastJobRef) + '</strong></div>' : '';
+    var _refHtml = (jobRef || window._lastJobRef) ? '<div style="display:inline-block;margin-bottom:10px;padding:4px 12px;background:#F1F5F9;border:1.5px solid #CBD5E1;border-radius:4px;font-family:var(--font-m);font-size:12px;color:#475569;letter-spacing:0.05em">Job ref: <strong style="color:var(--ink);font-size:13px">' + (jobRef || window._lastJobRef) + '</strong></div>' : '';
     if (_canLaunchNow) {
       fb.innerHTML = '<div class="bb-s6-confirm">'
         + '<div class="bb-s6-tick">✓</div>'
@@ -1929,7 +1929,7 @@ async function bbSaveBrief() {
           if (_campSec) _campSec.style.display = 'block';
           bbRenderCampaignSection(_updatedBrief);
         } else {
-          bbShowPostSave(data ? data.id : null, _savedStatus);
+          bbShowPostSave(data ? data.id : null, _savedStatus, data ? data.job_ref : window._lastJobRef);
         }
         showToast('Campaign updated ✓', 'success');
       }
