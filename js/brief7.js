@@ -1,4 +1,30 @@
-// v100
+// v100 — inline swSocialFrom* fallbacks
+if (typeof swSocialFromBrief === 'undefined') {
+  window.swSocialFromBrief = function(briefId, briefData) {
+    var brandId = briefData.brand_id || (briefData.brand && briefData.brand.id) || null;
+    var payload = { source:'brief', brief_id:briefId, title:briefData.title||'Campaign',
+      brand_id:brandId, site_ids:briefData.site_ids||[], start_date:briefData.start_date||null,
+      end_date:briefData.end_date||null, budget:briefData.budget||null, job_ref:briefData.job_ref||null };
+    try { sessionStorage.setItem('_slGenPayload', JSON.stringify(payload)); } catch(e) {}
+    if (/social\.html/.test(window.location.pathname)) {
+      if (typeof slShowGenModal === 'function') slShowGenModal(payload);
+    } else { window.location = 'social.html'; }
+  };
+}
+if (typeof swSocialFromEvent === 'undefined') {
+  window.swSocialFromEvent = function(eventIds, eventData) {
+    var payload = { source:'event', event_ids:Array.isArray(eventIds)?eventIds:[eventIds],
+      title:eventData.title||'Event', brand_id:eventData.brand_id||null,
+      site_ids:eventData.site_ids||[], start_date:eventData.start_date||null,
+      end_date:eventData.end_date||null, budget:eventData.planned_budget||eventData.budget||null,
+      location:eventData.location||null, job_ref:eventData.job_ref||null };
+    try { sessionStorage.setItem('_slGenPayload', JSON.stringify(payload)); } catch(e) {}
+    if (/social\.html/.test(window.location.pathname)) {
+      if (typeof slShowGenModal === 'function') slShowGenModal(payload);
+    } else { window.location = 'social.html'; }
+  };
+}
+
 // Swansway Marketing Portal — Brief Builder JS
 
 // Snapshot of original bb-left sidebar HTML — restored on bbNewBrief
