@@ -1725,9 +1725,9 @@ async function swGenerateJobRef(creatorId) {
   try {
     // Query all three tables for refs matching today's prefix — highest number wins
     var results = await Promise.allSettled([
-      fetch(base + '/briefs?select=job_ref&job_ref=like.' + prefix + '*&order=job_ref.desc&limit=1', { headers: hdrs }).then(function(r) { return r.json(); }),
-      fetch(base + '/events?select=job_ref&job_ref=like.' + prefix + '*&order=job_ref.desc&limit=1', { headers: hdrs }).then(function(r) { return r.json(); }),
-      fetch(base + '/social_posts?select=job_ref&job_ref=like.' + prefix + '*&order=job_ref.desc&limit=1', { headers: hdrs }).then(function(r) { return r.json(); })
+      fetch(base + '/briefs?select=job_ref&job_ref=like.' + encodeURIComponent(prefix + '%') + '&order=job_ref.desc&limit=1', { headers: hdrs }).then(function(r) { return r.json(); }),
+      fetch(base + '/events?select=job_ref&job_ref=like.' + encodeURIComponent(prefix + '%') + '&order=job_ref.desc&limit=1', { headers: hdrs }).then(function(r) { return r.json(); }),
+      fetch(base + '/social_posts?select=job_ref&job_ref=like.' + encodeURIComponent(prefix + '%') + '&order=job_ref.desc&limit=1', { headers: hdrs }).then(function(r) { return r.json(); })
     ]);
 
     var maxNum = 0;
