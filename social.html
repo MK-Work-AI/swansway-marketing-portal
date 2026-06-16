@@ -60,6 +60,9 @@ document.addEventListener('click', navCloseAll);
     .sl-cal-cell--other { background:var(--surface); }
     .sl-cal-cell--today { background:#EFF6FF; }
     .sl-cal-cell--today:hover { background:#E0EFFE; }
+    .sl-cal-cell--drag-over { background:#EEF4FF !important; outline:2px dashed var(--swansway); outline-offset:-2px; }
+    .sl-cal-pill[draggable='true'] { cursor:grab; }
+    .sl-cal-pill[draggable='true']:active { cursor:grabbing; }
     .sl-cal-day-num { font-family:var(--font-m); font-size:12px; font-weight:500; color:var(--ink-soft); margin-bottom:4px; }
     .sl-cal-today-badge { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:var(--swansway); color:#fff; font-weight:700; font-size:12px; }
     .sl-cal-pill { display:flex; align-items:center; gap:4px; width:100%; margin-bottom:2px; padding:3px 5px; border-radius:3px; cursor:pointer; overflow:hidden; transition:opacity .15s; border:none; text-align:left; }
