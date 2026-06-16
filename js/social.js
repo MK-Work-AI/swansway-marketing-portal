@@ -113,12 +113,15 @@ async function slLoadPosts() {
 
 async function slLoadApprovers() {
   try {
-    var r = await fetch(SL_BASE + '/admin_config?key=eq.social_approvers&select=value', {
+    // social_approvers is stored inside the main config blob (not a separate key/value row)
+    var r = await fetch(SL_BASE + '/admin_config?select=config&order=updated_at.desc&limit=1', {
       headers: getAuthHeaders()
     });
     if (r.ok) {
       var rows = await r.json();
-      if (rows && rows[0]) SL_APPROVERS = rows[0].value || {};
+      if (rows && rows[0] && rows[0].config && rows[0].config.social_approvers) {
+        SL_APPROVERS = rows[0].config.social_approvers;
+      }
     }
   } catch(e) { /* non-fatal */ }
 }
