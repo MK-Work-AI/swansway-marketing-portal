@@ -1392,47 +1392,72 @@ async function loadSiteBudgets() {
       !_p.endsWith('budget.html')  && !_p.endsWith('/budget') &&
       !_p.endsWith('channels.html')&& !_p.endsWith('/channels')) return;
   try {
-    var resp = await fetch(SUPABASE_URL + '/rest/v1/site_budgets?select=*', {
-      headers: {
-        ...getAuthHeaders({'Content-Type': 'application/json'})
-      }
+    var year = parseInt(PLAN_YEAR) || new Date().getFullYear();
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/site_budget_lines?year=eq.' + year + '&select=*', {
+      headers: getAuthHeaders({'Content-Type': 'application/json'})
     });
     if (!resp.ok) {
-      var err = await resp.text();
-      console.warn('loadSiteBudgets error:', resp.status, err);
+      console.warn('loadSiteBudgets error:', resp.status, await resp.text());
       return;
     }
-    var rows = await resp.json();
-    if (!rows || !rows.length) { console.log('loadSiteBudgets: no data'); return; }
-    rows.forEach(function(row) { SITE_BUDGETS[row.site_id] = row; });
-    var groupTotal = rows.reduce(function(s, r) { return s + (r.annual_planned || 0); }, 0);
+    var lines = await resp.json() || [];
+
+    // Build SITE_BUDGETS with compatibility adapter:
+    // SITE_BUDGETS[site_id] = {
+    //   m0_planned, m1_planned... (sum across all channels for that month)
+    //   m0_actual,  m1_actual...
+    //   annual_planned (sum of all months planned)
+    //   channels: { channelName: { 0: {planned,actual}, 1:... } }  ← new granular data
+    // }
+    SITE_BUDGETS = {};
+    lines.forEach(function(line) {
+      var sid = line.site_id;
+      if (!SITE_BUDGETS[sid]) {
+        SITE_BUDGETS[sid] = { site_id: sid, annual_planned: 0, channels: {} };
+        for (var m = 0; m < 12; m++) {
+          SITE_BUDGETS[sid]['m' + m + '_planned'] = 0;
+          SITE_BUDGETS[sid]['m' + m + '_actual']  = 0;
+        }
+      }
+      // Granular channel data
+      if (!SITE_BUDGETS[sid].channels[line.channel]) {
+        SITE_BUDGETS[sid].channels[line.channel] = {};
+      }
+      SITE_BUDGETS[sid].channels[line.channel][line.month] = {
+        planned: line.planned || 0,
+        actual:  line.actual  || 0
+      };
+      // Roll up to compatibility flat fields
+      SITE_BUDGETS[sid]['m' + line.month + '_planned'] += (line.planned || 0);
+      SITE_BUDGETS[sid]['m' + line.month + '_actual']  += (line.actual  || 0);
+      SITE_BUDGETS[sid].annual_planned                 += (line.planned || 0);
+    });
+
+    var groupTotal = Object.values(SITE_BUDGETS).reduce(function(s, d) { return s + (d.annual_planned || 0); }, 0);
     if (groupTotal > 0) {
       var el = document.getElementById('group-budget-val');
       if (el) {
-      if (groupTotal >= 100000) el.textContent = '£' + (groupTotal/1000000).toFixed(2) + 'M';
-      else if (groupTotal >= 1000) el.textContent = '£' + (groupTotal/1000).toFixed(1) + 'K';
-      else el.textContent = '£' + groupTotal.toLocaleString();
+        if (groupTotal >= 1000000) el.textContent = '£' + (groupTotal/1000000).toFixed(2) + 'M';
+        else if (groupTotal >= 1000) el.textContent = '£' + (groupTotal/1000).toFixed(1) + 'K';
+        else el.textContent = '£' + groupTotal.toLocaleString();
+      }
     }
-    }
-    if(typeof updateBrandBudgetsFromSites==='function') updateBrandBudgetsFromSites();
-    if(typeof syncBrandSitesFromHubSites==='function') syncBrandSitesFromHubSites();
-    // Run commitments + events in parallel — both independent of each other
+    if (typeof updateBrandBudgetsFromSites === 'function') updateBrandBudgetsFromSites();
+    if (typeof syncBrandSitesFromHubSites  === 'function') syncBrandSitesFromHubSites();
     await Promise.all([
       typeof loadBriefCommitmentsForTracker === 'function' ? loadBriefCommitmentsForTracker() : Promise.resolve(),
       loadEventsForBudget(),
       loadSocialBudgets()
     ]);
-    // Now site budgets are loaded — trigger channel aggregation if brand data ready
     if (Object.keys(BRAND_CHANNELS_DATA).length) {
       updateGroupChannelsFromBrands();
       if (typeof renderGroupChannels === 'function') renderGroupChannels();
     }
     if (typeof renderBudgetTracker === 'function') renderBudgetTracker();
-    // Re-render brand site budget tab if on brand.html
     var urlParams = new URLSearchParams(window.location.search);
     var activeBrandId = urlParams.get('brand');
     if (activeBrandId && typeof renderBrandSites === 'function') renderBrandSites(activeBrandId);
-    console.log('Site budgets loaded: ' + rows.length + ' sites, £' + groupTotal.toLocaleString());
+    console.log('Site budgets loaded:', lines.length, 'lines, £' + groupTotal.toLocaleString() + ' planned');
   } catch(e) { console.warn('loadSiteBudgets exception:', e); }
 }
 
