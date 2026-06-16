@@ -712,48 +712,42 @@ function bbRenderChannelSplit() {
   var list    = document.getElementById('bb-channel-split-list');
   if (!section || !list) return;
 
-  var channels = BB.channels || [];
-  if (!channels.length || !BB.budget) {
-    section.style.display = 'none';
-    return;
-  }
-
+  var channelIds = BB.channels || [];
+  if (!channelIds.length || !BB.budget) { section.style.display = 'none'; return; }
   section.style.display = 'block';
 
-  // Get channel colours from admin config STATE.channels or BC_DEFAULT_CHANNELS
-  var colorMap = {};
-  var allChs = (typeof STATE !== 'undefined' && STATE.channels && STATE.channels.length)
-    ? STATE.channels : (typeof BC_DEFAULT_CHANNELS !== 'undefined' ? BC_DEFAULT_CHANNELS : []);
-  allChs.forEach(function(c) {
-    colorMap[c.name || c.channel] = c.color || '#6B7280';
+  // Build id→{name,color} lookup from BB_PESO
+  var pesoMap = {};
+  var pesoColors = { P:'#FF6B35', E:'#4ECDC4', S:'#A855F7', O:'#22C55E' };
+  if (typeof BB_PESO !== 'undefined') {
+    Object.keys(BB_PESO).forEach(function(key) {
+      var quad = BB_PESO[key];
+      (quad.channels || []).forEach(function(ch) {
+        pesoMap[ch.id] = { name: ch.name, color: pesoColors[key] || '#6B7280' };
+      });
+    });
+  }
+
+  // Sync BB.channel_split — remove deselected, add new
+  Object.keys(BB.channel_split).forEach(function(id) {
+    if (!channelIds.includes(id)) delete BB.channel_split[id];
+  });
+  channelIds.forEach(function(id) {
+    if (BB.channel_split[id] === undefined) BB.channel_split[id] = 0;
   });
 
-  // Remove channels no longer selected from split
-  Object.keys(BB.channel_split).forEach(function(ch) {
-    if (!channels.includes(ch)) delete BB.channel_split[ch];
-  });
-
-  // Ensure all selected channels have a value (default 0)
-  channels.forEach(function(ch) {
-    if (BB.channel_split[ch] === undefined) BB.channel_split[ch] = 0;
-  });
-
-  var total = channels.reduce(function(s,ch){ return s + (BB.channel_split[ch]||0); }, 0);
-
-  list.innerHTML = channels.map(function(ch) {
-    var val = BB.channel_split[ch] || 0;
-    var pct = BB.budget > 0 ? Math.round(val / BB.budget * 100) : 0;
-    var color = colorMap[ch] || '#6B7280';
-    var safeId = ch.replace(/[^a-zA-Z0-9]/g, '_');
+  list.innerHTML = channelIds.map(function(id) {
+    var val  = BB.channel_split[id] || 0;
+    var pct  = BB.budget > 0 ? Math.round(val / BB.budget * 100) : 0;
+    var info = pesoMap[id] || { name: id, color: '#6B7280' };
     return '<div class="bb-ch-split-row">'
-      + '<div class="bb-ch-split-dot" style="background:' + color + '"></div>'
-      + '<div class="bb-ch-split-name">' + ch + '</div>'
-      + '<input class="bb-ch-split-input" type="number" min="0" value="' + val + '" '
-      + '<input class="bb-ch-split-input" type="number" min="0" value="' + val + '" data-channel="' + ch.replace(/"/g,'&quot;') + '" '
-      +   'onchange="bbOnChannelSplit(this.dataset.channel,this.value)" '
-      +   'oninput="bbOnChannelSplit(this.dataset.channel,this.value)">'
+      + '<div class="bb-ch-split-dot" style="background:' + info.color + '"></div>'
+      + '<div class="bb-ch-split-name">' + info.name + '</div>'
+      + '<input class="bb-ch-split-input" type="number" min="0" value="' + val
+      + '" data-channel="' + id + '" onchange="bbOnChannelSplit(this.dataset.channel,this.value)" oninput="bbOnChannelSplit(this.dataset.channel,this.value)">'
+      + '<div class="bb-ch-split-pct">' + pct + '%</div>'
       + '<div style="height:4px;background:var(--surface);border-radius:2px;overflow:hidden">'
-      +   '<div style="width:' + Math.min(pct,100) + '%;height:100%;background:' + color + ';border-radius:2px;transition:width 0.3s"></div>'
+      +   '<div style="width:' + Math.min(pct,100) + '%;height:100%;background:' + info.color + ';border-radius:2px;transition:width 0.3s"></div>'
       + '</div>'
       + '</div>';
   }).join('');
