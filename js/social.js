@@ -1,3 +1,4 @@
+// v100
 // Swansway Marketing Portal — Social Hub JS v1
 // Page guard
 if (!/social\.html/.test(window.location.pathname) && window.location.pathname !== '/' && window.location.pathname !== '') {
