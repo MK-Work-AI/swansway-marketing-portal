@@ -1239,17 +1239,15 @@ function calShowCampaign(cJson) {
   closeBtn.textContent = 'Close';
   closeBtn.onclick = function() { overlay.remove(); };
 
-  if (typeof slPromptFromBrief === 'function' && c.brief_id) {
-    var socialBtn = document.createElement('button');
-    socialBtn.className = 'btn';
-    socialBtn.style.cssText = 'flex:1;font-size:13px;background:#1E3A8A;color:#fff;border-color:#1E3A8A';
-    socialBtn.textContent = '📱 Social post';
-    socialBtn.onclick = function() {
-      overlay.remove();
-      slPromptFromBrief(c.brief_id, { brand_id: c.brand_id, title: c.name, start_date: c.start_date, end_date: c.end_date, budget: c.budget, job_ref: c.job_ref });
-    };
-    actions.appendChild(socialBtn);
-  }
+  var socialBtn = document.createElement('button');
+  socialBtn.className = 'btn';
+  socialBtn.style.cssText = 'flex:1;font-size:13px;background:#1E3A8A;color:#fff;border-color:#1E3A8A';
+  socialBtn.textContent = '📱 Social';
+  socialBtn.onclick = function() {
+    overlay.remove();
+    swSocialFromBrief(c.brief_id || c.id, { brand_id: c.brand_id, title: c.name, start_date: c.start_date, end_date: c.end_date, budget: c.budget, job_ref: c.job_ref });
+  };
+  actions.appendChild(socialBtn);
   actions.appendChild(editBtn); actions.appendChild(delBtn); actions.appendChild(closeBtn);
   body.appendChild(topRow); body.appendChild(grid); body.appendChild(actions);
   box.appendChild(hdr); box.appendChild(body);
