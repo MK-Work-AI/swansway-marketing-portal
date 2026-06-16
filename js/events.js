@@ -1133,8 +1133,6 @@ async function evSave(saveAsConfirmed) {
     showToast('Event' + (n > 1 ? 's' : '') + ' saved \u2713' + (n > 1 ? ' (' + n + ' sites)' : ''), 'success');
     // Social Hub: prompt to generate posts for new events
     if (!EV_EDITING_ID && typeof _newEventIds !== 'undefined' && _newEventIds.length) {
-      var _evSocialData = { title: d.title, brand_id: d.brand_id, site_ids: d.site_ids, start_date: d.start_date, end_date: d.end_date, planned_budget: d.planned_budget, location: d.location };
-      setTimeout(function() { swSocialFromEvent(_newEventIds, _evSocialData); }, 400);
     }
   } catch(e) {
     evFormError('Save failed: ' + e.message);
