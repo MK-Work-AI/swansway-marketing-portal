@@ -1039,44 +1039,16 @@ async function slSubmitComment() {
 
 // Called directly (on same page) or via sessionStorage redirect
 function slPromptFromEvent(eventIds, eventData) {
-  // eventData: { title, brand_id, site_ids, start_date, end_date, planned_budget, location, event_type_id }
-  var payload = {
-    source: 'event',
-    event_ids: eventIds,
-    title: eventData.title,
-    brand_id: eventData.brand_id,
-    site_ids: eventData.site_ids || [],
-    start_date: eventData.start_date,
-    end_date: eventData.end_date,
-    budget: eventData.planned_budget,
-    location: eventData.location,
-  };
-  if (/social\.html/.test(window.location.pathname)) {
-    slShowGenModal(payload);
-  } else {
-    // Store for when social.html loads
-    try { sessionStorage.setItem('_slGenPayload', JSON.stringify(payload)); } catch(e) {}
-    window.location = 'social.html';
+  // Delegate to shared helper in bundle-core
+  if (typeof swSocialFromEvent === 'function') {
+    swSocialFromEvent(eventIds, eventData);
   }
 }
 
 function slPromptFromBrief(briefId, briefData) {
-  // briefData: BB object — brand, start_date, end_date, budget, channels, site_ids
-  var payload = {
-    source: 'brief',
-    brief_id: briefId,
-    title: briefData.title || window._lastSavedBriefTitle || 'Campaign',
-    brand_id: briefData.brand ? briefData.brand.id : null,
-    site_ids: briefData.site_ids || [],
-    start_date: briefData.start_date,
-    end_date: briefData.end_date,
-    budget: briefData.budget,
-  };
-  if (/social\.html/.test(window.location.pathname)) {
-    slShowGenModal(payload);
-  } else {
-    try { sessionStorage.setItem('_slGenPayload', JSON.stringify(payload)); } catch(e) {}
-    window.location = 'social.html';
+  // Delegate to shared helper in bundle-core (works on any page)
+  if (typeof swSocialFromBrief === 'function') {
+    swSocialFromBrief(briefId, briefData);
   }
 }
 
