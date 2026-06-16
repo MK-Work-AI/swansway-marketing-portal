@@ -729,6 +729,12 @@ function slRenderPanel() {
 
 function slTogglePlatform(platId, btn) {
   if (!SL_PANEL_POST) return;
+  // Sync live form fields back into SL_PANEL_POST before any re-render,
+  // so typed values (title, brand, etc.) are not lost.
+  if (document.getElementById('sl-f-title')) {
+    var live = slCollectFormData();
+    Object.assign(SL_PANEL_POST, live);
+  }
   var ids = SL_PANEL_POST.platform_ids || [];
   var idx = ids.indexOf(platId);
   if (idx > -1) ids.splice(idx, 1);
