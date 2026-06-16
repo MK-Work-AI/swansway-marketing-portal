@@ -1113,6 +1113,7 @@ function bbShowPostSave(briefId, status) {
         + '<div class="bb-s6-tick">✓</div>'
         + '<div class="bb-s6-msg"><strong>Saved, ' + firstName + '.</strong> When ready, submit for approval.</div>'
         + '<button class="bb-s6-submit-btn" onclick="bbSubmitBrief()">Submit for approval →</button>'
+        + '<div style="margin-top:8px"><button class="bb-s6-submit-btn" style="background:#1E3A8A;margin-top:4px" onclick="slPromptFromBrief(window._lastSavedBriefId||\'' + briefId + '\', BB||{})">📱 Generate social posts</button></div>'
         + '</div>';
     }
   } else {
