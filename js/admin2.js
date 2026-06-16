@@ -1286,8 +1286,8 @@ function saPopulatePicker(selectId) {
   sel.innerHTML = '<option value="">— add approver —</option>';
   SA_MEMBERS.forEach(function(m) {
     var opt = document.createElement('option');
-    opt.value = m.name;
-    opt.textContent = m.name;
+    opt.value = m.id;           // store id — matched against CB_CURRENT_USER
+    opt.textContent = m.name;   // display name
     sel.appendChild(opt);
   });
 }
@@ -1301,10 +1301,13 @@ function saRenderPills(key, pillsId, pickerId) {
     container.innerHTML = '<span style="font-size:12px;color:var(--ink-faint);padding:2px 4px">None set — will use full approvers from Campaign Team</span>';
     return;
   }
-  list.forEach(function(name) {
+  list.forEach(function(memberId) {
+    // Resolve id → display name (fall back to id if member not found)
+    var member = SA_MEMBERS.find(function(m){ return m.id === memberId; });
+    var displayName = member ? member.name : memberId;
     var pill = document.createElement('span');
     pill.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:var(--swansway);color:#fff;border-radius:12px;padding:3px 10px 3px 12px;font-family:var(--font-m);font-size:11px;font-weight:600;letter-spacing:0.03em';
-    pill.innerHTML = name + '<button onclick="saRemoveApprover(\'' + key + '\',\'' + name.replace(/'/g,"\\'") + '\')" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;line-height:1;padding:0;display:flex;align-items:center;justify-content:center">✕</button>';
+    pill.innerHTML = displayName + '<button onclick="saRemoveApprover(\'' + key + '\',\'' + memberId.replace(/'/g,"\\'") + '\')" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;line-height:1;padding:0;display:flex;align-items:center;justify-content:center">✕</button>';
     container.appendChild(pill);
   });
 }
@@ -1350,11 +1353,14 @@ function saRenderBrandContent(brandId) {
 function saAddApprover(key) {
   var pickerId = key === 'default' ? 'sa-default-add' : 'sa-brand-add-' + key;
   var sel = document.getElementById(pickerId);
-  var name = sel ? sel.value.trim() : '';
-  if (!name) return;
+  var memberId = sel ? sel.value.trim() : '';
+  if (!memberId) return;
   if (!SA_DATA[key]) SA_DATA[key] = [];
-  if (SA_DATA[key].includes(name)) { showToast(name + ' already added', 'info'); return; }
-  SA_DATA[key].push(name);
+  if (SA_DATA[key].includes(memberId)) {
+    var m = SA_MEMBERS.find(function(x){ return x.id === memberId; });
+    showToast((m ? m.name : memberId) + ' already added', 'info'); return;
+  }
+  SA_DATA[key].push(memberId);
   sel.value = '';
   if (key === 'default') {
     saRenderPills('default', 'sa-default-pills', 'sa-default-add');
