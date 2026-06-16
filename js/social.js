@@ -442,6 +442,7 @@ function slRenderGrid() {
       + '<span class="sl-badge sl-badge--' + p.status + '" style="background:' + st.bg + ';color:' + st.color + '">' + st.label + '</span>'
       + (brand.name ? '<span class="sl-badge" style="background:' + (brand.color||'#666') + '22;color:' + (brand.color||'#666') + '">' + brand.name + '</span>' : '')
       + '</div>'
+      + (p.job_ref ? '<div style="font-size:9px;font-family:var(--font-m);color:var(--ink-soft);letter-spacing:0.06em;margin-bottom:2px">' + slEscape(p.job_ref) + '</div>' : '')
       + '<div class="sl-grid-card-title">' + slEscape(p.title) + '</div>'
       + (p.caption ? '<div class="sl-grid-card-caption">' + slEscape(p.caption) + '</div>' : '')
       + '<div class="sl-grid-card-meta">'
@@ -631,6 +632,7 @@ function slRenderPanel() {
     + '<div class="sl-field-label">Post title <span class="req">*</span></div>'
     + '<input class="sl-input" id="sl-f-title" value="' + slEscape(p.title||'') + '" placeholder="e.g. VW Summer Finance — Plate Change Push"' + disabled + '>'
     + '</div>'
+    + (p.job_ref ? '<div style="margin-bottom:10px;padding:6px 10px;background:var(--surface);border:1.5px solid var(--border);border-radius:4px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--ink-soft);font-family:var(--font-m);text-transform:uppercase;letter-spacing:0.06em">Job ref</span><span style="font-family:var(--font-m);font-size:12px;font-weight:700;color:var(--ink);letter-spacing:0.04em">' + slEscape(p.job_ref) + '</span></div>' : '')
 
     // Brand + Post type row
     + '<div class="sl-input-row">'
@@ -845,6 +847,13 @@ async function slSavePost() {
       payload.status = 'draft';
       payload.created_by = slAsUUID(CB_CURRENT_USER);
       payload.created_at = new Date().toISOString();
+      // Inherit job_ref from parent brief or event; otherwise generate own
+      if (!payload.job_ref) {
+        var inheritedRef = (typeof swGetInheritedRef === 'function')
+          ? await swGetInheritedRef(payload.brief_id || null, payload.event_id || null)
+          : null;
+        payload.job_ref = inheritedRef || (typeof swGenerateJobRef === 'function' ? await swGenerateJobRef(CB_CURRENT_USER) : null);
+      }
     }
 
     var r;
