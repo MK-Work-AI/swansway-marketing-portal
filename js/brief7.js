@@ -702,6 +702,104 @@ function bbGetAllocation() {
 }
 
 
+
+/* ══════════════════════════════════════════════════════════
+   CHANNEL BUDGET SPLIT
+══════════════════════════════════════════════════════════ */
+
+function bbRenderChannelSplit() {
+  var section = document.getElementById('bb-channel-split-section');
+  var list    = document.getElementById('bb-channel-split-list');
+  if (!section || !list) return;
+
+  var channels = BB.channels || [];
+  if (!channels.length || !BB.budget) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+
+  // Get channel colours from admin config STATE.channels or BC_DEFAULT_CHANNELS
+  var colorMap = {};
+  var allChs = (typeof STATE !== 'undefined' && STATE.channels && STATE.channels.length)
+    ? STATE.channels : (typeof BC_DEFAULT_CHANNELS !== 'undefined' ? BC_DEFAULT_CHANNELS : []);
+  allChs.forEach(function(c) {
+    colorMap[c.name || c.channel] = c.color || '#6B7280';
+  });
+
+  // Remove channels no longer selected from split
+  Object.keys(BB.channel_split).forEach(function(ch) {
+    if (!channels.includes(ch)) delete BB.channel_split[ch];
+  });
+
+  // Ensure all selected channels have a value (default 0)
+  channels.forEach(function(ch) {
+    if (BB.channel_split[ch] === undefined) BB.channel_split[ch] = 0;
+  });
+
+  var total = channels.reduce(function(s,ch){ return s + (BB.channel_split[ch]||0); }, 0);
+
+  list.innerHTML = channels.map(function(ch) {
+    var val = BB.channel_split[ch] || 0;
+    var pct = BB.budget > 0 ? Math.round(val / BB.budget * 100) : 0;
+    var color = colorMap[ch] || '#6B7280';
+    var safeId = ch.replace(/[^a-zA-Z0-9]/g, '_');
+    return '<div class="bb-ch-split-row">'
+      + '<div class="bb-ch-split-dot" style="background:' + color + '"></div>'
+      + '<div class="bb-ch-split-name">' + ch + '</div>'
+      + '<input class="bb-ch-split-input" type="number" min="0" value="' + val + '" '
+      + '<input class="bb-ch-split-input" type="number" min="0" value="' + val + '" data-channel="' + ch.replace(/"/g,'&quot;') + '" '
+      +   'onchange="bbOnChannelSplit(this.dataset.channel,this.value)" '
+      +   'oninput="bbOnChannelSplit(this.dataset.channel,this.value)">'
+      + '<div style="height:4px;background:var(--surface);border-radius:2px;overflow:hidden">'
+      +   '<div style="width:' + Math.min(pct,100) + '%;height:100%;background:' + color + ';border-radius:2px;transition:width 0.3s"></div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  bbUpdateSplitTotal();
+}
+
+function bbOnChannelSplit(channel, value) {
+  BB.channel_split[channel] = parseFloat(value) || 0;
+  bbUpdateSplitTotal();
+  bbUpdateBrief();
+}
+
+function bbUpdateSplitTotal() {
+  var channels = BB.channels || [];
+  var total = channels.reduce(function(s,ch){ return s + (BB.channel_split[ch]||0); }, 0);
+  var totalEl  = document.getElementById('bb-split-total');
+  var statusEl = document.getElementById('bb-split-status');
+  if (totalEl)  totalEl.textContent = '£' + total.toLocaleString();
+  if (statusEl) {
+    var diff = BB.budget - total;
+    if (Math.abs(diff) < 1) {
+      statusEl.textContent = '✓ Fully allocated';
+      statusEl.style.color = '#059669';
+    } else if (diff > 0) {
+      statusEl.textContent = '£' + diff.toLocaleString() + ' unallocated';
+      statusEl.style.color = '#D97706';
+    } else {
+      statusEl.textContent = '£' + Math.abs(diff).toLocaleString() + ' over budget';
+      statusEl.style.color = '#DC2626';
+    }
+  }
+}
+
+function bbAutoSplitChannels() {
+  var channels = BB.channels || [];
+  if (!channels.length || !BB.budget) return;
+  var perChannel = Math.round(BB.budget / channels.length);
+  var remainder  = BB.budget - (perChannel * (channels.length - 1));
+  channels.forEach(function(ch, i) {
+    BB.channel_split[ch] = (i === channels.length - 1) ? remainder : perChannel;
+  });
+  bbRenderChannelSplit();
+  bbUpdateBrief();
+}
+
 function bbRenderAllocation() {
   const el = document.getElementById('bb-alloc-list');
   if(!el) return;
@@ -822,6 +920,7 @@ function bbRenderPESO() {
   // by reconciling science-based selection with saved user selection
   if (_savedChannels.length) {
     BB.channels = _savedChannels;
+    bbRenderChannelSplit();
     // Update visual state: active = in saved channels, inactive = not in saved channels
     el.querySelectorAll('.bb-ch-row').forEach(function(row) {
       // Extract channel id from onclick: bbToggleCh('id', this)
@@ -846,6 +945,7 @@ function bbToggleCh(id, row) {
   const idx = BB.channels.indexOf(id);
   if(idx>-1) BB.channels.splice(idx,1); else BB.channels.push(id);
   row.classList.toggle('bb-ch-active');
+  bbRenderChannelSplit();
   bbUpdateBrief();
 }
 
@@ -1850,6 +1950,7 @@ async function bbSaveBrief() {
     audiences:         selAuds,
     channel_ids:       BB.channels,
     channels:          BB.channels,
+    channel_split:     BB.channel_split || {},
     allocation:        bbGetAllocation(),
     proposition:       (document.getElementById('bb-smp')?.value || BB.proposition || ''),
     mandatories:       (document.getElementById('bb-mandatories')?.value || BB.mandatories || ''),
@@ -2578,7 +2679,7 @@ function bbNewBrief() {
   }
   if (window._bbCampModeActive) bbExitCampaignMode();
   BB.brand = null; BB.ctype = null; BB.budget = 5000; BB.duration = null;
-  BB.audiences = []; BB.channels = []; BB.objective = null;
+  BB.audiences = []; BB.channels = []; BB.channel_split = {}; BB.objective = null;
   BB.proposition = ''; BB.start_date = ''; BB.end_date = '';
   BB.site_id = ''; BB.site_ids = []; BB.site_splits = {}; BB.scope = 'brand'; BB.step = 1;
   BB._calCampaignId = null;
@@ -2677,6 +2778,7 @@ function bbInitFromBrief(brief) {
   BB.duration    = brief.duration_weeks ? {weeks: brief.duration_weeks, label: brief.duration_label || ''} : null;
   BB.audiences   = brief.audience_ids || [];
   BB.channels    = brief.channel_ids  || [];
+  BB.channel_split = brief.channel_split || {};
   BB.proposition = brief.proposition  || '';
   BB.mandatories = brief.mandatories  || '';
   BB.notes       = brief.notes        || '';
@@ -2863,7 +2965,7 @@ function bbNewBrief() {
   }
   if (window._bbCampModeActive) bbExitCampaignMode();
   BB.brand = null; BB.ctype = null; BB.budget = 5000; BB.duration = null;
-  BB.audiences = []; BB.channels = []; BB.objective = null;
+  BB.audiences = []; BB.channels = []; BB.channel_split = {}; BB.objective = null;
   BB.proposition = ''; BB.start_date = ''; BB.end_date = '';
   BB.site_id = ''; BB.site_ids = []; BB.site_splits = {}; BB.scope = 'brand'; BB.step = 1;
   BB._calCampaignId = null;
