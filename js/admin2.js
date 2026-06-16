@@ -401,108 +401,242 @@ function collectChannelForm() { /* channels are updated live via oninput */ }
 
 /* ══ SITE BUDGETS ══ */
 async function sbLoad() {
-  var el = document.getElementById('sb-tbody');
-  if (el) el.innerHTML = '<tr><td colspan="26" style="padding:20px;text-align:center;color:var(--ink-soft)">Loading…</td></tr>';
+  var container = document.getElementById('sb-content');
+  if (container) container.innerHTML = '<div style="padding:30px;text-align:center;color:var(--ink-soft)">Loading…</div>';
   try {
-    var r = await fetch(SUPA + '/site_budgets?select=*', { headers: getAuthHeaders() });
-    console.log('sbLoad status:', r.status);
-    if (!r.ok) {
-      var err = await r.text();
-      console.warn('sbLoad error:', err);
-      if (el) el.innerHTML = '<tr><td colspan="26" style="padding:20px;color:#C8102E">Error loading budgets: ' + r.status + '</td></tr>';
-      return;
-    }
+    var r = await fetch(SUPA + '/site_budget_lines?year=eq.' + PLAN_YEAR + '&select=*', { headers: getAuthHeaders() });
+    if (!r.ok) throw new Error(await r.text());
     var rows = await r.json();
-    console.log('sbLoad rows:', rows.length);
+    // Build: SB_SITE_DATA[site_id][channel][month] = { planned, actual }
     SB_SITE_DATA = {};
-    rows.forEach(function(row) { SB_SITE_DATA[row.site_id] = row; });
-    sbRenderTable(SB_CURRENT_BRAND);
+    rows.forEach(function(row) {
+      if (!SB_SITE_DATA[row.site_id]) SB_SITE_DATA[row.site_id] = {};
+      if (!SB_SITE_DATA[row.site_id][row.channel]) SB_SITE_DATA[row.site_id][row.channel] = {};
+      SB_SITE_DATA[row.site_id][row.channel][row.month] = { planned: row.planned || 0, actual: row.actual || 0 };
+    });
+    sbRenderContent(SB_CURRENT_BRAND);
   } catch(e) {
     console.warn('sbLoad:', e);
-    if (el) el.innerHTML = '<tr><td colspan="26" style="padding:20px;color:#C8102E">Error: ' + e.message + '</td></tr>';
+    if (container) container.innerHTML = '<div style="padding:20px;color:#C8102E">Error: ' + e.message + '</div>';
   }
 }
+
 function sbSelectBrand(brandId) {
   SB_CURRENT_BRAND = brandId;
-  document.querySelectorAll('[data-sb-brand]').forEach(function(t){
-    t.className = 'brand-tab-btn' + (t.dataset.sbBrand===brandId?' active':'');
+  document.querySelectorAll('[data-sb-brand]').forEach(function(t) {
+    t.className = 'brand-tab-btn' + (t.dataset.sbBrand === brandId ? ' active' : '');
   });
-  sbRenderTable(brandId);
+  sbRenderContent(brandId);
 }
-function sbRenderTable(brandId) {
-  var thead = document.getElementById('sb-thead');
-  var tbody = document.getElementById('sb-tbody');
-  var metrics = document.getElementById('sb-metrics');
-  if (!tbody) return;
-  var sites = SB_SITES.filter(function(s){return s.brand_id===brandId;});
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var thStyle = 'background:var(--swansway);color:#fff;font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:10px 8px;text-align:right;white-space:nowrap;border:none';
-  var th1Style = thStyle.replace('text-align:right','text-align:left');
 
-  var field = SB_VIEW === 'actual' ? 'actual' : 'planned';
-  if (thead) {
-    thead.innerHTML = '<tr>'
-      + '<th style="'+th1Style+'">Site</th>'
-      + '<th style="'+thStyle+'">Annual</th>'
-      + months.map(function(m){return '<th style="'+thStyle+'">'+m+'</th>';}).join('')
-      + '</tr>';
+function sbGetChannels() {
+  // Use BC_DEFAULT_CHANNELS as the canonical channel list for budget lines
+  return typeof BC_DEFAULT_CHANNELS !== 'undefined' ? BC_DEFAULT_CHANNELS : [];
+}
+
+function sbRenderContent(brandId) {
+  var container = document.getElementById('sb-content');
+  if (!container) return;
+
+  var sites    = SB_SITES.filter(function(s) { return s.brand_id === brandId; });
+  var channels = sbGetChannels();
+  var months   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var field    = SB_VIEW === 'actual' ? 'actual' : 'planned';
+
+  if (!sites.length) {
+    container.innerHTML = '<div style="padding:20px;color:var(--ink-faint)">No sites for this brand.</div>';
+    return;
   }
-  tbody.innerHTML = '';
-  var totalPlan=0, totalActual=0;
-  sites.forEach(function(site) {
-    var d = SB_SITE_DATA[site.site_id] || {};
-    var tr = document.createElement('tr');
-    var annPlan = 0;
-    for (var i=0;i<12;i++) annPlan += (d['m'+i+'_planned']||0);
-    d.annual_planned = annPlan || (d.annual_planned||0);
-    totalPlan += d.annual_planned||0;
-    for (var i=0;i<12;i++) totalActual += (d['m'+i+'_actual']||0);
 
-    tr.style.cssText = 'border-bottom:1px solid var(--border)';
-    tr.innerHTML = '<td style="font-family:var(--font-b);font-size:13px;font-weight:600;padding:8px 10px;white-space:nowrap;color:var(--ink)">'+site.site_name+'</td>'
-      + '<td style="font-family:var(--font-m);font-size:13px;font-weight:700;color:var(--swansway);padding:8px 10px;text-align:right;white-space:nowrap">£'+(d.annual_planned||0).toLocaleString()+'</td>'
-      + months.map(function(m,i){
-          var f = 'm'+i+'_'+field;
-          return '<td style="padding:4px 6px;text-align:right"><input class="admin-input admin-input-sm" type="number" value="'+(d[f]||0)+'" data-site="'+site.site_id+'" data-field="'+f+'" onchange="sbSetVal(this)" style="width:58px;text-align:right;font-family:var(--font-m);font-size:12px"></td>';
-        }).join('');
-    tbody.appendChild(tr);
+  // Brand totals for metrics row
+  var brandTotal = 0, brandActual = 0;
+  sites.forEach(function(site) {
+    var sd = SB_SITE_DATA[site.site_id] || {};
+    channels.forEach(function(ch) {
+      var chKey = ch.channel || ch.name;
+      var chd = sd[chKey] || {};
+      for (var m = 0; m < 12; m++) {
+        brandTotal  += (chd[m] ? chd[m].planned : 0);
+        brandActual += (chd[m] ? chd[m].actual  : 0);
+      }
+    });
   });
-  if (metrics) metrics.innerHTML = [
-    {l:'Planned total',v:'£'+totalPlan.toLocaleString(),c:'var(--swansway)'},
-    {l:'Actual YTD',v:totalActual>0?'£'+totalActual.toLocaleString():'—',c:'#059669'},
-    {l:'Variance',v:totalActual>0?(totalActual>=totalPlan?'+':'')+'£'+Math.abs(totalActual-totalPlan).toLocaleString():'—',c:totalActual>totalPlan?'#DC2626':'#059669'},
-    {l:'Sites',v:sites.length,c:'#6B7280'},
-  ].map(function(m){return '<div class="admin-metric" style="border-top-color:'+m.c+'"><div class="admin-metric-label">'+m.l+'</div><div class="admin-metric-val" style="color:'+m.c+'">'+m.v+'</div></div>';}).join('');
+
+  // Metrics bar
+  var metricsHtml = [
+    { l: 'Planned total', v: '£' + brandTotal.toLocaleString(), c: 'var(--swansway)' },
+    { l: 'Actual YTD', v: brandActual > 0 ? '£' + brandActual.toLocaleString() : '—', c: '#059669' },
+    { l: 'Remaining', v: '£' + Math.max(0, brandTotal - brandActual).toLocaleString(), c: brandActual > brandTotal ? '#DC2626' : '#374151' },
+    { l: 'Sites', v: sites.length, c: '#6B7280' },
+  ].map(function(m) {
+    return '<div class="admin-metric" style="border-top-color:' + m.c + '"><div class="admin-metric-label">' + m.l + '</div><div class="admin-metric-val" style="color:' + m.c + '">' + m.v + '</div></div>';
+  }).join('');
+
+  var html = '<div id="sb-metrics" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem">' + metricsHtml + '</div>';
+
+  // Per-site accordions
+  var thStyle = 'background:var(--swansway);color:#fff;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:8px 6px;text-align:right;white-space:nowrap;border:none;min-width:48px';
+  var th1Style = thStyle.replace('text-align:right', 'text-align:left') + ';min-width:160px';
+
+  sites.forEach(function(site) {
+    var sd = SB_SITE_DATA[site.site_id] || {};
+
+    // Site annual total
+    var siteTotal = 0;
+    channels.forEach(function(ch) {
+      var chKey = ch.channel || ch.name;
+      var chd = sd[chKey] || {};
+      for (var m = 0; m < 12; m++) siteTotal += (chd[m] ? chd[m][field] : 0);
+    });
+
+    var siteId = site.site_id.replace(/[^a-zA-Z0-9]/g, '_');
+
+    html += '<div class="admin-card" style="margin-bottom:10px;padding:0;overflow:hidden">';
+    // Site header — clickable to expand/collapse
+    html += '<div data-site-toggle="' + siteId + '" onclick="sbToggleSite(this.dataset.siteToggle)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;background:var(--white);border-bottom:1px solid var(--border)">'
+      + '<div style="display:flex;align-items:center;gap:10px">'
+      +   '<span id="sb-arrow-' + siteId + '" style="font-size:12px;color:var(--ink-soft)">▶</span>'
+      +   '<span style="font-family:var(--font-b);font-size:14px;font-weight:700;color:var(--ink)">' + site.site_name + '</span>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:16px">'
+      +   '<span style="font-family:var(--font-m);font-size:12px;color:var(--ink-soft)">' + (field === 'planned' ? 'Planned' : 'Actual') + ' annual</span>'
+      +   '<span style="font-family:var(--font-m);font-size:16px;font-weight:700;color:var(--swansway)">£' + siteTotal.toLocaleString() + '</span>'
+      + '</div>'
+      + '</div>';
+
+    // Collapsible channel grid
+    html += '<div id="sb-site-' + siteId + '" style="display:none;overflow-x:auto">';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    html += '<thead><tr>'
+      + '<th style="' + th1Style + '">Channel</th>'
+      + '<th style="' + thStyle + '">Annual</th>'
+      + months.map(function(m) { return '<th style="' + thStyle + '">' + m + '</th>'; }).join('')
+      + '</tr></thead><tbody>';
+
+    var rowTotal = {};
+    for (var m = 0; m < 12; m++) rowTotal[m] = 0;
+    var rowAnn = 0;
+
+    channels.forEach(function(ch) {
+      var chKey = ch.channel || ch.name;
+      var chd = sd[chKey] || {};
+      var color = ch.color || '#6B7280';
+      var chAnn = 0;
+      for (var m = 0; m < 12; m++) chAnn += (chd[m] ? chd[m][field] : 0);
+
+      html += '<tr style="border-bottom:1px solid var(--surface)">'
+        + '<td style="padding:6px 10px;white-space:nowrap;display:flex;align-items:center;gap:6px">'
+        +   '<span style="width:8px;height:8px;border-radius:50%;background:' + color + ';display:inline-block;flex-shrink:0"></span>'
+        +   '<span style="font-weight:600;color:var(--ink)">' + chKey + '</span>'
+        + '</td>'
+        + '<td style="padding:4px 6px;text-align:right;font-family:var(--font-m);font-weight:700;color:var(--swansway)">£' + chAnn.toLocaleString() + '</td>';
+
+      for (var m = 0; m < 12; m++) {
+        var val = chd[m] ? chd[m][field] : 0;
+        rowTotal[m] += val;
+        html += '<td style="padding:3px 4px;text-align:right">'
+          + '<input class="admin-input" type="number" min="0" value="' + val + '" '
+          + 'data-site="' + site.site_id + '" data-channel="' + chKey + '" data-month="' + m + '" data-field="' + field + '" '
+          + 'onchange="sbSetLine(this)" '
+          + 'style="width:62px;text-align:right;font-family:var(--font-m);font-size:11px;padding:3px 5px">'
+          + '</td>';
+      }
+      rowAnn += chAnn;
+      html += '</tr>';
+    });
+
+    // Site total row
+    html += '<tr style="background:var(--surface);font-weight:700">'
+      + '<td style="padding:8px 10px;font-family:var(--font-m);font-size:11px;font-weight:700;color:var(--ink)">TOTAL</td>'
+      + '<td style="padding:4px 6px;text-align:right;font-family:var(--font-m);font-weight:700;color:var(--swansway)">£' + rowAnn.toLocaleString() + '</td>';
+    for (var m = 0; m < 12; m++) {
+      html += '<td style="padding:4px 6px;text-align:right;font-family:var(--font-m);font-weight:700;color:var(--ink)">£' + rowTotal[m].toLocaleString() + '</td>';
+    }
+    html += '</tr>';
+
+    html += '</tbody></table></div></div>';
+  });
+
+  container.innerHTML = html;
 }
-function sbSetVal(inp) {
-  var sid = inp.dataset.site, field = inp.dataset.field;
-  if (!SB_SITE_DATA[sid]) SB_SITE_DATA[sid] = {site_id:sid};
-  SB_SITE_DATA[sid][field] = parseFloat(inp.value)||0;
-  // Recalc annual
-  var total = 0;
-  for (var i=0;i<12;i++) total += SB_SITE_DATA[sid]['m'+i+'_planned']||0;
-  SB_SITE_DATA[sid].annual_planned = total;
-  sbRenderTable(SB_CURRENT_BRAND);
+
+function sbToggleSite(siteId) {
+  var panel = document.getElementById('sb-site-' + siteId);
+  var arrow = document.getElementById('sb-arrow-' + siteId);
+  if (!panel) return;
+  var open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
 }
+
+function sbSetLine(inp) {
+  var siteId  = inp.dataset.site;
+  var channel = inp.dataset.channel;
+  var month   = parseInt(inp.dataset.month, 10);
+  var field   = inp.dataset.field;
+  var val     = parseFloat(inp.value) || 0;
+  if (!SB_SITE_DATA[siteId]) SB_SITE_DATA[siteId] = {};
+  if (!SB_SITE_DATA[siteId][channel]) SB_SITE_DATA[siteId][channel] = {};
+  if (!SB_SITE_DATA[siteId][channel][month]) SB_SITE_DATA[siteId][channel][month] = { planned: 0, actual: 0 };
+  SB_SITE_DATA[siteId][channel][month][field] = val;
+  // Update site annual total in header without full re-render
+  var sites    = SB_SITES.filter(function(s) { return s.brand_id === SB_CURRENT_BRAND; });
+  var channels = sbGetChannels();
+  var site     = sites.find(function(s){ return s.site_id === siteId; });
+  if (site) {
+    var sd = SB_SITE_DATA[siteId] || {};
+    var siteTotal = 0;
+    channels.forEach(function(ch) {
+      var chKey = ch.channel || ch.name;
+      var chd = sd[chKey] || {};
+      for (var m = 0; m < 12; m++) siteTotal += (chd[m] ? chd[m][field] : 0);
+    });
+  }
+}
+
+// Keep old sbSetVal as alias for compatibility
+function sbSetVal(inp) { sbSetLine(inp); }
+
 async function sbSave() {
   var btn = document.getElementById('sb-save-btn');
-  if (btn) { btn.textContent = 'Saving…'; btn.disabled=true; }
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
   try {
-    var rows = SB_SITES.map(function(site) {
-      var d = SB_SITE_DATA[site.site_id] || {};
-      var row = {site_id:site.site_id,site_name:site.site_name,brand_id:site.brand_id,brand_name:site.brand_name,annual_planned:d.annual_planned||0,updated_at:new Date().toISOString()};
-      for (var i=0;i<12;i++) { row['m'+i+'_planned']=d['m'+i+'_planned']||0; row['m'+i+'_actual']=d['m'+i+'_actual']||0; }
-      return row;
+    var year     = parseInt(PLAN_YEAR) || new Date().getFullYear();
+    var channels = sbGetChannels();
+    var rows     = [];
+    SB_SITES.forEach(function(site) {
+      var sd = SB_SITE_DATA[site.site_id] || {};
+      channels.forEach(function(ch) {
+        var chKey = ch.channel || ch.name;
+        var chd = sd[chKey] || {};
+        for (var m = 0; m < 12; m++) {
+          var cell = chd[m] || { planned: 0, actual: 0 };
+          if (cell.planned > 0 || cell.actual > 0) {
+            rows.push({
+              site_id:  site.site_id,
+              brand_id: site.brand_id,
+              channel:  chKey,
+              month:    m,
+              year:     year,
+              planned:  cell.planned || 0,
+              actual:   cell.actual  || 0,
+              updated_at: new Date().toISOString()
+            });
+          }
+        }
+      });
     });
-    var r = await fetch(SUPA + '/site_budgets', {
-      method:'POST',
-      headers:getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),
-      body:JSON.stringify(rows)
+    var r = await fetch(SUPA + '/site_budget_lines', {
+      method: 'POST',
+      headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify(rows)
     });
     if (!r.ok) throw new Error(await r.text());
-    showToast('Site budgets saved ✓','success');
-  } catch(e) { showToast('Save error: '+e.message,'error'); }
-  if (btn) { btn.textContent='Save budgets'; btn.disabled=false; }
+    showToast('Site budgets saved ✓', 'success');
+  } catch(e) {
+    showToast('Save error: ' + e.message, 'error');
+  }
+  if (btn) { btn.textContent = 'Save budgets'; btn.disabled = false; }
 }
 
 /* ══ SITE KPIs ══ */
