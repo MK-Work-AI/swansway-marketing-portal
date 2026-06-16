@@ -1,5 +1,6 @@
 var EV_EVENTS_BUDGET = [];
 var BRIEF_COMMITMENTS = {};
+var SOCIAL_BUDGETS = {}; // { site_id: { month: totalBudget } } — from social_posts.budget_allocated
 
 async function loadBriefCommitmentsForTracker() {
   var base = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
@@ -650,6 +651,7 @@ function renderBudgetTracker() {
           var sp = d['m' + mi + '_planned'] || 0;
           var sa = d['m' + mi + '_actual']  || 0;
           var sc = (BRIEF_COMMITMENTS[site.site_id] || {})[mi] || 0;
+          var ssoc = (siteSocialData.months[mi] || 0);
           sitePlan += sp; siteActual += sa; siteCommitted += sc;
           var scls = sa === 0 ? '' : ((sa-sp) > sp*0.1 ? ' budget-over' : (sa-sp) < -sp*0.1 ? ' budget-under' : ' budget-on');
           var sinner;
@@ -657,13 +659,19 @@ function renderBudgetTracker() {
             // Actual spend — show solid, with committed sub-figure if different
             sinner = '&pound;' + sa.toLocaleString();
             if (sc > 0 && sc !== sa) sinner += '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + sc.toLocaleString() + ' committed</div>';
+            if (ssoc > 0) sinner += '<div style="font-size:9px;color:#1877F2;font-weight:600;line-height:1.2">&pound;' + ssoc.toLocaleString() + ' social</div>';
           } else if (sa === 0 && sc > 0 && sp > 0) {
             // Planned + committed — show planned with committed sub-figure
             sinner = '<em style="color:var(--ink-faint)">&pound;' + sp.toLocaleString() + '</em>'
               + '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + sc.toLocaleString() + ' committed</div>';
+            if (ssoc > 0) sinner += '<div style="font-size:9px;color:#1877F2;font-weight:600;line-height:1.2">&pound;' + ssoc.toLocaleString() + ' social</div>';
           } else if (sc > 0) {
             // Committed only (no plan set)
             sinner = '<span style="color:#D97706;font-weight:600">&pound;' + sc.toLocaleString() + '</span>';
+            if (ssoc > 0) sinner += '<div style="font-size:9px;color:#1877F2;font-weight:600;line-height:1.2">&pound;' + ssoc.toLocaleString() + ' social</div>';
+          } else if (ssoc > 0) {
+            sinner = sp > 0 ? '<em style="color:var(--ink-faint)">&pound;' + sp.toLocaleString() + '</em>' : '';
+            sinner += '<div style="font-size:9px;color:#1877F2;font-weight:600;line-height:1.2">&pound;' + ssoc.toLocaleString() + ' social</div>';
           } else {
             sinner = sp > 0 ? '<em style="color:var(--ink-faint)">&pound;' + sp.toLocaleString() + '</em>' : '<em style="color:var(--ink-faint)">&mdash;</em>';
           }
@@ -713,8 +721,12 @@ function renderBudgetTracker() {
         }, 0);
         var identifiedEvPl  = siteEvs.reduce(function(s,e){ return s + (e.planned_budget || 0); }, 0);
         var identifiedEvAc  = siteEvs.reduce(function(s,e){ return s + (e.actual_spend   || 0); }, 0);
-        var identifiedTotal = identifiedCamp + identifiedEvPl;
-        var hasItems = siteCamps.length > 0 || siteEvs.length > 0;
+        // Social budgets for this site
+        var siteSocialData = typeof getSocialBudgetBySite === 'function' ? getSocialBudgetBySite(site.site_id, site.brand_id) : { months: {}, posts: [] };
+        var siteSocialTotal = Object.values(siteSocialData.months).reduce(function(s,v){ return s+v; }, 0);
+        var siteSocialPosts = siteSocialData.posts || [];
+        var identifiedTotal = identifiedCamp + identifiedEvPl + siteSocialTotal;
+        var hasItems = siteCamps.length > 0 || siteEvs.length > 0 || siteSocialPosts.length > 0;
         var accordId = 'bta-' + site.site_id.replace(/[^a-z0-9]/gi, '_');
 
         var siteLabel = hasItems
@@ -806,6 +818,39 @@ function renderBudgetTracker() {
             });
             acHtml += '<tr class="bt-accord-total"><td colspan="4">Events total</td>'
               + '<td style="text-align:right;font-family:var(--font-m)">' + (identifiedEvPl > 0 ? '&pound;' + identifiedEvPl.toLocaleString() : '&mdash;') + '</td>'
+              + '<td></td></tr>';
+            acHtml += '</tbody></table>';
+          }
+
+          // Social posts section
+          if (siteSocialPosts.length > 0) {
+            acHtml += '<div class="bt-accord-section-label" style="margin-top:14px">📲 Social Posts</div>';
+            acHtml += '<table class="bt-accord-table"><thead><tr>'
+              + '<th>Post</th><th>Type</th><th>Platforms</th><th>Scheduled</th><th style="text-align:right">Budget</th><th>Status</th>'
+              + '</tr></thead><tbody>';
+            var SL_STATUS_LABELS = { draft:'Draft', in_review:'In Review', approved:'Approved', scheduled:'Scheduled', published:'Published', rejected:'Rejected' };
+            var SL_STATUS_COLORS = { draft:'#6B6560', in_review:'#92400E', approved:'#065F46', scheduled:'#1E3A8A', published:'#4C1D95', rejected:'#991B1B' };
+            siteSocialPosts.forEach(function(p) {
+              var sc2 = SL_STATUS_COLORS[p.status] || '#6B7280';
+              var scheduledStr = p.scheduled_at
+                ? new Date(p.scheduled_at).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})
+                : '<em style="color:var(--ink-faint)">TBC</em>';
+              var platIds = [];
+              try { platIds = Array.isArray(p.platform_ids) ? p.platform_ids : JSON.parse(p.platform_ids || '[]'); } catch(e) {}
+              var platIcons = { facebook:'👤', instagram:'📸', linkedin:'💼', tiktok:'🎵', gmb:'📍', threads:'🔗' };
+              var platStr = platIds.map(function(pid){ return platIcons[pid] || pid; }).join(' ') || '&mdash;';
+              var typeLabel = (p.post_type||'').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();}) || '&mdash;';
+              acHtml += '<tr>'
+                + '<td style="font-weight:600">' + btEsc(p.title || 'Untitled') + '</td>'
+                + '<td><span style="font-size:10px;padding:2px 7px;border-radius:3px;background:#F3F4F6;font-family:var(--font-m)">' + btEsc(typeLabel) + '</span></td>'
+                + '<td style="font-size:12px">' + platStr + '</td>'
+                + '<td style="color:var(--ink-soft);white-space:nowrap">' + scheduledStr + '</td>'
+                + '<td style="text-align:right;font-family:var(--font-m);color:#1877F2;font-weight:600">' + (p.budget_allocated ? '&pound;' + Number(p.budget_allocated).toLocaleString() : '&mdash;') + '</td>'
+                + '<td><span style="font-size:10px;padding:2px 7px;border-radius:3px;color:#fff;background:' + sc2 + ';font-family:var(--font-m)">' + btEsc(SL_STATUS_LABELS[p.status] || p.status || 'draft') + '</span></td>'
+                + '</tr>';
+            });
+            acHtml += '<tr class="bt-accord-total"><td colspan="4">Social posts total</td>'
+              + '<td style="text-align:right;font-family:var(--font-m);color:#1877F2">' + (siteSocialTotal > 0 ? '&pound;' + siteSocialTotal.toLocaleString() : '&mdash;') + '</td>'
               + '<td></td></tr>';
             acHtml += '</tbody></table>';
           }
@@ -1273,7 +1318,8 @@ async function loadSiteBudgets() {
     // Run commitments + events in parallel — both independent of each other
     await Promise.all([
       typeof loadBriefCommitmentsForTracker === 'function' ? loadBriefCommitmentsForTracker() : Promise.resolve(),
-      loadEventsForBudget()
+      loadEventsForBudget(),
+      loadSocialBudgets()
     ]);
     // Now site budgets are loaded — trigger channel aggregation if brand data ready
     if (Object.keys(BRAND_CHANNELS_DATA).length) {
@@ -1436,6 +1482,73 @@ function getEventBudgetBySite(siteId) {
     monthly[m].actual  += ev.actual_spend   || 0;
   });
   return monthly;
+}
+
+async function loadSocialBudgets() {
+  // Fetch social posts that have budget_allocated set, for PLAN_YEAR
+  // Groups by site_id (from site_ids array) and month of scheduled_at
+  try {
+    var planYear = parseInt(PLAN_YEAR) || new Date().getFullYear();
+    var r = await fetch(SUPABASE_URL + '/rest/v1/social_posts?select=id,title,brand_id,site_ids,scheduled_at,budget_allocated,status,post_type&budget_allocated=gt.0&status=neq.cancelled', {
+      headers: getAuthHeaders({'Content-Type': 'application/json'})
+    });
+    if (!r.ok) return;
+    var posts = await r.json();
+    SOCIAL_BUDGETS = {};
+    // Also build brand-level social budget map for brand page
+    window.SOCIAL_BUDGETS_BRAND = {};
+    posts.forEach(function(p) {
+      if (!p.scheduled_at || !p.budget_allocated) return;
+      var d = new Date(p.scheduled_at);
+      if (d.getFullYear() !== planYear) return;
+      var month = d.getMonth();
+      var budget = parseFloat(p.budget_allocated) || 0;
+      // Brand-level rollup
+      var bid = p.brand_id || 'unknown';
+      if (!window.SOCIAL_BUDGETS_BRAND[bid]) window.SOCIAL_BUDGETS_BRAND[bid] = { total: 0, posts: [] };
+      window.SOCIAL_BUDGETS_BRAND[bid].total += budget;
+      window.SOCIAL_BUDGETS_BRAND[bid].posts.push(p);
+      // Site-level: site_ids is a JSON array of site_id strings
+      var siteIds = [];
+      try { siteIds = Array.isArray(p.site_ids) ? p.site_ids : (p.site_ids ? JSON.parse(p.site_ids) : []); } catch(e) {}
+      if (!siteIds.length) {
+        // No site specified — attribute to brand as a whole, split equally across brand sites later
+        // Store under a brand-keyed pseudo-site so we can resolve at render time
+        var bKey = '__brand__' + bid;
+        if (!SOCIAL_BUDGETS[bKey]) SOCIAL_BUDGETS[bKey] = { months: {}, posts: [] };
+        SOCIAL_BUDGETS[bKey].months[month] = (SOCIAL_BUDGETS[bKey].months[month] || 0) + budget;
+        SOCIAL_BUDGETS[bKey].posts.push(p);
+      } else {
+        var perSite = Math.round(budget / siteIds.length);
+        siteIds.forEach(function(sid) {
+          if (!SOCIAL_BUDGETS[sid]) SOCIAL_BUDGETS[sid] = { months: {}, posts: [] };
+          SOCIAL_BUDGETS[sid].months[month] = (SOCIAL_BUDGETS[sid].months[month] || 0) + perSite;
+          SOCIAL_BUDGETS[sid].posts.push(p);
+        });
+      }
+    });
+    console.log('Social budgets loaded:', Object.keys(SOCIAL_BUDGETS).length, 'sites,', posts.length, 'posts');
+  } catch(e) { console.warn('loadSocialBudgets:', e); }
+}
+
+function getSocialBudgetBySite(siteId, brandId) {
+  // Returns object: { months: {0:v,...}, posts: [] }
+  // Merges direct site allocation + brand-wide allocation split across brand sites
+  var direct = SOCIAL_BUDGETS[siteId] || { months: {}, posts: [] };
+  var bKey = '__brand__' + brandId;
+  var brandWide = SOCIAL_BUDGETS[bKey];
+  if (!brandWide) return direct;
+  // Split brand-wide budget equally across all sites for this brand
+  var brandSiteCount = HUB_SITES ? HUB_SITES.filter(function(s){ return s.brand_id === brandId; }).length : 1;
+  if (!brandSiteCount) brandSiteCount = 1;
+  var merged = { months: Object.assign({}, direct.months), posts: direct.posts.slice() };
+  Object.keys(brandWide.months).forEach(function(m) {
+    merged.months[m] = (merged.months[m] || 0) + Math.round(brandWide.months[m] / brandSiteCount);
+  });
+  brandWide.posts.forEach(function(p) {
+    if (!merged.posts.find(function(x){ return x.id === p.id; })) merged.posts.push(p);
+  });
+  return merged;
 }
 async function loadSiteKPIs() {
   var _p = window.location.pathname;
