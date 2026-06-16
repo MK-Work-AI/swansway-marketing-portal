@@ -38,6 +38,7 @@ var SL_PIPELINE_COLS = ['draft','in_review','approved','scheduled','published'];
 var SL_POSTS        = [];   // all loaded posts
 var SL_FILTERED     = [];   // after filters applied
 var SL_VIEW         = 'calendar';
+var SL_CAL_MODE     = 'month'; // 'month' | 'week' | 'day'
 var SL_CURRENT_MONTH = new Date();
 var SL_EDITING_ID   = null; // null = new post
 var SL_PANEL_POST   = null; // current post object in panel
@@ -265,13 +266,48 @@ function slRenderCurrentView() {
    CALENDAR VIEW
 ══════════════════════════════════════════════════════════ */
 
-function slPrevMonth() { SL_CURRENT_MONTH.setMonth(SL_CURRENT_MONTH.getMonth() - 1); slRenderCalendar(); }
-function slNextMonth() { SL_CURRENT_MONTH.setMonth(SL_CURRENT_MONTH.getMonth() + 1); slRenderCalendar(); }
+
+function slSetCalMode(mode) {
+  SL_CAL_MODE = mode;
+  ['month','week','day'].forEach(function(m) {
+    var btn = document.getElementById('sl-mode-' + m);
+    if (btn) btn.classList.toggle('active', m === mode);
+  });
+  slRenderCalendar();
+}
+
+function slCalPrev() {
+  if (SL_CAL_MODE === 'month') {
+    SL_CURRENT_MONTH.setMonth(SL_CURRENT_MONTH.getMonth() - 1);
+  } else if (SL_CAL_MODE === 'week') {
+    SL_CURRENT_MONTH.setDate(SL_CURRENT_MONTH.getDate() - 7);
+  } else {
+    SL_CURRENT_MONTH.setDate(SL_CURRENT_MONTH.getDate() - 1);
+  }
+  slRenderCalendar();
+}
+
+function slCalNext() {
+  if (SL_CAL_MODE === 'month') {
+    SL_CURRENT_MONTH.setMonth(SL_CURRENT_MONTH.getMonth() + 1);
+  } else if (SL_CAL_MODE === 'week') {
+    SL_CURRENT_MONTH.setDate(SL_CURRENT_MONTH.getDate() + 7);
+  } else {
+    SL_CURRENT_MONTH.setDate(SL_CURRENT_MONTH.getDate() + 1);
+  }
+  slRenderCalendar();
+}
+
+function slPrevMonth() { slCalPrev(); }
+function slNextMonth() { slCalNext(); }
 
 function slRenderCalendar() {
+  if (SL_CAL_MODE === 'week') { slRenderWeek(); return; }
+  if (SL_CAL_MODE === 'day')  { slRenderDay();  return; }
   var headingEl = document.getElementById('sl-month-heading');
   var grid = document.getElementById('sl-cal-grid');
   if (!grid) return;
+  grid.className = ''; // clear week/day mode class
 
   var year  = SL_CURRENT_MONTH.getFullYear();
   var month = SL_CURRENT_MONTH.getMonth();
@@ -354,6 +390,157 @@ function slRenderCalendar() {
     html += '<div class="' + cls + '"' + dropHandlers + ' onclick="' + (cell.thisMonth ? 'slOpenPost(null,\'' + (cell.dateStr||'') + '\')' : '') + '">'
       + dayNum + postsHtml + addBtn + '</div>';
   });
+
+  grid.innerHTML = html;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   WEEK VIEW
+══════════════════════════════════════════════════════════ */
+
+function slRenderWeek() {
+  var headingEl = document.getElementById('sl-month-heading');
+  var grid = document.getElementById('sl-cal-grid');
+  if (!grid) return;
+
+  // Find Monday of current week
+  var ref = new Date(SL_CURRENT_MONTH);
+  var dow = ref.getDay(); // 0=Sun
+  var monday = new Date(ref);
+  monday.setDate(ref.getDate() - ((dow + 6) % 7)); // shift to Monday
+
+  var days = [];
+  for (var i = 0; i < 7; i++) {
+    var d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    days.push(d);
+  }
+
+  var MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var DN = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var today = new Date();
+  var todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+
+  if (headingEl) {
+    var endDay = days[6];
+    headingEl.textContent = days[0].getDate() + ' ' + MN[days[0].getMonth()] + ' – ' + endDay.getDate() + ' ' + MN[endDay.getMonth()] + ' ' + days[0].getFullYear();
+  }
+
+  // Posts keyed by date
+  var postsByDate = {};
+  SL_FILTERED.forEach(function(p) {
+    if (!p.scheduled_at) return;
+    var d = p.scheduled_at.substring(0,10);
+    if (!postsByDate[d]) postsByDate[d] = [];
+    postsByDate[d].push(p);
+  });
+
+  grid.className = 'week-mode';
+
+  var html = '<div class="sl-cal-dow" style="background:#0D1B2A"></div>'; // gutter header
+  days.forEach(function(d) {
+    var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    var isToday = ds === todayStr;
+    html += '<div class="sl-cal-dow" style="' + (isToday ? 'background:var(--accent)' : '') + '">' + DN[days.indexOf(d)] + ' ' + d.getDate() + '</div>';
+  });
+
+  // Hour rows 7am–8pm
+  for (var h = 7; h <= 20; h++) {
+    var label = h < 12 ? h + 'am' : h === 12 ? '12pm' : (h-12) + 'pm';
+    html += '<div class="sl-cal-time-gutter">' + label + '</div>';
+    days.forEach(function(d) {
+      var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      var isToday = ds === todayStr;
+      var hourPosts = (postsByDate[ds] || []).filter(function(p) {
+        if (!p.scheduled_at) return false;
+        var ph = parseInt(p.scheduled_at.substring(11,13), 10);
+        return ph === h;
+      });
+      var _wSlot = ds + 'T' + String(h).padStart(2,'0') + ':00';
+      html += '<div class="sl-cal-hour-cell" style="' + (isToday ? 'background:#EEF4FF' : '') + '" onclick="slOpenPost(null,\'' + _wSlot + '\')">'; 
+      hourPosts.forEach(function(p) {
+        var st = SL_STATUSES[p.status] || SL_STATUSES.draft;
+        var plat = SL_PLATFORMS.find(function(pl){ return (p.platform_ids||[]).includes(pl.id); });
+        var color = plat ? plat.color : '#6B6560';
+        var canDrag = ['draft','approved','scheduled'].includes(p.status);
+        html += '<button class="sl-cal-pill" draggable="' + (canDrag?'true':'false') + '" data-post-id="' + p.id + '" style="background:' + st.bg + ';color:' + st.color + ';margin-bottom:2px;width:100%;text-align:left" onclick="event.stopPropagation();slOpenPost(\'' + p.id + '\')" ondragstart="slDragStart(event,\'' + p.id + '\')" ondragend="slDragEnd(event)">'
+          + '<span class="sl-cal-pill-dot" style="background:' + color + '"></span>'
+          + '<span class="sl-cal-pill-text">' + slEscape(p.title) + '</span>'
+          + '</button>';
+      });
+      html += '</div>';
+    });
+  }
+
+  grid.innerHTML = html;
+}
+
+/* ══════════════════════════════════════════════════════════
+   DAY VIEW
+══════════════════════════════════════════════════════════ */
+
+function slRenderDay() {
+  var headingEl = document.getElementById('sl-month-heading');
+  var grid = document.getElementById('sl-cal-grid');
+  if (!grid) return;
+
+  var ref = SL_CURRENT_MONTH;
+  var ds = ref.getFullYear() + '-' + String(ref.getMonth()+1).padStart(2,'0') + '-' + String(ref.getDate()).padStart(2,'0');
+  var MN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var DN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  if (headingEl) headingEl.textContent = DN[ref.getDay()] + ' ' + ref.getDate() + ' ' + MN[ref.getMonth()] + ' ' + ref.getFullYear();
+
+  var dayPosts = SL_FILTERED.filter(function(p) {
+    return p.scheduled_at && p.scheduled_at.substring(0,10) === ds;
+  });
+
+  var postsByHour = {};
+  dayPosts.forEach(function(p) {
+    var h = parseInt(p.scheduled_at.substring(11,13), 10);
+    if (!postsByHour[h]) postsByHour[h] = [];
+    postsByHour[h].push(p);
+  });
+
+  var unscheduled = SL_FILTERED.filter(function(p) {
+    return !p.scheduled_at;
+  });
+
+  grid.className = 'day-mode';
+
+  var html = '<div class="sl-cal-dow" style="background:#0D1B2A"></div>'
+    + '<div class="sl-cal-dow">' + DN[ref.getDay()] + ' ' + ref.getDate() + ' ' + MN[ref.getMonth()] + '</div>';
+
+  for (var h = 7; h <= 21; h++) {
+    var label = h < 12 ? h + ':00am' : h === 12 ? '12:00pm' : (h-12) + ':00pm';
+    html += '<div class="sl-cal-time-gutter">' + label + '</div>';
+    var _dSlot = ds + 'T' + String(h).padStart(2,'0') + ':00';
+    html += '<div class="sl-cal-hour-cell" onclick="slOpenPost(null,\'' + _dSlot + '\')">'; 
+    (postsByHour[h] || []).forEach(function(p) {
+      var st = SL_STATUSES[p.status] || SL_STATUSES.draft;
+      var plat = SL_PLATFORMS.find(function(pl){ return (p.platform_ids||[]).includes(pl.id); });
+      var color = plat ? plat.color : '#6B6560';
+      html += '<button class="sl-cal-pill" style="background:' + st.bg + ';color:' + st.color + ';margin-bottom:3px;width:100%;text-align:left" onclick="event.stopPropagation();slOpenPost(\'' + p.id + '\')">'
+        + '<span class="sl-cal-pill-dot" style="background:' + color + '"></span>'
+        + '<span class="sl-cal-pill-text">' + slEscape(p.title) + '</span>'
+        + '</button>';
+    });
+    html += '</div>';
+  }
+
+  // Unscheduled posts at bottom
+  if (unscheduled.length) {
+    html += '<div class="sl-cal-time-gutter" style="color:#92400E;font-weight:700">TBC</div>';
+    html += '<div class="sl-cal-hour-cell">';
+    unscheduled.forEach(function(p) {
+      var st = SL_STATUSES[p.status] || SL_STATUSES.draft;
+      html += '<button class="sl-cal-pill" style="background:' + st.bg + ';color:' + st.color + ';margin-bottom:3px;width:100%;text-align:left" onclick="event.stopPropagation();slOpenPost(\'' + p.id + '\')">'
+        + '<span class="sl-cal-pill-text">' + slEscape(p.title) + '</span>'
+        + '</button>';
+    });
+    html += '</div>';
+  }
 
   grid.innerHTML = html;
 }
