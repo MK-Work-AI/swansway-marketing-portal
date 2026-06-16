@@ -1102,6 +1102,7 @@ async function evSave(saveAsConfirmed) {
       }
     } else {
       // New: create one event per site
+      var _newEventIds = [];
       for (var i = 0; i < d.site_ids.length; i++) {
         var siteId = d.site_ids[i];
         var payload = evBuildPayload(d, siteId, saveAsConfirmed, true);
@@ -1112,7 +1113,7 @@ async function evSave(saveAsConfirmed) {
         });
         if (!r.ok) throw new Error(await r.text());
         var newRows = await r.json();
-        var eventId = newRows[0].id;
+        var eventId = newRows[0].id; if(typeof _newEventIds!=="undefined") _newEventIds.push(eventId);
         await evSaveVehicles(eventId, d.brand_id);
         await evSavePOS(eventId);
         // Budget aggregated from events table on budget page — no site_budgets mutation
@@ -1124,6 +1125,20 @@ async function evSave(saveAsConfirmed) {
     evRender();
     var n = EV_EDITING_ID ? 1 : d.site_ids.length;
     showToast('Event' + (n > 1 ? 's' : '') + ' saved \u2713' + (n > 1 ? ' (' + n + ' sites)' : ''), 'success');
+    // Social Hub: prompt to generate posts for new events
+    if (!EV_EDITING_ID && typeof _newEventIds !== 'undefined' && _newEventIds.length) {
+      var _evSocialData = { title: d.title, brand_id: d.brand_id, site_ids: d.site_ids, start_date: d.start_date, end_date: d.end_date, planned_budget: d.planned_budget, location: d.location };
+      if (typeof slPromptFromEvent === 'function') {
+        setTimeout(function() { slPromptFromEvent(_newEventIds, _evSocialData); }, 400);
+      } else {
+        setTimeout(function() {
+          if (confirm('Generate social posts for this event?\n\nThis will create draft posts in the Social Hub pre-filled with the event details.')) {
+            try { sessionStorage.setItem('_slGenPayload', JSON.stringify({ source: 'event', event_ids: _newEventIds, title: _evSocialData.title, brand_id: _evSocialData.brand_id, site_ids: _evSocialData.site_ids, start_date: _evSocialData.start_date, end_date: _evSocialData.end_date, budget: _evSocialData.planned_budget, location: _evSocialData.location })); } catch(e) {}
+            window.location = 'social.html';
+          }
+        }, 500);
+      }
+    }
   } catch(e) {
     evFormError('Save failed: ' + e.message);
     saveBtns.forEach(function(b){ b.disabled = false; b.style.opacity = ''; });
