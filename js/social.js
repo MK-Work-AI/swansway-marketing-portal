@@ -784,7 +784,7 @@ function slCollectFormData() {
     vehicle_model:    (document.getElementById('sl-f-vehicle')  ||{}).value || null,
     target_audience:  (document.getElementById('sl-f-audience') ||{}).value || null,
     location:         (document.getElementById('sl-f-location') ||{}).value || null,
-    assigned_to:      (document.getElementById('sl-f-assignee') ||{}).value || null,
+    assigned_to:      slAsUUID((document.getElementById('sl-f-assignee') ||{}).value) || null,
     notes:            (document.getElementById('sl-f-notes')    ||{}).value || null,
   };
 }
@@ -807,7 +807,7 @@ async function slSavePost() {
     var isNew = !SL_EDITING_ID;
     if (isNew) {
       payload.status = 'draft';
-      payload.created_by = CB_CURRENT_USER || null;
+      payload.created_by = slAsUUID(CB_CURRENT_USER);
       payload.created_at = new Date().toISOString();
     }
 
@@ -854,7 +854,7 @@ async function slSubmitPost() {
       headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
       body: JSON.stringify(Object.assign({}, data, {
         status: 'in_review',
-        submitted_by: CB_CURRENT_USER || null,
+        submitted_by: slAsUUID(CB_CURRENT_USER),
         submitted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }))
@@ -879,7 +879,7 @@ async function slApprovePost() {
       headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
       body: JSON.stringify({
         status: 'approved',
-        approved_by: CB_CURRENT_USER,
+        approved_by: slAsUUID(CB_CURRENT_USER),
         approved_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -921,7 +921,7 @@ async function slConfirmReject() {
       headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
       body: JSON.stringify({
         status: 'rejected',
-        rejected_by: CB_CURRENT_USER,
+        rejected_by: slAsUUID(CB_CURRENT_USER),
         rejected_at: new Date().toISOString(),
         rejection_reason: reason,
         updated_at: new Date().toISOString(),
@@ -967,7 +967,7 @@ async function slAddComment(text, type) {
     headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
     body: JSON.stringify([{
       post_id: SL_EDITING_ID,
-      user_id: CB_CURRENT_USER || null,
+      user_id: slAsUUID(CB_CURRENT_USER),
       user_name: me.name || 'Team',
       comment: text,
       comment_type: type || 'note',
@@ -1104,7 +1104,7 @@ async function slConfirmGenerate(payload) {
     scheduled_at:    schedDate,
     budget_allocated: payload.budget ? Math.round(payload.budget * 0.05) : null,  // 5% of event budget as default
     location:        payload.location || null,
-    created_by:      CB_CURRENT_USER || null,
+    created_by:      slAsUUID(CB_CURRENT_USER),
     created_at:      new Date().toISOString(),
     updated_at:      new Date().toISOString(),
   };
@@ -1139,6 +1139,14 @@ function slEscape(str) {
     .replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;')
     .replace(/'/g,'&#39;');
+}
+
+// Returns val only if it's a valid UUID, otherwise null.
+// The portal uses name-based IDs (e.g. "marcus") for CB_CURRENT_USER
+// in some environments, which Supabase rejects in UUID columns.
+function slAsUUID(val) {
+  if (!val) return null;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(val)) ? val : null;
 }
 
 function slShowToast(msg, type) {
