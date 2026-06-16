@@ -1106,19 +1106,24 @@ function bbShowPostSave(briefId, status, jobRef) {
     var _canLaunchNow = _perms.can_approve_all || _perms.can_approve_digital;
     var _refHtml = (jobRef || window._lastJobRef) ? '<div style="display:inline-block;margin-bottom:10px;padding:4px 12px;background:#F1F5F9;border:1.5px solid #CBD5E1;border-radius:4px;font-family:var(--font-m);font-size:12px;color:#475569;letter-spacing:0.05em">Job ref: <strong style="color:var(--ink);font-size:13px">' + (jobRef || window._lastJobRef) + '</strong></div>' : '';
     if (_canLaunchNow) {
+      var _hasSocial = BB && BB.channels && (BB.channels.indexOf('social_organic') !== -1 || BB.channels.indexOf('social_paid') !== -1);
+      var _socialBtn = '<div style="margin-top:8px"><button class="bb-s6-submit-btn" style="background:#1E3A8A;margin-top:4px" onclick="slPromptFromBrief(window._lastSavedBriefId||\'' + briefId + '\', BB||{})">📱 ' + (_hasSocial ? 'Social is a channel on this campaign — build your posts' : 'Generate social posts') + '</button></div>';
       fb.innerHTML = '<div class="bb-s6-confirm">'
         + '<div class="bb-s6-tick">✓</div>'
         + _refHtml
         + '<div class="bb-s6-msg"><strong>Saved, ' + firstName + '.</strong> Ready to go live.</div>'
         + '<button class="bb-s6-launch" onclick="bbSubmitAndLaunch()">LAUNCH CAMPAIGN</button>'
+        + _socialBtn
         + '</div>';
     } else {
+      var _hasSocial2 = BB && BB.channels && (BB.channels.indexOf('social_organic') !== -1 || BB.channels.indexOf('social_paid') !== -1);
+      var _socialBtn2 = '<div style="margin-top:8px"><button class="bb-s6-submit-btn" style="background:#1E3A8A;margin-top:4px" onclick="slPromptFromBrief(window._lastSavedBriefId||\'' + briefId + '\', BB||{})">📱 ' + (_hasSocial2 ? 'Social is a channel — build your posts' : 'Generate social posts') + '</button></div>';
       fb.innerHTML = '<div class="bb-s6-confirm">'
         + '<div class="bb-s6-tick">✓</div>'
         + _refHtml
         + '<div class="bb-s6-msg"><strong>Saved, ' + firstName + '.</strong> When ready, submit for approval.</div>'
         + '<button class="bb-s6-submit-btn" onclick="bbSubmitBrief()">Submit for approval →</button>'
-        + '<div style="margin-top:8px"><button class="bb-s6-submit-btn" style="background:#1E3A8A;margin-top:4px" onclick="slPromptFromBrief(window._lastSavedBriefId||\'' + briefId + '\', BB||{})">📱 Generate social posts</button></div>'
+        + _socialBtn2
         + '</div>';
     }
   } else {
@@ -1884,6 +1889,16 @@ async function bbSaveBrief() {
     feedback.style.display = 'none';
     window._lastSavedBriefId = data ? data.id : null;
     window._lastSavedBriefTitle = title;
+    // Auto-create/update social placeholder 2 days before campaign start
+    if (data && data.id && typeof swCreateSocialPlaceholder === 'function') {
+      swCreateSocialPlaceholder(data.id, {
+        title: title,
+        brand_id: record.brand_id || null,
+        brand_name: record.brand_name || null,
+        start_date: record.start_date || null,
+        job_ref: data.job_ref || window._lastJobRef || null
+      });
+    }
     // Link brief back to calendar campaign if opened from one
     if (BB && BB._calCampaignId && window._lastSavedBriefId) {
       fetch('https://humitzrleflxnlnodpde.supabase.co/rest/v1/campaigns?id=eq.'+BB._calCampaignId, {
