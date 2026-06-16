@@ -599,9 +599,13 @@ function renderBrandSites(brandId) {
   });
 
   // Update summary row to include committed
-  html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem">';
+  html = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.5rem">';
+  // Social budgets for this brand
+  var brandSocialData = window.SOCIAL_BUDGETS_BRAND && window.SOCIAL_BUDGETS_BRAND[brandId];
+  var totalSocial = brandSocialData ? brandSocialData.total : 0;
   html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Brand planned total</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:var(--swansway)">£' + totalPlan.toLocaleString() + '</div></div>';
   html += '<div style="background:var(--white);border:1px solid var(--border);border-top:3px solid #D97706;border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Committed (briefs)</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:#D97706">' + (totalCommitted > 0 ? '£' + totalCommitted.toLocaleString() : '—') + '</div></div>';
+  html += '<div style="background:var(--white);border:1px solid var(--border);border-top:3px solid #1877F2;border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Social budgeted</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:#1877F2">' + (totalSocial > 0 ? '£' + totalSocial.toLocaleString() : '—') + '</div></div>';
   html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">YTD actual</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:#059669">' + (totalActual > 0 ? '£' + totalActual.toLocaleString() : '—') + '</div></div>';
   var variance = totalActual - totalPlan;
   html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Variance</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:' + (variance > 0 ? '#DC2626' : '#059669') + '">' + (totalActual > 0 ? (variance >= 0 ? '+' : '') + '£' + Math.abs(variance).toLocaleString() : '—') + '</div></div>';
