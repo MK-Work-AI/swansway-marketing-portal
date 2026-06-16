@@ -1255,15 +1255,20 @@ async function mcLoadCampaignDetail(c) {
           try { platIds = Array.isArray(p.platform_ids) ? p.platform_ids : JSON.parse(p.platform_ids || '[]'); } catch(e) {}
           var platStr = platIds.map(function(pid){ return PLAT_ICONS[pid]||pid; }).join(' ');
           var schedStr = p.scheduled_at ? new Date(p.scheduled_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : 'TBC';
-          spHtml += '<div onclick="mcOpenSocialPost(\'' + p.id + '\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border-radius:4px;margin-bottom:6px;cursor:pointer">' +
-            '<span style="font-size:11px;color:var(--ink-soft);font-family:var(--font-m);flex-shrink:0;min-width:52px">' + schedStr + '</span>' +
-            '<span style="flex:1;font-size:12px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.title||'Untitled') + '</span>' +
-            (platStr ? '<span style="font-size:11px;color:var(--ink-soft);font-family:var(--font-m)">' + platStr + '</span>' : '') +
-            '<span style="font-size:10px;padding:2px 8px;border-radius:10px;color:#fff;background:' + sc + ';font-family:var(--font-m);font-weight:600;flex-shrink:0">' + sl + '</span>' +
-            '<span style="font-size:13px;color:var(--ink-soft)">&#8594;</span>' +
+          spHtml += '<div data-post-id="' + p.id + '" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border-radius:4px;margin-bottom:6px;cursor:pointer;pointer-events:auto">' +
+            '<span style="font-size:11px;color:var(--ink-soft);font-family:var(--font-m);flex-shrink:0;min-width:52px;pointer-events:none">' + schedStr + '</span>' +
+            '<span style="flex:1;font-size:12px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none">' + (p.title||'Untitled') + '</span>' +
+            (platStr ? '<span style="font-size:11px;color:var(--ink-soft);font-family:var(--font-m);pointer-events:none">' + platStr + '</span>' : '') +
+            '<span style="font-size:10px;padding:2px 8px;border-radius:10px;color:#fff;background:' + sc + ';font-family:var(--font-m);font-weight:600;flex-shrink:0;pointer-events:none">' + sl + '</span>' +
+            '<span style="font-size:13px;color:var(--ink-soft);pointer-events:none">&#8594;</span>' +
             '</div>';
         });
         socialEl.innerHTML = spHtml;
+        // Delegated click — catches clicks on child elements too
+        socialEl.addEventListener('click', function(e) {
+          var row = e.target.closest('[data-post-id]');
+          if (row) mcOpenSocialPost(row.getAttribute('data-post-id'));
+        });
       }
     }
   } catch(e) {
