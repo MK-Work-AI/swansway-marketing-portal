@@ -1098,10 +1098,7 @@ async function evSave(saveAsConfirmed) {
       if (!r.ok) throw new Error(await r.text());
       await evSaveVehicles(EV_EDITING_ID, d.brand_id);
       await evSavePOS(EV_EDITING_ID);
-      // Update social placeholder date if start_date changed
-      if (typeof swCreateEventSocialPlaceholder === 'function' && d.start_date) {
-        swCreateEventSocialPlaceholder(EV_EDITING_ID, { title: d.title, brand_id: d.brand_id, start_date: d.start_date, job_ref: oldEvent ? oldEvent.job_ref : null });
-      }
+
       if (oldEvent) {
         var oldP = oldEvent.planned_budget || 0, newP = parseFloat(d.planned_budget) || 0;
         var oldA = oldEvent.actual_spend   || 0, newA = parseFloat(d.actual_spend)   || 0;
@@ -1124,15 +1121,7 @@ async function evSave(saveAsConfirmed) {
         var eventId = newRows[0].id; if(typeof _newEventIds!=="undefined") _newEventIds.push(eventId);
         await evSaveVehicles(eventId, d.brand_id);
         await evSavePOS(eventId);
-        // Auto-create social placeholder 2 days before event
-        if (typeof swCreateEventSocialPlaceholder === 'function') {
-          swCreateEventSocialPlaceholder(eventId, {
-            title: d.title,
-            brand_id: d.brand_id,
-            start_date: d.start_date,
-            job_ref: _evJobRef || null
-          });
-        }
+
         // Budget aggregated from events table on budget page — no site_budgets mutation
       }
     }
