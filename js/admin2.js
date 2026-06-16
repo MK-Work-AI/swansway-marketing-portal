@@ -1261,12 +1261,15 @@ async function saLoad() {
     }
   } catch(e) { console.warn('saLoad members:', e); }
 
-  // Load existing approver config
+  // Load existing approver config from the main config blob (same place saSave() writes to)
+  // SA_DATA may already be populated by loadAdminCfg() on page init — only overwrite if blob has data
   try {
-    var r2 = await fetch(SUPA + '/admin_config?key=eq.social_approvers&select=value', { headers: getAuthHeaders() });
+    var r2 = await fetch(SUPA + '/admin_config?select=config&order=updated_at.desc&limit=1', { headers: getAuthHeaders() });
     if (r2.ok) {
       var rows2 = await r2.json();
-      SA_DATA = (rows2 && rows2[0] && rows2[0].value) ? rows2[0].value : {};
+      if (rows2 && rows2[0] && rows2[0].config && rows2[0].config.social_approvers) {
+        SA_DATA = rows2[0].config.social_approvers;
+      }
     }
   } catch(e) { console.warn('saLoad config:', e); }
 
