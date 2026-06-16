@@ -391,7 +391,9 @@ function evOpenDetail(id) {
         : '<p style="font-family:var(--font-b);font-size:13px;color:var(--ink-faint);margin:0">No debrief added yet.</p>') : '')
     + '</div>'
     + '<div class="ev-modal-footer">'
+    + (ev.job_ref ? '<span style="font-family:var(--font-m);font-size:10px;color:var(--ink-soft);letter-spacing:0.05em;padding:4px 8px;background:var(--surface);border-radius:4px;margin-right:auto">' + evEsc(ev.job_ref) + '</span>' : '')
     + '<button class="btn" onclick="evOpenForm(\'' + ev.id + '\')">\u270F Edit</button>'
+    + (typeof slPromptFromEvent === 'function' ? '<button class="btn" style="background:#1E3A8A;color:#fff;border-color:#1E3A8A" onclick="slPromptFromEvent([\''+ev.id+'\'],{title:evEsc(ev.title),brand_id:ev.brand_id,start_date:ev.start_date,end_date:ev.end_date,location:ev.location,job_ref:ev.job_ref})">\uD83D\uDCF1 Social post</button>' : '')
     + (isLeadership && ev.status === 'draft'     ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'confirmed\')">\u2713 Confirm</button>' : '')
     + (isLeadership && ev.status === 'confirmed' ? '<button class="btn" onclick="evChangeStatus(\'' + ev.id + '\',\'draft\')">\u21A9 Unconfirm</button>' : '')
     + (isLeadership && ev.status === 'confirmed' ? '<button class="btn btn-accent" onclick="evChangeStatus(\'' + ev.id + '\',\'completed\')">&#x2705; Mark Complete</button>' : '')
@@ -1096,6 +1098,10 @@ async function evSave(saveAsConfirmed) {
       if (!r.ok) throw new Error(await r.text());
       await evSaveVehicles(EV_EDITING_ID, d.brand_id);
       await evSavePOS(EV_EDITING_ID);
+      // Update social placeholder date if start_date changed
+      if (typeof swCreateEventSocialPlaceholder === 'function' && d.start_date) {
+        swCreateEventSocialPlaceholder(EV_EDITING_ID, { title: d.title, brand_id: d.brand_id, start_date: d.start_date, job_ref: oldEvent ? oldEvent.job_ref : null });
+      }
       if (oldEvent) {
         var oldP = oldEvent.planned_budget || 0, newP = parseFloat(d.planned_budget) || 0;
         var oldA = oldEvent.actual_spend   || 0, newA = parseFloat(d.actual_spend)   || 0;
@@ -1118,6 +1124,15 @@ async function evSave(saveAsConfirmed) {
         var eventId = newRows[0].id; if(typeof _newEventIds!=="undefined") _newEventIds.push(eventId);
         await evSaveVehicles(eventId, d.brand_id);
         await evSavePOS(eventId);
+        // Auto-create social placeholder 2 days before event
+        if (typeof swCreateEventSocialPlaceholder === 'function') {
+          swCreateEventSocialPlaceholder(eventId, {
+            title: d.title,
+            brand_id: d.brand_id,
+            start_date: d.start_date,
+            job_ref: _evJobRef || null
+          });
+        }
         // Budget aggregated from events table on budget page — no site_budgets mutation
       }
     }
