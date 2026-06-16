@@ -629,9 +629,14 @@ function slRenderPanel() {
     + '<select class="sl-select" id="sl-f-brand"' + disabled + '>' + brandOptions + '</select></div>'
     + '<div class="sl-field-group"><div class="sl-field-label">Post type</div>'
     + '<select class="sl-select" id="sl-f-type"' + disabled + '>'
-    + '<option value="organic"' + (p.post_type==='organic'?' selected':'') + '>Organic</option>'
-    + '<option value="paid"' + (p.post_type==='paid'?' selected':'') + '>Paid / Promoted</option>'
-    + '<option value="boosted"' + (p.post_type==='boosted'?' selected':'') + '>Boosted</option>'
+    + '<option value="new_model"'        + (p.post_type==='new_model'       ?' selected':'') + '>New Model</option>'
+    + '<option value="offer"'            + (p.post_type==='offer'           ?' selected':'') + '>Offer / Deal</option>'
+    + '<option value="event"'            + (p.post_type==='event'           ?' selected':'') + '>Event</option>'
+    + '<option value="brand_story"'      + (p.post_type==='brand_story'     ?' selected':'') + '>Brand Story</option>'
+    + '<option value="csr"'              + (p.post_type==='csr'             ?' selected':'') + '>CSR</option>'
+    + '<option value="competition"'      + (p.post_type==='competition'     ?' selected':'') + '>Competition</option>'
+    + '<option value="behind_scenes"'    + (p.post_type==='behind_scenes'   ?' selected':'') + '>Behind the Scenes</option>'
+    + '<option value="product_walkround"'+ (p.post_type==='product_walkround'?' selected':'') + '>Product Walkaround</option>'
     + '</select></div>'
     + '</div>'
 
@@ -668,6 +673,19 @@ function slRenderPanel() {
     + '<div class="sl-field-label">Caption / copy <span class="req">*</span></div>'
     + '<textarea class="sl-textarea" id="sl-f-caption" style="min-height:120px"' + disabled + ' oninput="slOnCaptionInput(this)">' + slEscape(p.caption||'') + '</textarea>'
     + '<div class="sl-char-counter ' + charClass + '" id="sl-char-counter">' + captionLen + ' characters</div>'
+    + '</div>'
+
+    // Hashtags
+    + '<div class="sl-field-group">'
+    + '<div class="sl-field-label">Hashtags</div>'
+    + '<input class="sl-input" id="sl-f-hashtags" value="' + slEscape(p.hashtags||'') + '" placeholder="#automotive #swansway #audi"' + disabled + '>'
+    + ((p.platform_ids||[]).includes('instagram') ? '<label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--ink-soft);cursor:pointer"><input type="checkbox" id="sl-f-hashtag-first-comment" ' + (p.hashtag_first_comment?'checked':'') + (disabled?' disabled':'') + '><span>Post hashtags as first comment (Instagram best practice)</span></label>' : '')
+    + '</div>'
+
+    // Link / CTA
+    + '<div class="sl-field-group">'
+    + '<div class="sl-field-label">Link / CTA URL</div>'
+    + '<input class="sl-input" id="sl-f-cta-url" type="url" value="' + slEscape(p.cta_url||'') + '" placeholder="https://swansway.com/offers/audi-q5" ' + disabled + '>'
     + '</div>'
 
     // Assigned to
@@ -792,6 +810,9 @@ function slCollectFormData() {
     location:         (document.getElementById('sl-f-location') ||{}).value || null,
     assigned_to:      slAsUUID((document.getElementById('sl-f-assignee') ||{}).value) || null,
     notes:            (document.getElementById('sl-f-notes')    ||{}).value || null,
+    hashtags:         (document.getElementById('sl-f-hashtags') ||{}).value || null,
+    hashtag_first_comment: !!(document.getElementById('sl-f-hashtag-first-comment') && document.getElementById('sl-f-hashtag-first-comment').checked),
+    cta_url:          (document.getElementById('sl-f-cta-url')  ||{}).value || null,
   };
 }
 
