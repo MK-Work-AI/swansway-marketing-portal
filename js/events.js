@@ -981,20 +981,26 @@ async function efLoadBudgetPanel() {
 
   try {
     var siteList = EV_FORM_DATA.site_ids.map(encodeURIComponent).join(',');
-    var r = await fetch(SUPA + '/site_budgets?site_id=in.(' + siteList + ')&select=*', { headers: getAuthHeaders() });
+    var year = new Date().getFullYear();
+    // Query site_budget_lines and aggregate by site+month across all channels
+    var r = await fetch(SUPA + '/site_budget_lines?site_id=in.(' + siteList + ')&month=eq.' + month + '&year=eq.' + year + '&select=site_id,channel,planned,actual', { headers: getAuthHeaders() });
     if (!r.ok) { panel.innerHTML = ''; return; }
-    var budgets = await r.json();
+    var lines = await r.json();
 
-    // Build a lookup by site_id
+    // Aggregate lines into totals per site
     var budgetBySite = {};
-    budgets.forEach(function(b){ budgetBySite[b.site_id] = b; });
+    lines.forEach(function(line) {
+      if (!budgetBySite[line.site_id]) budgetBySite[line.site_id] = { planned: 0, actual: 0 };
+      budgetBySite[line.site_id].planned += (line.planned || 0);
+      budgetBySite[line.site_id].actual  += (line.actual  || 0);
+    });
 
     var rows = EV_FORM_DATA.site_ids.map(function(sid) {
       var site = SB_SITES.find(function(s){ return s.site_id === sid; });
       var siteName = site ? site.site_name : sid;
       var brow = budgetBySite[sid];
-      var allocated = brow ? (brow[mN + '_planned'] || 0) : null;
-      var spent     = brow ? (brow[mN + '_actual']  || 0) : null;
+      var allocated = brow ? (brow.planned || 0) : null;
+      var spent     = brow ? (brow.actual  || 0) : null;
       var remaining = (allocated !== null) ? (allocated - spent - plannedInput) : null;
       var color = remaining !== null ? (remaining < 0 ? '#DC2626' : remaining < allocated * 0.1 ? '#D97706' : '#059669') : '#6B7280';
       return { siteName: siteName, allocated: allocated, spent: spent, remaining: remaining, color: color };
