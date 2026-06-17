@@ -744,7 +744,7 @@ function renderBrandSites(brandId) {
   el.innerHTML = html;
   brsInjectStyles();
   brsAttachListeners(el);
-  var accRows = el.querySelectorAll('tr[data-accord]'); console.log('brsAttach: found', accRows.length, 'accordion rows');
+  var accRows = el.querySelectorAll('tr[data-accord]'); console.log('brsAttach: found', accRows.length, 'accordion rows, el in doc:', document.body.contains(el));
 }
 
 
