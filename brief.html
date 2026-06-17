@@ -429,6 +429,20 @@ document.addEventListener('click', navCloseAll);
 .bb-out-peso-q{padding:12px;border-radius:4px}
 .bb-out-peso-q.P{background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2)}
 .bb-out-peso-q.E{background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.2)}
+.bb-out-peso-q.S{background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2)}
+.bb-out-peso-q.O{background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2)}
+.bb-out-peso-letter{font-family:var(--font-d);font-size:22px;font-weight:800;margin-bottom:2px}
+.bb-out-peso-name{font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:10px}
+.bb-out-peso-item{font-size:11px;color:var(--ink);padding:3px 0;border-bottom:1px solid var(--border)}
+.bb-out-peso-item:last-child{border-bottom:none}
+.bb-out-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bb-out-kpi{padding:12px 14px;background:var(--surface);border-radius:4px}
+.bb-out-kpi-label{font-family:var(--font-m);font-size:9px;color:var(--ink-soft);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px}
+.bb-out-kpi-val{font-family:var(--font-d);font-size:20px;font-weight:800;color:var(--ink)}
+.bb-out-tl{display:grid;grid-template-columns:80px 1fr;gap:6px 12px;align-items:start}
+.bb-out-tl-label{font-family:var(--font-m);font-size:10px;font-weight:700;color:var(--ink-soft);padding-top:5px}
+.bb-out-tl-pills{display:flex;flex-wrap:wrap;gap:4px}
+.bb-out-tl-pill{font-size:11px;padding:3px 8px;border-radius:10px;background:var(--surface);color:var(--ink);font-family:var(--font-b);border:1px solid var(--border)}
 
 
   </style>
@@ -437,8 +451,8 @@ document.addEventListener('click', navCloseAll);
 <script src="config.js?v=2"></script>
 <script src="bundle-core.js?v=101"></script>
 <script src="js/group.js?v=105" defer></script>
-<script src="js/brief7.js?v=103" defer>
-  <script>
+<script src="js/brief7.js?v=104" defer></script>
+<script>
     // Override bbCheckUrlOnLoad AFTER brief7.js loads
     function bbCheckUrlOnLoad() { /* disabled */ }
     var _origBbNewBrief = window.bbNewBrief;
@@ -448,7 +462,7 @@ document.addEventListener('click', navCloseAll);
       if (_origBbNewBrief) _origBbNewBrief.apply(this, arguments);
     };
     console.log('POST-LOAD: bbCheckUrlOnLoad and bbNewBrief overridden');
-  </script></script>
+  </script>
 </head>
 <body>
 
