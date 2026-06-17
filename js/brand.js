@@ -316,7 +316,7 @@ function renderBrandEvents(brandId) {
         }
         chHtml += '</tr>';
       });
-      html += '<tr id="' + siteAccordId + '" style="display:none"><td colspan="' + colCount + '" style="padding:0;background:#F0F4FF;border-left:3px solid #2563EB">';
+      html += '<tr id="' + siteAccordId + '" class="brs-detail-row"><td colspan="' + colCount + '" style="padding:0;background:#F0F4FF;border-left:3px solid #2563EB">';
       html += '<table style="width:100%;border-collapse:collapse">';
       html += '<thead><tr style="background:#E8EFFF"><th style="padding:5px 12px 5px 28px;text-align:left;font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em">Channel</th>';
       html += '<th style="padding:5px 12px;text-align:right;font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase">Planned</th>';
@@ -591,9 +591,24 @@ function brsToggle(id) {
   var row = document.getElementById(id);
   var chv = document.getElementById('brs-chv-' + id);
   if (!row) return;
-  var open = row.style.display !== 'none';
-  row.style.display = open ? 'none' : 'table-row';
-  if (chv) chv.innerHTML = open ? '&#9654;' : '&#9660;';
+  var open = row.classList.contains('brs-open');
+  if (open) {
+    row.classList.remove('brs-open');
+    row.style.display = 'none';
+    if (chv) chv.innerHTML = '&#9654;';
+  } else {
+    row.classList.add('brs-open');
+    row.style.display = 'table-row';
+    if (chv) chv.innerHTML = '&#9660;';
+  }
+}
+
+function brsInjectStyles() {
+  if (document.getElementById('brs-styles')) return;
+  var s = document.createElement('style');
+  s.id = 'brs-styles';
+  s.textContent = '.brs-detail-row { display: none; } .brs-detail-row.brs-open { display: table-row; }';
+  document.head.appendChild(s);
 }
 
 function brsAttachListeners(container) {
@@ -716,6 +731,7 @@ function renderBrandSites(brandId) {
   });
   html += '</tbody></table></div>';
   el.innerHTML = html;
+  brsInjectStyles();
   brsAttachListeners(el);
   var accRows = el.querySelectorAll('tr[data-accord]'); console.log('brsAttach: found', accRows.length, 'accordion rows');
 }
