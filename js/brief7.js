@@ -628,6 +628,7 @@ function bbOnBudget(v) {
   document.querySelectorAll('.bb-preset').forEach(p=>p.classList.toggle('bb-active',parseInt(p.dataset.v)===BB.budget));
   bbUpdateScienceBox();
   bbUpdateMaturity();
+  bbRenderChannelSplit();
   bbUpdateBrief();
   const btn3 = document.getElementById('bb-btn-3-next');
   if(btn3 && BB.duration) btn3.disabled = false;
@@ -711,7 +712,13 @@ function bbRenderChannelSplit() {
   var list    = document.getElementById('bb-channel-split-list');
   if (!section || !list) return;
 
+  // Use selected channels, or all PESO channels as default if none selected yet
   var channelIds = BB.channels || [];
+  if (!channelIds.length && typeof BB_PESO !== 'undefined') {
+    Object.values(BB_PESO).forEach(function(quad) {
+      (quad.channels||[]).forEach(function(ch) { if (!channelIds.includes(ch.id)) channelIds.push(ch.id); });
+    });
+  }
   if (!channelIds.length || !BB.budget) { section.style.display = 'none'; return; }
   section.style.display = 'block';
 
