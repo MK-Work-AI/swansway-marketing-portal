@@ -633,6 +633,7 @@ function renderBrandSites(brandId) {
   var sites = HUB_SITES.filter(function(s){ return s.brand_id === brandId; });
   var channelCount = sites.reduce(function(sum,s){ return sum + Object.keys((SITE_BUDGETS[s.site_id]||{}).channels||{}).length; }, 0);
   var renderKey = siteCount + '_' + channelCount;
+  console.log('renderBrandSites key check: stored='+el._brsRenderKey+' new='+renderKey+' channelCount='+channelCount);
   if (el._brsRenderKey === renderKey && channelCount > 0) return;
   el._brsRenderKey = renderKey;
   var sites = HUB_SITES.filter(function(s) { return s.brand_id === brandId; });
@@ -743,6 +744,7 @@ function renderBrandSites(brandId) {
   });
   html += '</tbody></table></div>';
   el.innerHTML = html;
+  console.log('renderBrandSites: wrote HTML, brs- rows in DOM:', el.querySelectorAll('[id^=brs-]').length);
   brsInjectStyles();
   brsAttachListeners(el);
   var accRows = el.querySelectorAll('tr[data-accord]'); console.log('brsAttach: found', accRows.length, 'accordion rows');
