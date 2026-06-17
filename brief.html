@@ -1067,6 +1067,18 @@ document.addEventListener('click', navCloseAll);
         <div class="bb-section-label" style="margin-bottom:8px">Budget split by site</div>
         <div id="bb-split-body"></div>
       </div>
+      <!-- Channel budget split -->
+      <div id="bb-channel-split-section" style="display:none;margin-top:1.5rem;margin-bottom:1.5rem">
+        <div class="bb-section-label">Channel budget split</div>
+        <div id="bb-channel-split-list" style="margin-bottom:10px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border-radius:4px;margin-bottom:6px">
+          <span style="font-family:var(--font-m);font-size:11px;font-weight:700;color:var(--ink)">Total allocated</span>
+          <span id="bb-split-total" style="font-family:var(--font-m);font-size:13px;font-weight:700;color:var(--ink)">£0</span>
+          <span id="bb-split-status" style="font-size:11px;font-family:var(--font-m)"></span>
+          <button onclick="bbAutoSplitChannels()" style="font-family:var(--font-m);font-size:11px;padding:4px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--white);cursor:pointer;color:var(--ink-soft)">Auto-split equally</button>
+        </div>
+      </div>
+
       <div class="bb-section-label">Campaign duration</div>
       <div id="bb-duration-display" style="display:flex;align-items:baseline;gap:16px;margin-bottom:1.5rem;padding:20px 24px;background:var(--white);border:1.5px solid var(--border);border-radius:8px;min-height:72px">
         <div id="bb-dur-weeks-big" style="font-family:var(--font-d);font-size:52px;font-weight:800;color:var(--swansway);line-height:1">—</div>
@@ -1126,17 +1138,6 @@ document.addEventListener('click', navCloseAll);
       </div>
       <div class="bb-section-label">Channel activation (pre-recommended, toggle to adjust)</div>
       <div class="bb-peso-grid" id="bb-peso-grid"></div>
-      <!-- Channel budget split — populated by bbRenderChannelSplit() after channels are selected -->
-      <div id="bb-channel-split-section" style="display:none;margin-top:1.5rem">
-        <div class="bb-section-label">How is your budget split across channels?</div>
-        <div id="bb-channel-split-list" style="margin-bottom:10px"></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border-radius:4px;margin-bottom:6px">
-          <span style="font-family:var(--font-m);font-size:11px;font-weight:700;color:var(--ink)">Total allocated</span>
-          <span id="bb-split-total" style="font-family:var(--font-m);font-size:13px;font-weight:700;color:var(--ink)">£0</span>
-          <span id="bb-split-status" style="font-size:11px;font-family:var(--font-m)"></span>
-          <button onclick="bbAutoSplitChannels()" style="font-family:var(--font-m);font-size:11px;padding:4px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--white);cursor:pointer;color:var(--ink-soft)">Auto-split equally</button>
-        </div>
-      </div>
 
       <div class="bb-section-label" style="margin-top:1.5rem">Single-minded proposition</div>
       <textarea class="bb-textarea" id="bb-smp" placeholder="What's the ONE thing you want the audience to think, feel or do? e.g. 'BYD Seal offers Tesla-level technology at £10K less — and it is ready now.'" oninput="BB.proposition=this.value;bbUpdateBrief()"></textarea>
