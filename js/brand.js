@@ -291,6 +291,42 @@ function renderBrandEvents(brandId) {
     html += '<td style="padding:8px 12px;font-size:12px;font-family:var(--font-m);color:#059669">' + (ev.actual_spend > 0 ? '£' + ev.actual_spend.toLocaleString() : '—') + '</td>';
     html += '<td style="padding:8px 12px"><span style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 8px;border-radius:10px;background:' + sc + '20;color:' + sc + '">' + (ev.status || 'planned') + '</span></td>';
     html += '</tr>';
+    // Channel breakdown accordion row
+    if (siteHasChannels) {
+      var colCount = 5 + 12;
+      var channels = SITE_BUDGETS[site.site_id].channels || {};
+      var chCommits = (window.BRIEF_COMMITMENTS_BY_CHANNEL || {})[site.site_id] || {};
+      var chHtml = '';
+      Object.keys(channels).forEach(function(ch) {
+        var chData = channels[ch];
+        var chPlan = Object.values(chData).reduce(function(s,v){ return s + (typeof v === 'object' ? (v.planned||0) : v); }, 0);
+        var chCmt = Object.values(chCommits[ch] || {}).reduce(function(s,v){ return s+v; }, 0);
+        var chRem = chPlan - Math.round(chCmt);
+        var chPct = chPlan > 0 ? Math.min(100, Math.round(chCmt/chPlan*100)) : 0;
+        var remColor = chRem < 0 ? '#DC2626' : chRem < chPlan*0.1 ? '#D97706' : '#059669';
+        chHtml += '<tr style="background:#F8FAFF">';
+        chHtml += '<td style="padding:5px 12px 5px 28px;font-size:11px;color:var(--ink-soft)">' + ch + '</td>';
+        chHtml += '<td style="padding:5px 12px;text-align:right;font-family:var(--font-m);font-size:11px;color:var(--swansway)">' + (chPlan > 0 ? '£'+chPlan.toLocaleString() : '—') + '</td>';
+        chHtml += '<td style="padding:5px 12px;text-align:right;font-family:var(--font-m);font-size:11px;color:#D97706;font-weight:' + (chCmt>0?'700':'400') + '">' + (chCmt > 0 ? '£'+Math.round(chCmt).toLocaleString() : '—') + '</td>';
+        chHtml += '<td style="padding:5px 12px;text-align:right;font-family:var(--font-m);font-size:11px;color:'+remColor+'">' + (chPlan > 0 ? (chRem<0?'-':'')+'£'+Math.abs(chRem).toLocaleString() : '—') + '</td>';
+        chHtml += '<td style="padding:5px 12px"><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden"><div style="height:100%;width:'+chPct+'%;background:'+(chPct>90?'#DC2626':chPct>70?'#D97706':'#2563EB')+';border-radius:2px"></div></div><span style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft)">'+chPct+'%</span></div></td>';
+        for (var mi = 0; mi < 12; mi++) {
+          var mPlan = typeof chData[mi] === 'object' ? (chData[mi].planned||0) : (chData[mi]||0);
+          chHtml += '<td style="padding:5px 6px;text-align:right;font-family:var(--font-m);font-size:9px;color:var(--ink-faint)">' + (mPlan > 0 ? '£'+mPlan.toLocaleString() : '') + '</td>';
+        }
+        chHtml += '</tr>';
+      });
+      html += '<tr id="' + siteAccordId + '" style="display:none"><td colspan="' + colCount + '" style="padding:0;background:#F0F4FF;border-left:3px solid #2563EB">';
+      html += '<table style="width:100%;border-collapse:collapse">';
+      html += '<thead><tr style="background:#E8EFFF"><th style="padding:5px 12px 5px 28px;text-align:left;font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em">Channel</th>';
+      html += '<th style="padding:5px 12px;text-align:right;font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase">Planned</th>';
+      html += '<th style="padding:5px 12px;text-align:right;font-family:var(--font-m);font-size:9px;color:#D97706;text-transform:uppercase">Committed</th>';
+      html += '<th style="padding:5px 12px;text-align:right;font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase">Remaining</th>';
+      html += '<th style="padding:5px 12px;font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase">Used</th>';
+      for (var mhi = 0; mhi < 12; mhi++) { html += '<th style="padding:5px 6px;text-align:right;font-family:var(--font-m);font-size:9px;color:var(--ink-soft)">' + ['J','F','M','A','M','J','J','A','S','O','N','D'][mhi] + '</th>'; }
+      html += '</tr></thead><tbody>' + chHtml + '</tbody></table>';
+      html += '</td></tr>';
+    }
   });
   html += '</tbody></table></div>';
   el.innerHTML = html;
@@ -550,6 +586,16 @@ function renderBrandKPIs(brandId) {
 }
 
 
+
+function brsToggle(id) {
+  var row = document.getElementById(id);
+  var chv = document.getElementById('brs-chv-' + id);
+  if (!row) return;
+  var open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  if (chv) chv.innerHTML = open ? '&#9654;' : '&#9660;';
+}
+
 function renderBrandSites(brandId) {
   var el = document.getElementById(brandId + '-sites-list');
   if (!el) return;
@@ -632,8 +678,10 @@ function renderBrandSites(brandId) {
     var v = actual - plan;
     var evData = typeof getEventBudgetBySite === 'function' ? getEventBudgetBySite(site.site_id) : null;
     var bg = idx % 2 === 0 ? 'var(--white)' : 'var(--surface)';
-    html += '<tr style="background:' + bg + '">';
-    html += '<td style="padding:8px 12px;font-size:13px;font-weight:600">' + site.site_name + '</td>';
+    var siteAccordId = 'brs-' + site.site_id.replace(/[^a-z0-9]/gi,'_');
+    var siteHasChannels = Object.keys((SITE_BUDGETS[site.site_id] || {}).channels || {}).length > 0;
+    html += '<tr style="background:' + bg + ';cursor:' + (siteHasChannels?'pointer':'default') + '" ' + (siteHasChannels ? 'onclick="brsToggle(\'' + siteAccordId + '\')"' : '') + '>';
+    html += '<td style="padding:8px 12px;font-size:13px;font-weight:600">' + (siteHasChannels ? '<span style="font-size:10px;color:var(--ink-soft);margin-right:4px" id="brs-chv-'+siteAccordId+'">&#9654;</span>' : '') + site.site_name + '</td>';
     html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:var(--swansway);font-weight:700">' + (plan > 0 ? '£' + plan.toLocaleString() : '—') + '</td>';
     html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:#D97706;font-weight:600">' + (committed > 0 ? '£' + committed.toLocaleString() : '—') + '</td>';
     html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:#059669">' + (actual > 0 ? '£' + actual.toLocaleString() : '—') + '</td>';
