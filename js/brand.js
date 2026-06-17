@@ -631,10 +631,6 @@ function renderBrandSites(brandId) {
   var lastKey = '_brsRendered_' + brandId;
   var sites = HUB_SITES.filter(function(s){ return s.brand_id === brandId; });
   var channelCount = sites.reduce(function(sum,s){ return sum + Object.keys((SITE_BUDGETS[s.site_id]||{}).channels||{}).length; }, 0);
-  // Skip re-render if channels already rendered within last 5 seconds
-  var now = Date.now();
-  if (channelCount > 0 && el._brsChannelRender && (now - el._brsChannelRender) < 5000) return;
-  if (channelCount > 0) el._brsChannelRender = now;
   var sites = HUB_SITES.filter(function(s) { return s.brand_id === brandId; });
   if (!sites.length) {
     el.innerHTML = '<div style="padding:20px;color:var(--ink-faint);font-size:13px">No sites configured for this brand.</div>';
