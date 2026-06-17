@@ -590,6 +590,7 @@ function renderBrandKPIs(brandId) {
 function brsToggle(id) {
   var row = document.getElementById(id);
   var chv = document.getElementById('brs-chv-' + id);
+  console.log('brsToggle id='+id+' row='+!!row+' classes='+(row?row.className:'')+ ' display='+(row?window.getComputedStyle(row).display:''));
   if (!row) return;
   var open = row.classList.contains('brs-open');
   if (open) {
@@ -601,6 +602,7 @@ function brsToggle(id) {
     row.style.display = 'table-row';
     if (chv) chv.innerHTML = '&#9660;';
   }
+  console.log('brsToggle after: display='+window.getComputedStyle(row).display+' classes='+row.className);
 }
 
 function brsInjectStyles() {
