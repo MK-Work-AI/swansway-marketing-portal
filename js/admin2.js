@@ -229,7 +229,7 @@ async function saveAll() {
 /* ══ DASHBOARD ══ */
 async function refreshDashboard() {
   // Load site budgets if not already loaded
-  if (!Object.keys(SB_SITE_DATA).length) await   var totalBudget = 0;
+  var totalBudget = 0;
   SB_SITES.forEach(function(site) {
     var d = SB_SITE_DATA[site.site_id] || {};
     totalBudget += d.annual_planned || 0;
