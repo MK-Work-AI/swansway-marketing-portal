@@ -291,43 +291,6 @@ function renderBrandEvents(brandId) {
     html += '<td style="padding:8px 12px;font-size:12px;font-family:var(--font-m);color:#059669">' + (ev.actual_spend > 0 ? '£' + ev.actual_spend.toLocaleString() : '—') + '</td>';
     html += '<td style="padding:8px 12px"><span style="font-size:10px;font-family:var(--font-m);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 8px;border-radius:10px;background:' + sc + '20;color:' + sc + '">' + (ev.status || 'planned') + '</span></td>';
     html += '</tr>';
-    // Channel breakdown accordion row
-    if (siteHasChannels) {
-      var colCount = 17; // 5 fixed cols + 12 months
-      var chData2 = (SITE_BUDGETS[site.site_id] || {}).channels || {};
-      var chCommits2 = (window.BRIEF_COMMITMENTS_BY_CHANNEL || {})[site.site_id] || {};
-      var chHtml = '';
-      Object.keys(chData2).forEach(function(ch) {
-        var chMonths = chData2[ch];
-        var chPlan = Object.values(chMonths).reduce(function(s,v){ return s + (typeof v === 'object' ? (v.planned||0) : v); }, 0);
-        var chCmt = Object.values(chCommits2[ch] || {}).reduce(function(s,v){ return s+v; }, 0);
-        var chRem = chPlan - Math.round(chCmt);
-        var chPct = chPlan > 0 ? Math.min(100, Math.round(chCmt/chPlan*100)) : 0;
-        var remColor = chRem < 0 ? '#DC2626' : chRem < chPlan*0.1 ? '#D97706' : '#059669';
-        chHtml += '<tr style="background:#F8FAFF">';
-        chHtml += '<td style="padding:5px 12px 5px 28px;font-size:11px;color:var(--ink-soft)">' + ch + '</td>';
-        chHtml += '<td style="padding:5px 12px;text-align:right;font-family:var(--font-m);font-size:11px;color:var(--swansway)">' + (chPlan>0?'£'+chPlan.toLocaleString():'—') + '</td>';
-        chHtml += '<td style="padding:5px 12px;text-align:right;font-family:var(--font-m);font-size:11px;color:#D97706;font-weight:' + (chCmt>0?'700':'400') + '">' + (chCmt>0?'£'+Math.round(chCmt).toLocaleString():'—') + '</td>';
-        chHtml += '<td style="padding:5px 12px;text-align:right;font-family:var(--font-m);font-size:11px;color:'+remColor+'">' + (chPlan>0?(chRem<0?'-':'')+'£'+Math.abs(chRem).toLocaleString():'—') + '</td>';
-        chHtml += '<td style="padding:5px 12px"><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden"><div style="height:100%;width:'+chPct+'%;background:'+(chPct>90?'#DC2626':chPct>70?'#D97706':'#2563EB')+';border-radius:2px"></div></div><span style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft)">'+chPct+'%</span></div></td>';
-        for (var mci = 0; mci < 12; mci++) {
-          var mPlanCh = typeof chMonths[mci] === 'object' ? (chMonths[mci].planned||0) : (chMonths[mci]||0);
-          chHtml += '<td style="padding:5px 6px;text-align:right;font-family:var(--font-m);font-size:9px;color:var(--ink-faint)">' + (mPlanCh>0?'£'+mPlanCh.toLocaleString():'') + '</td>';
-        }
-        chHtml += '</tr>';
-      });
-      html += '<tr class="brs-detail-row"><td colspan="' + colCount + '" style="padding:0;background:#F0F4FF;border-left:3px solid #2563EB">';
-      html += '<table style="width:100%;border-collapse:collapse">';
-      html += '<thead><tr style="background:#E8EFFF">';
-      html += '<th style="padding:5px 12px 5px 28px;text-align:left;font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em">Channel</th>';
-      html += '<th style="padding:5px 12px;text-align:right;font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase">Planned</th>';
-      html += '<th style="padding:5px 12px;text-align:right;font-family:var(--font-m);font-size:9px;color:#D97706;text-transform:uppercase">Committed</th>';
-      html += '<th style="padding:5px 12px;text-align:right;font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase">Remaining</th>';
-      html += '<th style="padding:5px 12px;font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase">Used</th>';
-      ['J','F','M','A','M','J','J','A','S','O','N','D'].forEach(function(m){ html += '<th style="padding:5px 6px;text-align:right;font-family:var(--font-m);font-size:9px;color:var(--ink-soft)">'+m+'</th>'; });
-      html += '</tr></thead><tbody>' + chHtml + '</tbody></table>';
-      html += '</td></tr>';
-    }
   });
   html += '</tbody></table></div>';
   el.innerHTML = html;
@@ -725,6 +688,34 @@ function renderBrandSites(brandId) {
       html += '</td>';
     }
     html += '</tr>';
+    if (siteHasChannels) {
+      var chD = (SITE_BUDGETS[site.site_id]||{}).channels||{};
+      var chC = (window.BRIEF_COMMITMENTS_BY_CHANNEL||{})[site.site_id]||{};
+      var cR = '';
+      Object.keys(chD).forEach(function(ch) {
+        var cM = chD[ch];
+        var cP = Object.values(cM).reduce(function(s,v){return s+(typeof v==='object'?(v.planned||0):v);},0);
+        var cCt = Math.round(Object.values(chC[ch]||{}).reduce(function(s,v){return s+v;},0));
+        var cRm = cP-cCt; var cPc = cP>0?Math.min(100,Math.round(cCt/cP*100)):0;
+        var rCl = cRm<0?'#DC2626':cRm<cP*0.1?'#D97706':'#059669';
+        var bCl = cPc>90?'#DC2626':cPc>70?'#D97706':'#2563EB';
+        cR += '<tr style="background:#F8FAFF">';
+        cR += '<td style="padding:4px 12px 4px 24px;font-size:11px">'+ch+'</td>';
+        cR += '<td style="text-align:right;padding:4px 10px;font-size:11px;font-family:var(--font-m);color:var(--swansway)">'+(cP>0?'&#163;'+cP.toLocaleString():'&mdash;')+'</td>';
+        cR += '<td style="text-align:right;padding:4px 10px;font-size:11px;font-family:var(--font-m);color:#D97706;font-weight:'+(cCt>0?'700':'400')+'">'+(cCt>0?'&#163;'+cCt.toLocaleString():'&mdash;')+'</td>';
+        cR += '<td style="text-align:right;padding:4px 10px;font-size:11px;font-family:var(--font-m);color:'+rCl+'">'+(cP>0?(cRm<0?'-':'')+'&#163;'+Math.abs(cRm).toLocaleString():'&mdash;')+'</td>';
+        cR += '<td style="padding:4px 10px"><div style="display:flex;align-items:center;gap:4px"><div style="flex:1;height:3px;background:var(--border);border-radius:2px"><div style="height:100%;width:'+cPc+'%;background:'+bCl+';border-radius:2px"></div></div><span style="font-size:9px;font-family:var(--font-m);color:var(--ink-soft)">'+cPc+'%</span></div></td>';
+        cR += '</tr>';
+      });
+      html += '<tr class="brs-detail-row"><td colspan="17" style="padding:0;background:#F0F4FF;border-left:3px solid #2563EB">';
+      html += '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#E8EFFF">';
+      html += '<th style="padding:4px 12px 4px 24px;text-align:left;font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase">Channel</th>';
+      html += '<th style="padding:4px 10px;text-align:right;font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase">Planned</th>';
+      html += '<th style="padding:4px 10px;text-align:right;font-size:9px;font-family:var(--font-m);color:#D97706;text-transform:uppercase">Committed</th>';
+      html += '<th style="padding:4px 10px;text-align:right;font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase">Remaining</th>';
+      html += '<th style="padding:4px 10px;font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase">Used</th>';
+      html += '</tr></thead><tbody>'+cR+'</tbody></table></td></tr>';
+    }
   });
   html += '</tbody></table></div>';
   el.innerHTML = html;
