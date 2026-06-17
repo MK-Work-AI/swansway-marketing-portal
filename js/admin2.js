@@ -228,12 +228,19 @@ async function saveAll() {
 
 /* ══ DASHBOARD ══ */
 async function refreshDashboard() {
-  // Load site budgets if not already loaded
+  // Use SITE_BUDGETS (populated by group.js loadSiteBudgets) for accurate totals
   var totalBudget = 0;
-  SB_SITES.forEach(function(site) {
-    var d = SB_SITE_DATA[site.site_id] || {};
-    totalBudget += d.annual_planned || 0;
-  });
+  if (typeof SITE_BUDGETS !== 'undefined' && Object.keys(SITE_BUDGETS).length) {
+    SB_SITES.forEach(function(site) {
+      var d = SITE_BUDGETS[site.site_id] || {};
+      totalBudget += d.annual_planned || 0;
+    });
+  } else {
+    SB_SITES.forEach(function(site) {
+      var d = SB_SITE_DATA[site.site_id] || {};
+      totalBudget += d.annual_planned || 0;
+    });
+  }
   if (!totalBudget) totalBudget = STATE.brands.reduce(function(s,b){return s+(b.budget||0);},0);
   var totalUnits = STATE.brands.filter(function(b){return b.id!=='motormatch';}).reduce(function(s,b){return s+(b.newUnits||0);},0);
   var totalLeads = STATE.brands.reduce(function(s,b){return s+(b.leads||0);},0);
