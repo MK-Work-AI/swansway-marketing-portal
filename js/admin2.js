@@ -626,7 +626,7 @@ async function sbSave() {
         }
       });
     });
-    var r = await fetch(SUPA + '/site_budget_lines', {
+    var r = await fetch(SUPA + '/site_budget_lines?on_conflict=site_id,channel,month,year', {
       method: 'POST',
       headers: getAuthHeaders({ 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
       body: JSON.stringify(rows)
