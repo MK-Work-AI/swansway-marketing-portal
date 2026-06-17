@@ -735,6 +735,7 @@ function bbRenderChannelSplit() {
   }
 
   // Sync BB.channel_split — remove deselected, add new
+  if (!BB.channel_split || typeof BB.channel_split !== 'object') BB.channel_split = {};
   Object.keys(BB.channel_split).forEach(function(id) {
     if (!channelIds.includes(id)) delete BB.channel_split[id];
   });
