@@ -63,7 +63,7 @@ async function loadChannelCommitments() {
     // Fetch all briefs with channel_split, budget, site info, dates
     var year = parseInt(PLAN_YEAR) || new Date().getFullYear();
     var resp = await fetch(
-      SUPABASE_URL + '/rest/v1/briefs?select=id,budget,channel_split,site_id,site_ids,scope,brand_id,start_date,end_date,status&status=not.eq.archived&limit=1000',
+      SUPABASE_URL + '/rest/v1/briefs?select=id,budget,channel_split,site_id,site_ids,scope,brand_id,start_date,end_date,status&status=neq.archived&limit=1000',
       { headers: getAuthHeaders() }
     );
     if (!resp.ok) return;
