@@ -55,6 +55,87 @@ async function loadBriefCommitmentsForTracker() {
   } catch(e) { console.warn('loadBriefCommitmentsForTracker:', e); }
 }
 
+// Channel-level commitment data: BRIEF_COMMITMENTS_BY_CHANNEL[site_id][channel][month] = £
+window.BRIEF_COMMITMENTS_BY_CHANNEL = {};
+
+async function loadChannelCommitments() {
+  try {
+    // Fetch all briefs with channel_split, budget, site info, dates
+    var year = parseInt(PLAN_YEAR) || new Date().getFullYear();
+    var resp = await fetch(
+      SUPABASE_URL + '/rest/v1/briefs?select=id,budget,channel_split,site_id,site_ids,scope,brand_id,start_date,end_date,status&status=not.eq.archived&limit=1000',
+      { headers: getAuthHeaders() }
+    );
+    if (!resp.ok) return;
+    var briefs = await resp.json() || [];
+
+    window.BRIEF_COMMITMENTS_BY_CHANNEL = {};
+
+    briefs.forEach(function(brief) {
+      if (!brief.channel_split || !brief.budget) return;
+      var split = typeof brief.channel_split === 'string'
+        ? JSON.parse(brief.channel_split) : brief.channel_split;
+      if (!split || !Object.keys(split).length) return;
+
+      // Determine which months this brief covers
+      var startMonth = 0, endMonth = 11;
+      if (brief.start_date) {
+        var sd = new Date(brief.start_date + 'T00:00:00');
+        if (sd.getFullYear() === year) startMonth = sd.getMonth();
+        else if (sd.getFullYear() > year) return; // future year
+      }
+      if (brief.end_date) {
+        var ed = new Date(brief.end_date + 'T00:00:00');
+        if (ed.getFullYear() === year) endMonth = ed.getMonth();
+        else if (ed.getFullYear() < year) return; // past year
+      }
+      var numMonths = endMonth - startMonth + 1;
+      if (numMonths < 1) numMonths = 1;
+
+      // Determine which sites this brief covers
+      var siteIds = [];
+      try {
+        var rawSites = brief.site_ids;
+        if (typeof rawSites === 'string') rawSites = JSON.parse(rawSites);
+        if (Array.isArray(rawSites) && rawSites.length) {
+          siteIds = rawSites;
+        } else if (brief.site_id) {
+          siteIds = [brief.site_id];
+        }
+      } catch(e) { if (brief.site_id) siteIds = [brief.site_id]; }
+
+      if (!siteIds.length && brief.brand_id && typeof HUB_SITES !== 'undefined') {
+        siteIds = HUB_SITES.filter(function(s){ return s.brand_id === brief.brand_id; })
+          .map(function(s){ return s.site_id; });
+      }
+      if (!siteIds.length) return;
+
+      // Distribute channel split across sites and months
+      Object.keys(split).forEach(function(channel) {
+        var channelTotal = parseFloat(split[channel]) || 0;
+        if (!channelTotal) return;
+        var perSite = channelTotal / siteIds.length;
+        var perMonth = perSite / numMonths;
+
+        siteIds.forEach(function(sid) {
+          if (!window.BRIEF_COMMITMENTS_BY_CHANNEL[sid])
+            window.BRIEF_COMMITMENTS_BY_CHANNEL[sid] = {};
+          if (!window.BRIEF_COMMITMENTS_BY_CHANNEL[sid][channel])
+            window.BRIEF_COMMITMENTS_BY_CHANNEL[sid][channel] = {};
+          for (var m = startMonth; m <= endMonth; m++) {
+            window.BRIEF_COMMITMENTS_BY_CHANNEL[sid][channel][m] =
+              (window.BRIEF_COMMITMENTS_BY_CHANNEL[sid][channel][m] || 0) + perMonth;
+          }
+        });
+      });
+    });
+
+    console.log('Channel commitments loaded:', Object.keys(window.BRIEF_COMMITMENTS_BY_CHANNEL).length, 'sites');
+  } catch(e) { console.warn('loadChannelCommitments:', e); }
+}
+
+
+
 // Parse site_id field from a campaign — may be a JSON array or single string
 function btParseCampSiteIds(c) {
   if (!c.site_id) return [];
@@ -916,6 +997,49 @@ function renderBudgetTracker() {
               + '</div></div>';
           }
 
+          // ── Channel breakdown: planned vs committed per channel ──
+          var siteChannelData = window.BRIEF_COMMITMENTS_BY_CHANNEL ? (window.BRIEF_COMMITMENTS_BY_CHANNEL[site.site_id] || {}) : {};
+          var siteChannelPlanned = (typeof SITE_BUDGETS !== 'undefined' && SITE_BUDGETS[site.site_id])
+            ? (SITE_BUDGETS[site.site_id].channels || {}) : {};
+          var channelKeys = Object.keys(siteChannelPlanned).length
+            ? Object.keys(siteChannelPlanned)
+            : Object.keys(siteChannelData);
+
+          if (channelKeys.length > 0) {
+            acHtml += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">';
+            acHtml += '<div class="bt-accord-section-label" style="margin-bottom:8px">Channel budget breakdown</div>';
+            acHtml += '<table class="bt-accord-table"><thead><tr>'
+              + '<th style="text-align:left">Channel</th>'
+              + '<th style="text-align:right">Annual planned</th>'
+              + '<th style="text-align:right">Committed</th>'
+              + '<th style="text-align:right">Remaining</th>'
+              + '<th style="min-width:80px">Used</th>'
+              + '</tr></thead><tbody>';
+
+            channelKeys.forEach(function(ch) {
+              var chPlanData = siteChannelPlanned[ch] || {};
+              var chPlanTotal = Object.values(chPlanData).reduce(function(s, v) {
+                return s + ((typeof v === 'object' ? (v.planned || 0) : v) || 0);
+              }, 0);
+              var chCommitData = siteChannelData[ch] || {};
+              var chCommitTotal = Math.round(Object.values(chCommitData).reduce(function(s, v){ return s + v; }, 0));
+              var chRemaining = chPlanTotal - chCommitTotal;
+              var chPct = chPlanTotal > 0 ? Math.min(100, Math.round(chCommitTotal / chPlanTotal * 100)) : 0;
+              var chColor = chPct > 100 ? '#DC2626' : chPct > 85 ? '#D97706' : '#2563EB';
+              var remainStyle = chRemaining < 0 ? 'color:#DC2626;font-weight:700' : chRemaining < chPlanTotal * 0.1 ? 'color:#D97706;font-weight:700' : 'color:#059669';
+              acHtml += '<tr>'
+                + '<td style="font-size:12px;font-weight:600">' + btEsc(ch) + '</td>'
+                + '<td style="text-align:right;font-family:var(--font-m);font-size:11px">' + (chPlanTotal > 0 ? '&pound;' + chPlanTotal.toLocaleString() : '&mdash;') + '</td>'
+                + '<td style="text-align:right;font-family:var(--font-m);font-size:11px;color:#D97706;font-weight:' + (chCommitTotal > 0 ? '700' : '400') + '">' + (chCommitTotal > 0 ? '&pound;' + chCommitTotal.toLocaleString() : '&mdash;') + '</td>'
+                + '<td style="text-align:right;font-family:var(--font-m);font-size:11px;' + remainStyle + '">' + (chPlanTotal > 0 ? (chRemaining < 0 ? '-' : '') + '&pound;' + Math.abs(chRemaining).toLocaleString() : '&mdash;') + '</td>'
+                + '<td><div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:2px">'
+                +   '<div style="height:100%;width:' + chPct + '%;background:' + chColor + ';border-radius:2px"></div>'
+                + '</div><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);margin-top:2px">' + chPct + '%</div></td>'
+                + '</tr>';
+            });
+            acHtml += '</tbody></table></div>';
+          }
+
           acHtml += '</div></div></td>';
           rows += '<tr class="bt-accord-row" id="acrow-' + accordId + '" data-brand-rows="bt-sites-' + b.id + '" style="display:none">' + acHtml + '</tr>';
         }
@@ -1462,6 +1586,7 @@ async function loadSiteBudgets() {
     if (typeof syncBrandSitesFromHubSites  === 'function') syncBrandSitesFromHubSites();
     await Promise.all([
       typeof loadBriefCommitmentsForTracker === 'function' ? loadBriefCommitmentsForTracker() : Promise.resolve(),
+      loadChannelCommitments(),
       loadEventsForBudget(),
       loadSocialBudgets()
     ]);
