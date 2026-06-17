@@ -113,16 +113,8 @@ var BK_CURRENT_BRAND = 'audi';
 var BC_CURRENT_BRAND = 'audi';
 
 /* ══ INIT ══ */
-async function loadSiteBudgetsForDash() {
-  try {
-    var r = await fetch(SUPA + '/site_budgets?select=site_id,annual_planned,brand_id', { headers: getAuthHeaders() });
-    if (!r.ok) return;
-    var rows = await r.json();
-    rows.forEach(function(row) { SB_SITE_DATA[row.site_id] = row; });
-  } catch(e) {}
-}
-
 async function adminInit() {
+  console.log('admin2.js loaded and adminInit running');
   var sess = await SB.auth.getSession();
   if (!sess.data.session) { window.location = 'index.html'; return; }
   var email = sess.data.session.user.email;
@@ -237,8 +229,7 @@ async function saveAll() {
 /* ══ DASHBOARD ══ */
 async function refreshDashboard() {
   // Load site budgets if not already loaded
-  if (!Object.keys(SB_SITE_DATA).length) await loadSiteBudgetsForDash();
-  var totalBudget = 0;
+  if (!Object.keys(SB_SITE_DATA).length) await   var totalBudget = 0;
   SB_SITES.forEach(function(site) {
     var d = SB_SITE_DATA[site.site_id] || {};
     totalBudget += d.annual_planned || 0;
