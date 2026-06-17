@@ -63,7 +63,7 @@ async function loadChannelCommitments() {
     // Fetch all briefs with channel_split, budget, site info, dates
     var year = parseInt(PLAN_YEAR) || new Date().getFullYear();
     var resp = await fetch(
-      SUPABASE_URL + '/rest/v1/briefs?select=id,budget,channel_split,site_id,site_ids,scope,brand_id,start_date,end_date,status&status=neq.archived&limit=1000',
+      SUPABASE_URL + '/rest/v1/briefs?select=id,budget,channel_split,site_id,scope,brand_id,start_date,end_date,status,allocation&status=neq.archived&limit=1000',
       { headers: getAuthHeaders() }
     );
     if (!resp.ok) return;
@@ -95,12 +95,12 @@ async function loadChannelCommitments() {
       // Determine which sites this brief covers
       var siteIds = [];
       try {
-        var rawSites = brief.site_ids;
-        if (typeof rawSites === 'string') rawSites = JSON.parse(rawSites);
-        if (Array.isArray(rawSites) && rawSites.length) {
-          siteIds = rawSites;
-        } else if (brief.site_id) {
-          siteIds = [brief.site_id];
+        // site_id may be a JSON array string or single value
+        if (brief.site_id) {
+          var parsed = null;
+          try { parsed = JSON.parse(brief.site_id); } catch(e) {}
+          if (Array.isArray(parsed)) siteIds = parsed;
+          else siteIds = [brief.site_id];
         }
       } catch(e) { if (brief.site_id) siteIds = [brief.site_id]; }
 
