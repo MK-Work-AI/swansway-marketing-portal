@@ -590,6 +590,7 @@ function renderBrandKPIs(brandId) {
 function brsToggle(id) {
   var row = document.getElementById(id);
   var chv = document.getElementById('brs-chv-' + id);
+  console.log('brsToggle:', id, 'row found:', !!row, 'chv found:', !!chv);
   if (!row) return;
   var open = row.style.display !== 'none';
   row.style.display = open ? 'none' : 'table-row';
