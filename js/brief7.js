@@ -1094,24 +1094,26 @@ function bbGenerateBrief() {
   document.getElementById('bb-output').innerHTML = `
     <div class="bb-out-hero">
       <div class="bb-out-hero-top">
-        <div class="bb-out-hero-brand" style="background:${BB.brand?.color||'var(--swansway)'}">${BB.brand?.name?.toUpperCase()||'BRAND'}</div>
+        <div class="bb-out-hero-brand" style="background:${BB.brand?.color||'var(--swansway)'};">${BB.brand?.name?.toUpperCase()||'BRAND'}</div>
         <div class="bb-out-hero-type">${BB.ctype?.name||'Campaign'} &middot; ${BB.brand?.segment||''}</div>
         <div class="bb-out-hero-title">${document.getElementById('bb-brief-title')?.value||BB.brand?.name||'Campaign'}</div>
       </div>
       <div class="bb-out-meta">
         <div class="bb-out-meta-item"><div class="bb-out-meta-label">Budget</div><div class="bb-out-meta-val">&pound;${BB.budget.toLocaleString()}</div></div>
         <div class="bb-out-meta-item"><div class="bb-out-meta-label">Duration</div><div class="bb-out-meta-val">${week} weeks</div></div>
-        <div class="bb-out-meta-item"><div class="bb-out-meta-label">Dates</div><div class="bb-out-meta-val" style="font-size:13px;font-weight:500">${BB.start_date ? (()=>{ const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; const sd=new Date(BB.start_date+'T00:00:00'),ed=new Date((BB.end_date||BB.start_date)+'T00:00:00'); return sd.getDate()+' '+months[sd.getMonth()]+' – '+ed.getDate()+' '+months[ed.getMonth()]+' '+ed.getFullYear(); })() : fmt(now)+' – '+fmt(end)}</div></div>
+        <div class="bb-out-meta-item"><div class="bb-out-meta-label">Dates</div><div class="bb-out-meta-val" style="font-size:13px;font-weight:500">${BB.start_date ? (()=>{ const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; const sd=new Date(BB.start_date+'T00:00:00'),ed=new Date((BB.end_date||BB.start_date)+'T00:00:00'); return sd.getDate()+' '+months[sd.getMonth()]+' &ndash; '+ed.getDate()+' '+months[ed.getMonth()]+' '+ed.getFullYear(); })() : fmt(now)+' &ndash; '+fmt(end)}</div></div>
         <div class="bb-out-meta-item"><div class="bb-out-meta-label">Sites</div><div class="bb-out-meta-val" style="font-size:13px;font-weight:500">${BB.scope==='sites'&&BB.site_ids&&BB.site_ids.length ? (BB.site_ids.length===1 ? (HUB_SITES.find(s=>s.site_id===BB.site_ids[0])?.site_name||BB.site_ids[0]) : BB.site_ids.map(sid=>(HUB_SITES.find(s=>s.site_id===sid)?.site_name||sid)).join(', ')) : (BB.brand?.locations?.join(', ')||'All sites')}</div></div>
+        ${BB.job_ref ? '<div class="bb-out-meta-item"><div class="bb-out-meta-label">Ref</div><div class="bb-out-meta-val" style="font-size:12px;font-family:var(--font-m)">'+(window._lastJobRef||BB.job_ref)+'</div></div>' : ''}
       </div>
     </div>
     <div class="bb-out-body">
+
       <div class="bb-out-section">
         <div class="bb-out-section-title">Campaign objective</div>
         <div class="bb-out-grid">
           <div class="bb-out-field"><div class="bb-out-field-label">Primary objective</div><div class="bb-out-field-val">${BB.objective?.text||'Not defined'}</div></div>
           <div class="bb-out-field"><div class="bb-out-field-label">Success measure</div><div class="bb-out-field-val">${BB.objective?.kpi||'Not defined'}</div></div>
-          <div class="bb-out-field"><div class="bb-out-field-label">Funnel stage</div><div class="bb-out-field-val">${BB.objective?.funnel||'—'}</div></div>
+          <div class="bb-out-field"><div class="bb-out-field-label">Funnel stage</div><div class="bb-out-field-val">${BB.objective?.funnel||'&mdash;'}</div></div>
           <div class="bb-out-field"><div class="bb-out-field-label">Primary KPI target</div><div class="bb-out-field-val" style="font-family:var(--font-d);font-size:22px;font-weight:800;color:var(--accent)">${kpiMap[BB.objective?.id]||'TBC'}</div></div>
         </div>
       </div>
@@ -1119,11 +1121,11 @@ function bbGenerateBrief() {
       <div class="bb-out-section">
         <div class="bb-out-section-title">Single-minded proposition</div>
         <div style="padding:20px;background:var(--surface);border-radius:4px;border-left:4px solid ${BB.brand?.color||'#ccc'}">
-          <div style="font-size:18px;font-style:italic;font-weight:300;line-height:1.55;color:var(--ink)">"${prop}"</div>
+          <div style="font-size:18px;font-style:italic;font-weight:300;line-height:1.55;color:var(--ink)">&ldquo;${prop}&rdquo;</div>
         </div>
-        <div style="margin-top:10px;padding:12px 14px;background:var(--surface);border-radius:3px">
-          <div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);letter-spacing:0.1em;margin-bottom:4px">TONE OF VOICE</div>
-          <div style="font-size:13px;color:var(--ink);font-weight:500">${BB.brand?.tone?.join(' · ')||'TBC'}</div>
+        <div style="margin-top:8px;padding:12px 14px;background:var(--surface);border-radius:3px">
+          <div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px">Tone of voice</div>
+          <div style="font-size:13px;color:var(--ink);font-weight:500">${BB.brand?.tone?.join(' &middot; ')||'TBC'}</div>
         </div>
       </div>
 
@@ -1135,8 +1137,8 @@ function bbGenerateBrief() {
               <div class="bb-out-field-label">${a.icon} ${a.name}</div>
               <div class="bb-out-field-val">${a.desc}</div>
               <div style="margin-top:8px;font-size:11px;color:var(--ink-soft)">
-                Est. CPL: <strong>£${Math.round((BB.brand?.cpl?.meta||45)*a.cpl_mult)}</strong> Meta ·
-                <strong>£${Math.round((BB.brand?.cpl?.google||35)*a.cpl_mult)}</strong> Search
+                Est. CPL: <strong>&pound;${Math.round((BB.brand?.cpl?.meta||45)*a.cpl_mult)}</strong> Meta &middot;
+                <strong>&pound;${Math.round((BB.brand?.cpl?.google||35)*a.cpl_mult)}</strong> Search
               </div>
             </div>
           `).join('')}
@@ -1157,33 +1159,36 @@ function bbGenerateBrief() {
               });
             });
           }
-          if (!channels.length) return '<div style="font-size:12px;color:var(--ink-faint)">No channels selected.</div>';
-          var rows = channels.map(function(id) {
+          if (!channels.length) return '<div class="bb-out-field" style="color:var(--ink-faint);font-size:12px">No channels selected yet. Complete step 5.</div>';
+          var rows = '<div style="display:flex;flex-direction:column;gap:6px">';
+          channels.forEach(function(id) {
             var val = split[id] || 0;
             var pct = BB.budget > 0 ? Math.round(val / BB.budget * 100) : 0;
             var info = pesoMap[id] || { name: id, color: '#6B7280' };
-            return '<div style="display:grid;grid-template-columns:180px 1fr 50px 80px;gap:10px;align-items:center;margin-bottom:6px">'
-              + '<div style="font-size:12px;display:flex;align-items:center;gap:6px">'
-              +   '<span style="width:8px;height:8px;border-radius:50%;background:'+info.color+';display:inline-block;flex-shrink:0"></span>'
+            rows += '<div style="display:grid;grid-template-columns:1fr 140px 44px 80px;gap:12px;align-items:center;padding:10px 14px;background:var(--surface);border-radius:4px">'
+              + '<div style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px">'
+              +   '<span style="width:8px;height:8px;border-radius:50%;background:'+info.color+';flex-shrink:0;display:inline-block"></span>'
               +   info.name
               + '</div>'
-              + '<div style="height:4px;background:var(--surface-2);border-radius:2px">'
-              +   '<div style="height:4px;border-radius:2px;background:'+info.color+';width:'+Math.min(pct,100)+'%"></div>'
+              + '<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">'
+              +   '<div style="height:100%;border-radius:2px;background:'+info.color+';width:'+Math.min(pct,100)+'%"></div>'
               + '</div>'
-              + '<div style="font-family:var(--font-m);font-size:10px;color:var(--ink-soft);text-align:right">'+pct+'%</div>'
-              + '<div style="font-family:var(--font-m);font-size:11px;font-weight:600;color:var(--ink);text-align:right">&#163;'+val.toLocaleString()+'</div>'
+              + '<div style="font-family:var(--font-m);font-size:11px;color:var(--ink-soft);text-align:right">'+pct+'%</div>'
+              + '<div style="font-family:var(--font-m);font-size:13px;font-weight:700;color:var(--ink);text-align:right">&pound;'+val.toLocaleString()+'</div>'
               + '</div>';
-          }).join('');
+          });
+          rows += '</div>';
           var total = channels.reduce(function(s,id){ return s+(split[id]||0); }, 0);
-          var remaining = BB.budget - total;
-          if (Math.abs(remaining) > 0) {
-            rows += '<div style="margin-top:8px;padding:6px 10px;background:'+(remaining>0?'#FFF8E1':'#FEE2E2')+';border-radius:3px;font-size:11px;color:'+(remaining>0?'#92400E':'#991B1B')+';font-family:var(--font-m)">'
-              + (remaining>0 ? '&#163;'+remaining.toLocaleString()+' unallocated' : '&#163;'+Math.abs(remaining).toLocaleString()+' over budget')
+          var diff = BB.budget - total;
+          if (Math.abs(diff) >= 1) {
+            rows += '<div style="margin-top:8px;padding:8px 12px;background:'+(diff>0?'#FFF8E1':'#FEE2E2')+';border-radius:4px;font-size:12px;font-family:var(--font-m);font-weight:600;color:'+(diff>0?'#92400E':'#991B1B')+'">'
+              + (diff>0 ? '&pound;'+diff.toLocaleString()+' still unallocated' : '&pound;'+Math.abs(diff).toLocaleString()+' over budget — please adjust')
               + '</div>';
+          } else {
+            rows += '<div style="margin-top:8px;padding:8px 12px;background:#ECFDF5;border-radius:4px;font-size:12px;font-family:var(--font-m);font-weight:600;color:#065F46">&pound;'+BB.budget.toLocaleString()+' fully allocated &#10003;</div>';
           }
           return rows;
         })()}
-      </div>
       </div>
 
       <div class="bb-out-section">
@@ -1191,11 +1196,11 @@ function bbGenerateBrief() {
         <div class="bb-out-peso">
           ${Object.entries(BB_PESO).map(([key,quad])=>{
             const active = quad.channels.filter(c=>BB.channels.includes(c.id));
-            return `<div class="bb-out-peso-q ${key}">
-              <div class="bb-out-peso-letter" style="color:${quad.color}">${key}</div>
-              <div class="bb-out-peso-name">${quad.label}</div>
-              <div class="bb-out-peso-items">${active.length?active.map(c=>c.name).join('\n'):'None activated'}</div>
-            </div>`;
+            return '<div class="bb-out-peso-q '+key+'">'
+              + '<div class="bb-out-peso-letter" style="color:'+quad.color+'">'+key+'</div>'
+              + '<div class="bb-out-peso-name">'+quad.label+'</div>'
+              + '<div class="bb-out-peso-items">'+(active.length ? active.map(c=>'<div class="bb-out-peso-item">'+c.name+'</div>').join('') : '<div style="font-size:11px;color:var(--ink-faint);font-style:italic">None activated</div>')+'</div>'
+              + '</div>';
           }).join('')}
         </div>
       </div>
@@ -1204,9 +1209,9 @@ function bbGenerateBrief() {
         <div class="bb-out-section-title">KPI targets</div>
         <div class="bb-out-kpis">
           <div class="bb-out-kpi"><div class="bb-out-kpi-label">Primary target</div><div class="bb-out-kpi-val">${kpiMap[BB.objective?.id]||'TBC'}</div></div>
-          <div class="bb-out-kpi"><div class="bb-out-kpi-label">Target CPL (Meta)</div><div class="bb-out-kpi-val">£${BB.brand?.cpl?.meta||45}</div></div>
-          <div class="bb-out-kpi"><div class="bb-out-kpi-label">Target CPL (Search)</div><div class="bb-out-kpi-val">£${BB.brand?.cpl?.google||35}</div></div>
-          <div class="bb-out-kpi"><div class="bb-out-kpi-label">Budget per week</div><div class="bb-out-kpi-val">£${Math.round(BB.budget/week).toLocaleString()}</div></div>
+          <div class="bb-out-kpi"><div class="bb-out-kpi-label">Target CPL (Meta)</div><div class="bb-out-kpi-val">&pound;${BB.brand?.cpl?.meta||'—'}</div></div>
+          <div class="bb-out-kpi"><div class="bb-out-kpi-label">Target CPL (Search)</div><div class="bb-out-kpi-val">&pound;${BB.brand?.cpl?.google||'—'}</div></div>
+          <div class="bb-out-kpi"><div class="bb-out-kpi-label">Budget per week</div><div class="bb-out-kpi-val">&pound;${Math.round(BB.budget/Math.max(week,1)).toLocaleString()}</div></div>
           <div class="bb-out-kpi"><div class="bb-out-kpi-label">Audience tiers</div><div class="bb-out-kpi-val">${selAuds.length}</div></div>
           <div class="bb-out-kpi"><div class="bb-out-kpi-label">Channels active</div><div class="bb-out-kpi-val">${BB.channels.length}</div></div>
         </div>
@@ -1215,24 +1220,26 @@ function bbGenerateBrief() {
       <div class="bb-out-section">
         <div class="bb-out-section-title">Campaign timeline</div>
         <div class="bb-out-tl">
-          <div class="bb-out-tl-label">Wk 1–2</div><div class="bb-out-tl-pills"><span class="bb-out-tl-pill">Campaign sign-off</span><span class="bb-out-tl-pill">Creative production</span><span class="bb-out-tl-pill">Audience build</span><span class="bb-out-tl-pill">Platform setup</span></div>
-          <div class="bb-out-tl-label">Wk ${Math.ceil(week*0.3)+1}–${Math.ceil(week*0.6)}</div><div class="bb-out-tl-pills"><span class="bb-out-tl-pill">Campaign live</span><span class="bb-out-tl-pill">A/B testing active</span><span class="bb-out-tl-pill">Daily optimisation</span></div>
-          <div class="bb-out-tl-label">Wk ${Math.ceil(week*0.6)+1}–${week-1}</div><div class="bb-out-tl-pills"><span class="bb-out-tl-pill">Budget reallocation</span><span class="bb-out-tl-pill">Creative refresh</span><span class="bb-out-tl-pill">CRM follow-up waves</span></div>
+          <div class="bb-out-tl-label">Wk 1&ndash;2</div><div class="bb-out-tl-pills"><span class="bb-out-tl-pill">Campaign sign-off</span><span class="bb-out-tl-pill">Creative production</span><span class="bb-out-tl-pill">Audience build</span><span class="bb-out-tl-pill">Platform setup</span></div>
+          <div class="bb-out-tl-label">Wk ${Math.ceil(week*0.3)+1}&ndash;${Math.ceil(week*0.6)}</div><div class="bb-out-tl-pills"><span class="bb-out-tl-pill">Campaign live</span><span class="bb-out-tl-pill">A/B testing active</span><span class="bb-out-tl-pill">Daily optimisation</span></div>
+          <div class="bb-out-tl-label">Wk ${Math.ceil(week*0.6)+1}&ndash;${week-1}</div><div class="bb-out-tl-pills"><span class="bb-out-tl-pill">Budget reallocation</span><span class="bb-out-tl-pill">Creative refresh</span><span class="bb-out-tl-pill">CRM follow-up waves</span></div>
           <div class="bb-out-tl-label">Wk ${week}</div><div class="bb-out-tl-pills"><span class="bb-out-tl-pill">Campaign close</span><span class="bb-out-tl-pill">Results autopsy</span><span class="bb-out-tl-pill">Recommendations</span></div>
         </div>
       </div>
 
       <div class="bb-out-section">
-        <div class="bb-out-section-title">Mandatories & restrictions</div>
-        <div style="padding:14px;background:var(--surface);border-radius:3px;font-size:13px;line-height:1.7;color:var(--ink)">${mandatories}</div>
+        <div class="bb-out-section-title">Mandatories &amp; restrictions</div>
+        <div style="padding:14px;background:var(--surface);border-radius:4px;font-size:13px;line-height:1.7;color:var(--ink)">${mandatories}</div>
       </div>
 
-      <div style="margin-top:1.5rem;padding:14px;background:var(--ink);color:rgba(255,255,255,0.4);border-radius:3px;font-size:11px;text-align:center;font-family:var(--font-m);letter-spacing:0.06em">
-        SWANSWAY MOTOR GROUP · CAMPAIGN BRIEF BUILDER · ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).toUpperCase()}
+      <div style="margin-top:2rem;padding:14px 20px;background:var(--ink);color:rgba(255,255,255,0.35);border-radius:4px;font-family:var(--font-m);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;text-align:center">
+        Swansway Motor Group &middot; Campaign Brief &middot; ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}${window._lastJobRef ? ' &middot; '+window._lastJobRef : ''}
       </div>
+
     </div>
   `;
 }
+
 
 
 // loadBriefCommitmentsForTracker is defined in group.js
