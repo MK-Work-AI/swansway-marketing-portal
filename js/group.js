@@ -1586,6 +1586,10 @@ async function loadSiteBudgets() {
     }
     if (typeof updateBrandBudgetsFromSites === 'function') updateBrandBudgetsFromSites();
     if (typeof syncBrandSitesFromHubSites  === 'function') syncBrandSitesFromHubSites();
+    // Load campaigns for budget tracker accordion (needed on brand.html where calLoadFromSupabase doesn't run)
+    if (!BUILT_IN_CAMPAIGNS.length && typeof calLoadFromSupabase === 'function') {
+      await calLoadFromSupabase();
+    }
     await Promise.all([
       typeof loadBriefCommitmentsForTracker === 'function' ? loadBriefCommitmentsForTracker() : Promise.resolve(),
       loadChannelCommitments(),
