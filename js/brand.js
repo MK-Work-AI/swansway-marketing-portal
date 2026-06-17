@@ -6,7 +6,10 @@ function renderBrand(b) {
   const container = document.getElementById(b.id+'-content');
   if(!container) return;
   if(container.dataset.rendered) {
-    // Already rendered — just re-run the content functions to refresh data
+    // Already rendered — throttle refreshes to avoid wiping accordion state
+    var now = Date.now();
+    if (container._lastRefresh && now - container._lastRefresh < 3000) return;
+    container._lastRefresh = now;
     setTimeout(function() {
       if (typeof renderBrandSites === 'function')     renderBrandSites(b.id);
       if (typeof renderBrandCentres === 'function')   renderBrandCentres(b.id);
@@ -617,8 +620,7 @@ function brsAttachListeners(container) {
   if (!container) return;
   container.querySelectorAll('tr[data-accord]').forEach(function(tr) {
     tr.addEventListener('click', function(e) {
-      console.log('BRS CLICK', tr.getAttribute('data-accord'), e.target.tagName);
-      brsToggle(tr.getAttribute('data-accord'));
+          brsToggle(tr.getAttribute('data-accord'));
     });
   });
 }
@@ -632,10 +634,6 @@ function renderBrandSites(brandId) {
   var lastKey = '_brsRendered_' + brandId;
   var sites = HUB_SITES.filter(function(s){ return s.brand_id === brandId; });
   var channelCount = sites.reduce(function(sum,s){ return sum + Object.keys((SITE_BUDGETS[s.site_id]||{}).channels||{}).length; }, 0);
-  var renderKey = siteCount + '_' + channelCount;
-  console.log('renderBrandSites key check: stored='+el._brsRenderKey+' new='+renderKey+' channelCount='+channelCount);
-  if (el._brsRenderKey === renderKey && channelCount > 0) return;
-  el._brsRenderKey = renderKey;
   var sites = HUB_SITES.filter(function(s) { return s.brand_id === brandId; });
   console.log('renderBrandSites:', brandId, sites.length, 'sites, SITE_BUDGETS keys:', Object.keys(SITE_BUDGETS).length);
   if (!sites.length) {
@@ -744,7 +742,6 @@ function renderBrandSites(brandId) {
   });
   html += '</tbody></table></div>';
   el.innerHTML = html;
-  console.log('renderBrandSites: wrote HTML, brs- rows in DOM:', el.querySelectorAll('[id^=brs-]').length);
   brsInjectStyles();
   brsAttachListeners(el);
   var accRows = el.querySelectorAll('tr[data-accord]'); console.log('brsAttach: found', accRows.length, 'accordion rows');
