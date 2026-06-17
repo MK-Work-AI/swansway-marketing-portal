@@ -110,9 +110,22 @@ async function loadChannelCommitments() {
       }
       if (!siteIds.length) return;
 
+      // Map BB_PESO channel IDs to BC_DEFAULT_CHANNELS names
+      var CHANNEL_ID_MAP = {
+        'google':'Paid Search (Google/Bing)', 'autotrader':'AutoTrader',
+        'meta':'Meta (Facebook/Instagram)', 'youtube':'Display & Programmatic',
+        'tiktok':'Display & Programmatic', 'linkedin':'Display & Programmatic',
+        'crm':'Email Marketing', 'organic':'Social Organic',
+        'influencer':'Social Organic', 'ugc':'Social Organic',
+        'community':'Social Organic', 'events':'Events & Showroom',
+        'pr':'Other / Local', 'reviews':'Other / Local',
+        'motpress':'Other / Local', 'awards':'Other / Local',
+        'seo':'Other / Local', 'content':'Other / Local'
+      };
       // Distribute channel split across sites and months
-      Object.keys(split).forEach(function(channel) {
-        var channelTotal = parseFloat(split[channel]) || 0;
+      Object.keys(split).forEach(function(channelRaw) {
+        var channel = CHANNEL_ID_MAP[channelRaw] || channelRaw;
+        var channelTotal = parseFloat(split[channelRaw]) || 0;
         if (!channelTotal) return;
         var perSite = channelTotal / siteIds.length;
         var perMonth = perSite / numMonths;
