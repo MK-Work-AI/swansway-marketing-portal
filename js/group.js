@@ -1390,6 +1390,8 @@ async function loadSiteBudgets() {
   if (!_p.endsWith('index.html') && !_p.endsWith('/') &&
       !_p.endsWith('brand.html')   && !_p.endsWith('/brand') &&
       !_p.endsWith('budget.html')  && !_p.endsWith('/budget') &&
+      !_p.endsWith('brief.html')   && !_p.endsWith('/brief') &&
+      !_p.endsWith('events.html')  && !_p.endsWith('/events') &&
       !_p.endsWith('channels.html')&& !_p.endsWith('/channels')) return;
   try {
     var year = parseInt(PLAN_YEAR) || new Date().getFullYear();
