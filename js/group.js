@@ -1393,7 +1393,7 @@ async function loadSiteBudgets() {
       !_p.endsWith('channels.html')&& !_p.endsWith('/channels')) return;
   try {
     var year = parseInt(PLAN_YEAR) || new Date().getFullYear();
-    var resp = await fetch(SUPABASE_URL + '/rest/v1/site_budget_lines?year=eq.' + year + '&select=*', {
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/site_budget_lines?year=eq.' + year + '&select=*&limit=10000', {
       headers: getAuthHeaders({'Content-Type': 'application/json'})
     });
     if (!resp.ok) {
