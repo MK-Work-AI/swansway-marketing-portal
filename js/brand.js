@@ -614,7 +614,8 @@ function brsInjectStyles() {
 function brsAttachListeners(container) {
   if (!container) return;
   container.querySelectorAll('tr[data-accord]').forEach(function(tr) {
-    tr.addEventListener('click', function() {
+    tr.addEventListener('click', function(e) {
+      console.log('BRS CLICK', tr.getAttribute('data-accord'), e.target.tagName);
       brsToggle(tr.getAttribute('data-accord'));
     });
   });
