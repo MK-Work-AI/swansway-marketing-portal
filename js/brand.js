@@ -630,8 +630,10 @@ function renderBrandSites(brandId) {
   var siteCount = HUB_SITES.filter(function(s){ return s.brand_id === brandId; }).length;
   var budgetLoaded = Object.keys(SITE_BUDGETS).length > 0;
   var lastKey = '_brsRendered_' + brandId;
-  var renderKey = siteCount + '_' + budgetLoaded;
-  if (el._brsRenderKey === renderKey && budgetLoaded) return;
+  var sites = HUB_SITES.filter(function(s){ return s.brand_id === brandId; });
+  var channelCount = sites.reduce(function(sum,s){ return sum + Object.keys((SITE_BUDGETS[s.site_id]||{}).channels||{}).length; }, 0);
+  var renderKey = siteCount + '_' + channelCount;
+  if (el._brsRenderKey === renderKey && channelCount > 0) return;
   el._brsRenderKey = renderKey;
   var sites = HUB_SITES.filter(function(s) { return s.brand_id === brandId; });
   console.log('renderBrandSites:', brandId, sites.length, 'sites, SITE_BUDGETS keys:', Object.keys(SITE_BUDGETS).length);
