@@ -627,7 +627,6 @@ function bbOnBudget(v) {
   if(sub) sub.textContent = `£${weekly.toLocaleString()}/week · £${daily.toLocaleString()}/day${warn}`;
   document.querySelectorAll('.bb-preset').forEach(p=>p.classList.toggle('bb-active',parseInt(p.dataset.v)===BB.budget));
   bbUpdateScienceBox();
-  bbRenderAllocation();
   bbUpdateMaturity();
   bbUpdateBrief();
   const btn3 = document.getElementById('bb-btn-3-next');
@@ -1138,18 +1137,46 @@ function bbGenerateBrief() {
       </div>
 
       <div class="bb-out-section">
-        <div class="bb-out-section-title">Budget allocation (science-based)</div>
-        ${alloc.map(a=>`
-          <div style="display:grid;grid-template-columns:180px 1fr 50px 80px;gap:10px;align-items:center;margin-bottom:6px">
-            <div style="font-size:12px">${a.n}</div>
-            <div style="height:4px;background:var(--surface-2);border-radius:2px"><div style="height:4px;border-radius:2px;background:${a.c};width:${a.p}%"></div></div>
-            <div style="font-family:var(--font-m);font-size:10px;color:var(--ink-soft);text-align:right">${a.p}%</div>
-            <div style="font-family:var(--font-m);font-size:11px;font-weight:600;color:var(--ink);text-align:right">£${Math.round(BB.budget*a.p/100).toLocaleString()}</div>
-          </div>
-        `).join('')}
-        <div style="margin-top:12px;padding:10px 14px;background:#FFF8E1;border:1px solid #FDE68A;border-radius:3px;font-size:11px;color:#78350F">
-          ⚗ Binet &amp; Field (IPA Databank): Optimal brand:activation ratio for automotive is <strong>40:60 long:short term</strong>. ${BB.budget>10000?'This budget enables a healthy split.':'Consider building brand alongside activation for compounding returns.'}
-        </div>
+        <div class="bb-out-section-title">Channel budget split</div>
+        ${(function(){
+          var split = BB.channel_split || {};
+          var channels = BB.channels || [];
+          var pesoMap = {};
+          var pesoColors = { P:'#FF6B35', E:'#4ECDC4', S:'#A855F7', O:'#22C55E' };
+          if (typeof BB_PESO !== 'undefined') {
+            Object.keys(BB_PESO).forEach(function(key) {
+              (BB_PESO[key].channels||[]).forEach(function(ch) {
+                pesoMap[ch.id] = { name: ch.name, color: pesoColors[key]||'#6B7280' };
+              });
+            });
+          }
+          if (!channels.length) return '<div style="font-size:12px;color:var(--ink-faint)">No channels selected.</div>';
+          var rows = channels.map(function(id) {
+            var val = split[id] || 0;
+            var pct = BB.budget > 0 ? Math.round(val / BB.budget * 100) : 0;
+            var info = pesoMap[id] || { name: id, color: '#6B7280' };
+            return '<div style="display:grid;grid-template-columns:180px 1fr 50px 80px;gap:10px;align-items:center;margin-bottom:6px">'
+              + '<div style="font-size:12px;display:flex;align-items:center;gap:6px">'
+              +   '<span style="width:8px;height:8px;border-radius:50%;background:'+info.color+';display:inline-block;flex-shrink:0"></span>'
+              +   info.name
+              + '</div>'
+              + '<div style="height:4px;background:var(--surface-2);border-radius:2px">'
+              +   '<div style="height:4px;border-radius:2px;background:'+info.color+';width:'+Math.min(pct,100)+'%"></div>'
+              + '</div>'
+              + '<div style="font-family:var(--font-m);font-size:10px;color:var(--ink-soft);text-align:right">'+pct+'%</div>'
+              + '<div style="font-family:var(--font-m);font-size:11px;font-weight:600;color:var(--ink);text-align:right">&#163;'+val.toLocaleString()+'</div>'
+              + '</div>';
+          }).join('');
+          var total = channels.reduce(function(s,id){ return s+(split[id]||0); }, 0);
+          var remaining = BB.budget - total;
+          if (Math.abs(remaining) > 0) {
+            rows += '<div style="margin-top:8px;padding:6px 10px;background:'+(remaining>0?'#FFF8E1':'#FEE2E2')+';border-radius:3px;font-size:11px;color:'+(remaining>0?'#92400E':'#991B1B')+';font-family:var(--font-m)">'
+              + (remaining>0 ? '&#163;'+remaining.toLocaleString()+' unallocated' : '&#163;'+Math.abs(remaining).toLocaleString()+' over budget')
+              + '</div>';
+          }
+          return rows;
+        })()}
+      </div>
       </div>
 
       <div class="bb-out-section">
