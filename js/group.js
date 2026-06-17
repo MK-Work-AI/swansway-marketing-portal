@@ -852,7 +852,9 @@ function renderBudgetTracker() {
         var siteSocialTotal = Object.values(siteSocialData.months).reduce(function(s,v){ return s+v; }, 0);
         var siteSocialPosts = siteSocialData.posts || [];
         var identifiedTotal = identifiedCamp + identifiedEvPl + siteSocialTotal;
-        var hasItems = siteCamps.length > 0 || siteEvs.length > 0 || siteSocialPosts.length > 0;
+        var siteHasChannelData = Object.keys((window.BRIEF_COMMITMENTS_BY_CHANNEL || {})[site.site_id] || {}).length > 0
+          || Object.keys((SITE_BUDGETS[site.site_id] || {}).channels || {}).length > 0;
+        var hasItems = siteCamps.length > 0 || siteEvs.length > 0 || siteSocialPosts.length > 0 || siteHasChannelData;
         var accordId = 'bta-' + site.site_id.replace(/[^a-z0-9]/gi, '_');
 
         var siteLabel = hasItems
