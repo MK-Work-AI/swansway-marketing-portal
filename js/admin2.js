@@ -262,7 +262,12 @@ async function refreshDashboard() {
       + '<tbody>' + STATE.brands.map(function(b){
         return '<tr onclick=\"showPage(\'brand\');renderBrandEditor(\''+b.id+'\')" style="cursor:pointer">'
           +'<td><span class="brand-dot" style="background:'+BRAND_COLORS[b.id]+'"></span><strong>'+b.name+'</strong></td>'
-          +'<td>£'+(b.budget||0).toLocaleString()+'</td>'
+          +(function(){
+            if (typeof SITE_BUDGETS === 'undefined') return '<td>—</td>';
+            var brandSites = SB_SITES.filter(function(s){ return s.brand_id === b.id; });
+            var total = brandSites.reduce(function(sum,s){ return sum + ((SITE_BUDGETS[s.site_id]||{}).annual_planned||0); },0);
+            return '<td>£' + (total||0).toLocaleString() + '</td>';
+          }())
           +'<td>'+(b.newUnits||0).toLocaleString()+'</td>'
           +'<td>'+(b.leads||0).toLocaleString()+'</td>'
           +'<td>'+(b.evPct||0)+'%</td>'
