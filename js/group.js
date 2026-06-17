@@ -619,8 +619,8 @@ function renderBudgetTracker() {
         }
       });
     } else {
-      var monthly = Math.round(b.annual / 12);
-      for (var i = 0; i < 12; i++) brandMonthlyPlan[i] = monthly;
+      // No site budget data entered yet — show zeros
+      for (var i = 0; i < 12; i++) brandMonthlyPlan[i] = 0;
     }
 
     var brandPlan   = brandMonthlyPlan.reduce(function(s, v) { return s + v; }, 0);
@@ -1410,6 +1410,8 @@ async function loadSiteBudgets() {
     //   channels: { channelName: { 0: {planned,actual}, 1:... } }  ← new granular data
     // }
     SITE_BUDGETS = {};
+    // Zero out brand annual budgets — will be rebuilt from site sums below
+    BUDGET_BRANDS.forEach(function(b) { b.annual = 0; });
     lines.forEach(function(line) {
       var sid = line.site_id;
       if (!SITE_BUDGETS[sid]) {
@@ -1441,6 +1443,15 @@ async function loadSiteBudgets() {
         else if (groupTotal >= 1000) el.textContent = '£' + (groupTotal/1000).toFixed(1) + 'K';
         else el.textContent = '£' + groupTotal.toLocaleString();
       }
+    }
+    // Roll up site planned totals into BUDGET_BRANDS.annual
+    if (typeof HUB_SITES !== 'undefined') {
+      BUDGET_BRANDS.forEach(function(b) {
+        var brandSites = HUB_SITES.filter(function(s) { return s.brand_id === b.id; });
+        b.annual = brandSites.reduce(function(sum, site) {
+          return sum + (SITE_BUDGETS[site.site_id] ? SITE_BUDGETS[site.site_id].annual_planned : 0);
+        }, 0);
+      });
     }
     if (typeof updateBrandBudgetsFromSites === 'function') updateBrandBudgetsFromSites();
     if (typeof syncBrandSitesFromHubSites  === 'function') syncBrandSitesFromHubSites();
