@@ -587,23 +587,6 @@ function renderBrandKPIs(brandId) {
 
 
 
-function brsToggle(id) {
-  var row = document.getElementById(id);
-  var chv = document.getElementById('brs-chv-' + id);
-  console.log('brsToggle id='+id+' row='+!!row+' classes='+(row?row.className:'')+ ' display='+(row?window.getComputedStyle(row).display:''));
-  if (!row) return;
-  var open = row.classList.contains('brs-open');
-  if (open) {
-    row.classList.remove('brs-open');
-    row.style.display = 'none';
-    if (chv) chv.innerHTML = '&#9654;';
-  } else {
-    row.classList.add('brs-open');
-    row.style.display = 'table-row';
-    if (chv) chv.innerHTML = '&#9660;';
-  }
-  console.log('brsToggle after: display='+window.getComputedStyle(row).display+' classes='+row.className);
-}
 
 function brsInjectStyles() {
   if (document.getElementById('brs-styles')) return;
@@ -637,12 +620,6 @@ function brsAttachListeners(container) {
 function renderBrandSites(brandId) {
   var el = document.getElementById(brandId + '-sites-list');
   if (!el) return;
-  // Skip re-render if we already rendered with full data — prevents Auth re-trigger wiping accordion state
-  var siteCount = HUB_SITES.filter(function(s){ return s.brand_id === brandId; }).length;
-  var budgetLoaded = Object.keys(SITE_BUDGETS).length > 0;
-  var lastKey = '_brsRendered_' + brandId;
-  var sites = HUB_SITES.filter(function(s){ return s.brand_id === brandId; });
-  var channelCount = sites.reduce(function(sum,s){ return sum + Object.keys((SITE_BUDGETS[s.site_id]||{}).channels||{}).length; }, 0);
   var sites = HUB_SITES.filter(function(s) { return s.brand_id === brandId; });
   if (!sites.length) {
     el.innerHTML = '<div style="padding:20px;color:var(--ink-faint);font-size:13px">No sites configured for this brand.</div>';
