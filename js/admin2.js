@@ -322,7 +322,16 @@ function renderBrandEditor(id) {
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">'
     + '<div class="admin-card"><h3 class="admin-card-title">Budget & Financial Targets</h3>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
-    + brandField('Annual budget (£)', 'b-'+id+'-budget', b.budget, 'number')
+    + (function(){
+        var brandSites = (typeof SB_SITES !== 'undefined' ? SB_SITES : []).filter(function(s){ return s.brand_id === id; });
+        var derived = brandSites.reduce(function(sum, s){
+          return sum + ((typeof SITE_BUDGETS !== 'undefined' && SITE_BUDGETS[s.site_id] ? SITE_BUDGETS[s.site_id].annual_planned : 0));
+        }, 0);
+        return '<div class="admin-field"><label class="admin-field-label">Annual budget (£) — from site budgets</label>'
+          + '<div style="padding:8px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:4px;font-family:var(--font-m);font-size:14px;font-weight:700;color:var(--ink)">'
+          + (derived > 0 ? '&#163;' + derived.toLocaleString() : '<span style="color:var(--ink-faint)">No site budgets entered yet</span>')
+          + '</div><div style="font-size:11px;color:var(--ink-soft);margin-top:3px">Set in Admin &#8594; Site Budgets</div></div>';
+      }())
     + brandField('New car/van target', 'b-'+id+'-newUnits', b.newUnits, 'number')
     + brandField('EV/PHEV target (%)', 'b-'+id+'-evPct', b.evPct, 'number')
     + brandField('Leads per month', 'b-'+id+'-leads', b.leads, 'number')
