@@ -1362,17 +1362,42 @@ async function slConfirmGenerate(payload) {
   // Create one post per platform (or one post covering all selected)
   // We create a single post covering all selected platforms
   var schedDate = payload.start_date ? payload.start_date + 'T09:00:00' : null;
+
+  // Build suggested caption from event/campaign data
+  var suggestedCaption = '';
+  if (payload.source === 'event') {
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var dateStr = '';
+    if (payload.start_date) {
+      var sd = new Date(payload.start_date + 'T00:00:00');
+      dateStr = sd.getDate() + ' ' + months[sd.getMonth()];
+      if (payload.end_date && payload.end_date !== payload.start_date) {
+        var ed = new Date(payload.end_date + 'T00:00:00');
+        dateStr += ' – ' + ed.getDate() + ' ' + months[ed.getMonth()];
+      }
+    }
+    suggestedCaption = '📅 ' + (payload.title || 'Event')
+      + (dateStr ? ' | ' + dateStr : '')
+      + (payload.location ? ' | ' + payload.location : '')
+      + '\n\n[Add event highlights and booking CTA here]';
+  }
+
+  // Determine post type from source
+  var postType = payload.source === 'event' ? 'event' : 'brand_story';
+
   var postData = {
     title:           payload.title || 'New post',
     brand_id:        payload.brand_id || null,
     site_ids:        payload.site_ids || [],
     platform_ids:    selectedPlatforms,
     status:          'draft',
+    post_type:       postType,
     event_id:        payload.event_ids ? payload.event_ids[0] : null,
     brief_id:        payload.brief_id || null,
     scheduled_at:    schedDate,
-    budget_allocated: null,  // Left blank — team sets social budget explicitly
+    budget_allocated: null,
     location:        payload.location || null,
+    caption:         suggestedCaption || null,
     job_ref:         payload.job_ref   || null,
     created_by:      slAsUUID(CB_CURRENT_USER),
     created_at:      new Date().toISOString(),
