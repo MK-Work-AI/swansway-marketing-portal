@@ -616,8 +616,20 @@ function brsInjectStyles() {
 function brsAttachListeners(container) {
   if (!container) return;
   container.querySelectorAll('tr[data-accord]').forEach(function(tr) {
-    tr.addEventListener('click', function(e) {
-          brsToggle(tr.getAttribute('data-accord'));
+    var detailRow = tr.nextElementSibling;
+    if (!detailRow || !detailRow.classList.contains('brs-detail-row')) return;
+    tr.addEventListener('click', function() {
+      var open = detailRow.classList.contains('brs-open');
+      var chv = tr.querySelector('[id^="brs-chv-"]');
+      if (open) {
+        detailRow.classList.remove('brs-open');
+        detailRow.style.display = 'none';
+        if (chv) chv.innerHTML = '&#9654;';
+      } else {
+        detailRow.classList.add('brs-open');
+        detailRow.style.display = 'table-row';
+        if (chv) chv.innerHTML = '&#9660;';
+      }
     });
   });
 }
