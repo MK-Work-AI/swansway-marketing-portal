@@ -395,7 +395,7 @@ async function sbLoad() {
   var container = document.getElementById('sb-content');
   if (container) container.innerHTML = '<div style="padding:30px;text-align:center;color:var(--ink-soft)">Loading…</div>';
   try {
-    var r = await fetch(SUPA + '/site_budget_lines?year=eq.' + PLAN_YEAR + '&select=*&limit=10000', { headers: getAuthHeaders({'Range-Unit': 'items', 'Range': '0-9999'}) });
+    var r = await fetch(SUPA + '/site_budget_lines?year=eq.' + PLAN_YEAR + '&select=*&limit=10000', { headers: getAuthHeaders() });
     if (!r.ok) throw new Error(await r.text());
     var rows = await r.json();
     // Build: SB_SITE_DATA[site_id][channel][month] = { planned, actual }
