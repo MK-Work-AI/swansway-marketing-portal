@@ -590,11 +590,19 @@ function renderBrandKPIs(brandId) {
 function brsToggle(id) {
   var row = document.getElementById(id);
   var chv = document.getElementById('brs-chv-' + id);
-  console.log('brsToggle:', id, 'row found:', !!row, 'chv found:', !!chv);
   if (!row) return;
   var open = row.style.display !== 'none';
   row.style.display = open ? 'none' : 'table-row';
   if (chv) chv.innerHTML = open ? '&#9654;' : '&#9660;';
+}
+
+function brsAttachListeners(container) {
+  if (!container) return;
+  container.querySelectorAll('tr[data-accord]').forEach(function(tr) {
+    tr.addEventListener('click', function() {
+      brsToggle(tr.getAttribute('data-accord'));
+    });
+  });
 }
 
 function renderBrandSites(brandId) {
@@ -681,7 +689,7 @@ function renderBrandSites(brandId) {
     var bg = idx % 2 === 0 ? 'var(--white)' : 'var(--surface)';
     var siteAccordId = 'brs-' + site.site_id.replace(/[^a-z0-9]/gi,'_');
     var siteHasChannels = Object.keys((SITE_BUDGETS[site.site_id] || {}).channels || {}).length > 0;
-    html += '<tr style="background:' + bg + ';cursor:' + (siteHasChannels?'pointer':'default') + '" ' + (siteHasChannels ? 'onclick="brsToggle(\'' + siteAccordId + '\')"' : '') + '>';
+    html += '<tr style="background:' + bg + ';cursor:' + (siteHasChannels?'pointer':'default') + '"' + (siteHasChannels ? ' data-accord="' + siteAccordId + '"' : '') + '>';
     html += '<td style="padding:8px 12px;font-size:13px;font-weight:600">' + (siteHasChannels ? '<span style="font-size:10px;color:var(--ink-soft);margin-right:4px" id="brs-chv-'+siteAccordId+'">&#9654;</span>' : '') + site.site_name + '</td>';
     html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:var(--swansway);font-weight:700">' + (plan > 0 ? '£' + plan.toLocaleString() : '—') + '</td>';
     html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:#D97706;font-weight:600">' + (committed > 0 ? '£' + committed.toLocaleString() : '—') + '</td>';
@@ -707,6 +715,7 @@ function renderBrandSites(brandId) {
   });
   html += '</tbody></table></div>';
   el.innerHTML = html;
+  brsAttachListeners(el);
 }
 
 
