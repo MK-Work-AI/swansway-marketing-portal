@@ -1122,7 +1122,8 @@ function applyAdminConfig(cfg) {
       }
       // Update BUDGET_BRANDS array (budget tracker)
       var bb = BUDGET_BRANDS.find(function(b) { return b.id === ab.id; });
-      if (bb && ab.budget) bb.annual = ab.budget;
+      // BUDGET_BRANDS.annual is now derived from site_budget_lines — not set from admin config
+      // if (bb && ab.budget) bb.annual = ab.budget;
     });
 
     // Re-render group brand cards with updated data
