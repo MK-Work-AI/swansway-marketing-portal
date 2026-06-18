@@ -784,7 +784,7 @@ async function skSave() {
       SK_TARGETS.forEach(function(t){row[t.key]=d[t.key]||0;});
       return row;
     });
-    var r = await fetch(SUPA + '/site_kpis', {
+    var r = await fetch(SUPA + '/site_kpis?on_conflict=site_id', {
       method:'POST',
       headers:getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),
       body:JSON.stringify(rows)
