@@ -1840,7 +1840,8 @@ async function loadSiteKPIs() {
   var _p = window.location.pathname;
   if (!_p.endsWith('index.html') && !_p.endsWith('/') &&
       !_p.endsWith('brand.html') && !_p.endsWith('/brand') &&
-      !_p.endsWith('kpis.html')  && !_p.endsWith('/kpis')) return;
+      !_p.endsWith('kpis.html')  && !_p.endsWith('/kpis') &&
+      !_p.endsWith('budget.html')&& !_p.endsWith('/budget')) return;
   try {
     var resp = await fetch(SUPABASE_URL + '/rest/v1/site_kpis?select=*', {
       headers: {
@@ -1855,6 +1856,7 @@ async function loadSiteKPIs() {
     // Re-render KPIs after data loads — always, not just when view is active
     if (typeof applyAdminKPITargets === 'function') applyAdminKPITargets();
     if (typeof renderGroupKPIs === 'function') renderGroupKPIs();
+    if (typeof updateBrandKPIsFromSites === 'function') updateBrandKPIsFromSites();
     console.log('Site KPIs loaded: ' + rows.length + ' sites');
   } catch(e) { console.warn('loadSiteKPIs exception:', e); }
 }
