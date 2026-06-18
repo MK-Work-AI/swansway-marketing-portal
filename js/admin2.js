@@ -171,7 +171,15 @@ function showPage(id) {
   if (btn) btn.classList.add('active');
   // Lazy-load page data
   if (id === 'dashboard')    { refreshDashboard(); } // async — runs in background
-  if (id === 'group')        { populateGroupForm(); setTimeout(populateGroupForm, 2000); }
+  if (id === 'group')        {
+    populateGroupForm();
+    // Load site KPI data if not already loaded, then re-populate
+    if (!Object.keys(SK_SITE_DATA).length) {
+      skLoad().then(function(){ setTimeout(populateGroupForm, 500); });
+    } else {
+      setTimeout(populateGroupForm, 500);
+    }
+  }
   if (id === 'channels')     { renderChannelEditor(); }
   if (id === 'brand')        { renderBrandEditor(BRAND_IDS[0]); }
   if (id === 'sitebudgets')  { sbLoad(); }
@@ -305,18 +313,21 @@ function populateGroupForm() {
   // KPIs: aggregate from SITE_KPIS
   var totalUnitsTarget = 0, totalLeadsTarget = 0;
   var evSum = 0, evCount = 0, convSum = 0, retSum = 0, npsSum = 0, cplSum = 0, kpiCount = 0;
-  if (typeof SITE_KPIS !== 'undefined' && typeof HUB_SITES !== 'undefined') {
-    HUB_SITES.forEach(function(site) {
-      var d = SITE_KPIS[site.site_id] || {};
-      totalUnitsTarget += d.units_target || 0;
-      totalLeadsTarget += d.leads_target || 0;
-      if (d.ev_pct_target > 0)      { evSum  += d.ev_pct_target;      evCount++;  }
-      if (d.conversion_target > 0)  { convSum += d.conversion_target;  kpiCount++; }
-      if (d.retention_target > 0)   { retSum  += d.retention_target;               }
-      if (d.nps_target > 0)         { npsSum  += d.nps_target;                     }
-      if (d.cpl_target > 0)         { cplSum  += d.cpl_target;                     }
-    });
-  }
+  // Use SK_SITE_DATA (loaded by skLoad on admin page) and SB_SITES
+  var kpiSource = (typeof SK_SITE_DATA !== 'undefined' && Object.keys(SK_SITE_DATA).length) ? SK_SITE_DATA
+    : (typeof SITE_KPIS !== 'undefined' ? SITE_KPIS : {});
+  var siteList = (typeof SB_SITES !== 'undefined' && SB_SITES.length) ? SB_SITES
+    : (typeof HUB_SITES !== 'undefined' ? HUB_SITES : []);
+  siteList.forEach(function(site) {
+    var d = kpiSource[site.site_id] || {};
+    totalUnitsTarget += d.units_target || 0;
+    totalLeadsTarget += d.leads_target || 0;
+    if (d.ev_pct_target > 0)      { evSum  += d.ev_pct_target;      evCount++;  }
+    if (d.conversion_target > 0)  { convSum += d.conversion_target;  kpiCount++; }
+    if (d.retention_target > 0)   { retSum  += d.retention_target;               }
+    if (d.nps_target > 0)         { npsSum  += d.nps_target;                     }
+    if (d.cpl_target > 0)         { cplSum  += d.cpl_target;                     }
+  });
   var evAvg   = evCount  > 0 ? Math.round(evSum  / evCount * 10) / 10 : 0;
   var convAvg = kpiCount > 0 ? Math.round(convSum / kpiCount * 10) / 10 : 0;
   var retAvg  = kpiCount > 0 ? Math.round(retSum  / kpiCount * 10) / 10 : 0;
