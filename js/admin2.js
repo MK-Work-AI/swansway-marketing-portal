@@ -866,7 +866,7 @@ async function scSave() {
       var d = SC_DATA[sid];
       return {site_id:sid,site_name:d.site_name||sid,brand_id:d.brand_id||'',general_manager:d.general_manager||'',head_of_business:d.head_of_business||'',sales_manager:d.sales_manager||'',service_manager:d.service_manager||'',parts_manager:d.parts_manager||'',updated_at:new Date().toISOString()};
     });
-    var r = await fetch(SUPA + '/site_contacts', {
+    var r = await fetch(SUPA + '/site_contacts?on_conflict=site_id', {
       method:'POST',
       headers:getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),
       body:JSON.stringify(rows)
@@ -932,7 +932,7 @@ async function bkSave() {
   var d = BK_DATA[brandId] || {};
   var row = Object.assign({brand_id:brandId,brand_name:BRAND_NAMES[brandId],updated_at:new Date().toISOString()}, d);
   try {
-    var r = await fetch(SUPA + '/brand_kpis', {
+    var r = await fetch(SUPA + '/brand_kpis?on_conflict=brand_id', {
       method:'POST',
       headers:getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),
       body:JSON.stringify([row])
@@ -1136,7 +1136,7 @@ async function ctSave() {
   try {
     m.is_leadership = document.getElementById('ct-leadership') ? document.getElementById('ct-leadership').checked : !!m.is_leadership;
     await fetch(SUPA + '/campaign_team?id=eq.'+id, {method:'PATCH',headers:getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),body:JSON.stringify({name:m.name,role:m.role,email:m.email,active:m.active,is_leadership:m.is_leadership||false,updated_at:new Date().toISOString()})});
-    await fetch(SUPA + '/campaign_permissions', {method:'POST',headers:getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify([perms])});
+    await fetch(SUPA + '/campaign_permissions?on_conflict=member_id', {method:'POST',headers:getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify([perms])});
     showToast(m.name+' saved ✓','success');
     document.getElementById('ct-form').style.display='none';
     ctRenderList();
