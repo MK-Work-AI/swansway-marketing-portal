@@ -29,7 +29,7 @@ if (typeof navToggle === 'undefined') {
   <script src="config.js?v=2"></script>
   <script src="bundle-core.js?v=102"></script>
   <script src="js/group.js?v=110" defer></script>
-  <script src="js/admin2.js?v=112" defer></script>
+  <script src="js/admin2.js?v=113" defer></script>
   <style>
     .admin-layout { display:flex; min-height:calc(100vh - 120px); gap:0; }
     .admin-sidebar { width:220px; flex-shrink:0; background:var(--white); border-right:1px solid var(--border); padding:1rem 0; }
@@ -240,17 +240,20 @@ if (typeof navToggle === 'undefined') {
       </div>
       <div class="admin-card">
         <h3 class="admin-card-title">Group KPI Targets</h3>
+        <div style="margin-bottom:12px;padding:8px 12px;background:var(--surface);border-radius:4px;font-size:11px;color:var(--ink-soft)">
+          Shaded fields are derived from Site KPIs and Site Budgets — edit those sections to update these figures.
+        </div>
         <div class="form-grid-3">
-          <div><div class="admin-field-label">Group annual budget (£)</div><input class="admin-input" id="gs-budget" type="number" style="width:100%"></div>
-          <div><div class="admin-field-label">New car/van units target</div><input class="admin-input" id="gs-units" type="number" style="width:100%"></div>
-          <div><div class="admin-field-label">Leads/month target</div><input class="admin-input" id="gs-leads" type="number" style="width:100%"></div>
-          <div><div class="admin-field-label">EV sales % target</div><input class="admin-input" id="gs-evSales" type="number" style="width:100%"></div>
-          <div><div class="admin-field-label">EV mix % target</div><input class="admin-input" id="gs-evPct" type="number" style="width:100%"></div>
-          <div><div class="admin-field-label">Co-op utilisation % target</div><input class="admin-input" id="gs-coopPct" type="number" style="width:100%"></div>
-          <div><div class="admin-field-label">Conversion rate % target</div><input class="admin-input" id="gs-conv" type="number" style="width:100%"></div>
-          <div><div class="admin-field-label">Retention % target</div><input class="admin-input" id="gs-retention" type="number" style="width:100%"></div>
-          <div><div class="admin-field-label">NPS target</div><input class="admin-input" id="gs-nps" type="number" style="width:100%"></div>
-          <div><div class="admin-field-label">Group CPL target (£)</div><input class="admin-input" id="gs-cpl" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">Group annual budget (£) <span style="color:var(--ink-faint);font-size:9px">from site budgets</span></div><input class="admin-input" id="gs-budget" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">New car/van units target <span style="color:var(--ink-faint);font-size:9px">from site KPIs</span></div><input class="admin-input" id="gs-units" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">Leads/month target <span style="color:var(--ink-faint);font-size:9px">from site KPIs</span></div><input class="admin-input" id="gs-leads" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">EV sales % target <span style="color:var(--ink-faint);font-size:9px">from site KPIs</span></div><input class="admin-input" id="gs-evSales" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">EV mix % target <span style="color:var(--accent);font-size:9px">✎ editable</span></div><input class="admin-input" id="gs-evPct" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">Co-op utilisation % target <span style="color:var(--accent);font-size:9px">✎ editable</span></div><input class="admin-input" id="gs-coopPct" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">Conversion rate % target <span style="color:var(--ink-faint);font-size:9px">from site KPIs</span></div><input class="admin-input" id="gs-conv" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">Retention % target <span style="color:var(--ink-faint);font-size:9px">from site KPIs</span></div><input class="admin-input" id="gs-retention" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">NPS target <span style="color:var(--ink-faint);font-size:9px">from site KPIs</span></div><input class="admin-input" id="gs-nps" type="number" style="width:100%"></div>
+          <div><div class="admin-field-label">Group CPL target (£) <span style="color:var(--ink-faint);font-size:9px">from site KPIs</span></div><input class="admin-input" id="gs-cpl" type="number" style="width:100%"></div>
         </div>
       </div>
     </div>
