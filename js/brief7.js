@@ -1069,7 +1069,14 @@ function bbGenerateBrief() {
       }
     }
   }
-  if(feedback) { feedback.style.display='none'; feedback.textContent=''; }
+  if(feedback) {
+    // If re-opening a saved draft, show action buttons instead of hiding feedback
+    if (window._lastSavedBriefId && window._pendingDraftActionsId) {
+      setTimeout(bbShowDraftActions, 100);
+    } else {
+      feedback.style.display='none'; feedback.textContent='';
+    }
+  }
   // Auto-fill title
   const titleInput = document.getElementById('bb-brief-title');
   if(titleInput && !titleInput.value && BB.brand && BB.ctype) {
@@ -2636,7 +2643,6 @@ async function bbCampAdvance(campId, currentStage) {
 
 
 function bbShowDraftActions() {
-  console.log('bbShowDraftActions called, pendingId:', window._pendingDraftActionsId, '_lastSavedBriefId:', window._lastSavedBriefId);
   var fb = document.getElementById('bb-save-feedback');
   var saveBar = document.getElementById('bb-save-bar');
   if (!fb) return;
