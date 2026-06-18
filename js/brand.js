@@ -952,20 +952,62 @@ function renderBrandChannelMix(brandId) {
 
   var html = '<div class="sh"><div><div class="sh-title">Channel Mix</div><div class="sh-sub">Based on £' + brandBudget.toLocaleString() + ' annual budget</div></div></div>';
 
-  // Bar chart
+  // Build site channel planned and committed totals
+  var sitePlanned = {};
+  var siteCommitted = {};
+  brandSites.forEach(function(site) {
+    var chans = (SITE_BUDGETS[site.site_id] || {}).channels || {};
+    Object.keys(chans).forEach(function(ch) {
+      var mData = chans[ch];
+      var total = Object.values(mData).reduce(function(s,v){ return s+(typeof v==='object'?(v.planned||0):v); }, 0);
+      sitePlanned[ch] = (sitePlanned[ch] || 0) + total;
+    });
+    var cmt = (window.BRIEF_COMMITMENTS_BY_CHANNEL || {})[site.site_id] || {};
+    Object.keys(cmt).forEach(function(ch) {
+      var total = Math.round(Object.values(cmt[ch]).reduce(function(s,v){ return s+v; }, 0));
+      siteCommitted[ch] = (siteCommitted[ch] || 0) + total;
+    });
+  });
+
+  // Header row
   html += '<div style="padding:0 20px 20px">';
+  html += '<div style="display:grid;grid-template-columns:150px 1fr 90px 90px 90px;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:4px">';
+  html += '<div style="font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em">Channel</div>';
+  html += '<div style="font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em">Allocation</div>';
+  html += '<div style="font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase;text-align:right">Recommended</div>';
+  html += '<div style="font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase;text-align:right">Planned</div>';
+  html += '<div style="font-size:9px;font-family:var(--font-m);color:#D97706;text-transform:uppercase;text-align:right">Committed</div>';
+  html += '</div>';
+
   channels.forEach(function(ch) {
-    var gbp = Math.round(brandBudget * (parseFloat(ch.pct) || 0) / 100);
+    var rec = Math.round(brandBudget * (parseFloat(ch.pct) || 0) / 100);
     var pct = parseFloat(ch.pct) || 0;
-    html += '<div style="margin-bottom:12px">';
-    html += '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">';
-    html += '<span style="font-weight:600">' + ch.channel + '</span>';
-    html += '<span style="color:var(--ink-soft)">' + pct + '% &nbsp; <strong>£' + gbp.toLocaleString() + '</strong></span>';
-    html += '</div>';
-    html += '<div style="height:8px;background:var(--surface-2);border-radius:4px">';
-    html += '<div style="height:8px;border-radius:4px;background:' + (ch.color||'#333') + ';width:' + Math.min(pct,100) + '%"></div>';
-    html += '</div>';
+    var plan = Math.round(sitePlanned[ch.channel] || 0);
+    var cmt = Math.round(siteCommitted[ch.channel] || 0);
+    var maxV = Math.max(rec, plan, 1);
+    var recW = Math.min(Math.round(rec / maxV * 100), 100);
+    var planW = Math.min(Math.round(plan / maxV * 100), 100);
+    var cPct = plan > 0 ? Math.min(Math.round(cmt / plan * 100), 100) : 0;
+    var cCol = cPct > 100 ? '#DC2626' : cPct > 85 ? '#D97706' : '#059669';
+    var diff = plan - rec;
+    var diffStr = diff === 0 || plan === 0 ? '' : (diff > 0 ? '+' : '') + '&#163;' + Math.abs(diff).toLocaleString();
+    var diffCol = diff > 0 ? '#059669' : '#DC2626';
+    html += '<div style="display:grid;grid-template-columns:150px 1fr 90px 90px 90px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">';
+    html += '<div><div style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px">';
+    html += '<span style="width:8px;height:8px;border-radius:50%;background:' + (ch.color||'#333') + ';flex-shrink:0;display:inline-block"></span>';
+    html += ch.channel + '</div>';
     if (ch.note) html += '<div style="font-size:10px;color:var(--ink-faint);margin-top:2px">' + ch.note + '</div>';
+    html += '</div>';
+    html += '<div>';
+    html += '<div style="height:4px;background:var(--surface-2);border-radius:2px;margin-bottom:3px;position:relative">';
+    html += '<div style="height:4px;border-radius:2px;background:' + (ch.color||'#333') + ';width:' + recW + '%;opacity:0.3;position:absolute;top:0;left:0"></div>';
+    html += '<div style="height:4px;border-radius:2px;background:' + (ch.color||'#333') + ';width:' + planW + '%;position:absolute;top:0;left:0"></div>';
+    html += '</div>';
+    if (cmt > 0) { html += '<div style="height:3px;background:var(--surface-2);border-radius:2px"><div style="height:3px;border-radius:2px;background:' + cCol + ';width:' + cPct + '%"></div></div>'; }
+    html += '</div>';
+    html += '<div style="text-align:right;font-size:11px;font-family:var(--font-m);color:var(--ink-soft)">' + (rec > 0 ? '&#163;' + rec.toLocaleString() : '&mdash;') + '<br><span style="font-size:9px">' + pct + '%</span></div>';
+    html += '<div style="text-align:right;font-size:11px;font-family:var(--font-m);font-weight:' + (plan>0?'700':'400') + ';color:var(--ink)">' + (plan > 0 ? '&#163;' + plan.toLocaleString() : '&mdash;') + (diffStr ? '<br><span style="font-size:9px;color:' + diffCol + '">' + diffStr + '</span>' : '') + '</div>';
+    html += '<div style="text-align:right;font-size:11px;font-family:var(--font-m);font-weight:' + (cmt>0?'700':'400') + ';color:' + (cmt>0?cCol:'var(--ink-soft)') + '">' + (cmt > 0 ? '&#163;' + cmt.toLocaleString() : '&mdash;') + (cmt>0?'<br><span style="font-size:9px">'+cPct+'% used</span>':'') + '</div>';
     html += '</div>';
   });
 
