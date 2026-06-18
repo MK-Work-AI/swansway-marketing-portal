@@ -1417,7 +1417,7 @@ async function bbLaunchCampaignFromBrief(briefId, briefTitle, btnEl) {
 
     var tmpl = await fetch(base+'/campaign_task_templates?select=*&order=stage,task_order',{headers:getAuthHeaders()}).then(function(r){return r.json();});
     if (Array.isArray(tmpl) && tmpl.length) {
-      var cmap={'Paid Search (Google/Bing)':'paid_search','Display & Programmatic':'display','Email Marketing':'email','Social Organic':'social_organic','Paid Social (Meta/TikTok/LinkedIn)':'social_paid','Events & Showroom':'events','OOH & Print':'ooh_print','Manufacturer Co-op':'manufacturer_coop'};
+      var cmap={'Paid Search (Google/Bing)':'paid_search','Display, Video & Programmatic':'display','Email Marketing':'email','Social Organic':'social_organic','Paid Social (Meta/TikTok/LinkedIn)':'social_paid','Events & Showroom':'events','OOH & Print':'ooh_print','Manufacturer Co-op':'manufacturer_coop'};
       var chs=((brief&&(brief.confirmed_channels||brief.channels))||[]).map(function(c){return cmap[c]||c.toLowerCase().replace(/[^a-z]/g,'_');});
       var rows=tmpl.filter(function(t){return !t.channel||!chs.length||chs.includes(t.channel);}).map(function(t){
         var notes='';
