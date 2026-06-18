@@ -27,9 +27,9 @@ if (typeof navToggle === 'undefined') {
   <link rel="stylesheet" href="shared.css?v=2">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js?v=2"></script>
-  <script src="bundle-core.js?v=105"></script>
+  <script src="bundle-core.js?v=106"></script>
   <script src="js/group.js?v=110" defer></script>
-  <script src="js/admin2.js?v=122" defer></script>
+  <script src="js/admin2.js?v=123" defer></script>
   <style>
     .admin-layout { display:flex; min-height:calc(100vh - 120px); gap:0; }
     .admin-sidebar { width:220px; flex-shrink:0; background:var(--white); border-right:1px solid var(--border); padding:1rem 0; }
@@ -184,7 +184,8 @@ if (typeof navToggle === 'undefined') {
       <div class="admin-sidebar-label">Site Data</div>
       <button class="snav" data-page="sitebudgets" onclick="showPage('sitebudgets')">💷 Site Budgets</button>
       <button class="snav" data-page="sitekpis" onclick="showPage('sitekpis')">📊 Site KPIs</button>
-      <button class="snav" data-page="sitecontacts" onclick="showPage('sitecontacts')">📋 Site Directory</button>
+      <button class="snav" data-page="sitedirectory" onclick="showPage('sitedirectory')">📍 Site Directory</button>
+      <button class="snav" data-page="sitecontacts" onclick="showPage('sitecontacts')">📋 Site Contacts</button>
     </div>
     <div class="admin-sidebar-section">
       <div class="admin-sidebar-label">Brand Data</div>
@@ -329,7 +330,7 @@ if (typeof navToggle === 'undefined') {
 
       <div class="admin-page" id="page-sitecontacts">
       <div class="admin-page-header">
-        <div><div class="admin-page-title">Site Directory</div><div class="admin-page-sub">Dealership contacts and management team</div></div>
+        <div><div class="admin-page-title">Site Contacts</div><div class="admin-page-sub">Dealership contacts and management team</div></div>
         <button id="sc-save-btn" class="btn btn-accent" onclick="scSave()">Save directory</button>
       </div>
       <div class="brand-tabs" id="sc-brand-tabs"><button class="brand-tab-btn active" data-sc-brand="audi" onclick="scSelectBrand(this.dataset.scBrand)">Audi</button><button class="brand-tab-btn" data-sc-brand="vw" onclick="scSelectBrand(this.dataset.scBrand)">Volkswagen</button><button class="brand-tab-btn" data-sc-brand="vwcv" onclick="scSelectBrand(this.dataset.scBrand)">VW Commercial</button><button class="brand-tab-btn" data-sc-brand="seat" onclick="scSelectBrand(this.dataset.scBrand)">SEAT</button><button class="brand-tab-btn" data-sc-brand="cupra" onclick="scSelectBrand(this.dataset.scBrand)">CUPRA</button><button class="brand-tab-btn" data-sc-brand="landrover" onclick="scSelectBrand(this.dataset.scBrand)">Land Rover</button><button class="brand-tab-btn" data-sc-brand="jaguar" onclick="scSelectBrand(this.dataset.scBrand)">Jaguar</button><button class="brand-tab-btn" data-sc-brand="honda" onclick="scSelectBrand(this.dataset.scBrand)">Honda</button><button class="brand-tab-btn" data-sc-brand="peugeot" onclick="scSelectBrand(this.dataset.scBrand)">Peugeot</button><button class="brand-tab-btn" data-sc-brand="byd" onclick="scSelectBrand(this.dataset.scBrand)">BYD</button><button class="brand-tab-btn" data-sc-brand="omoda" onclick="scSelectBrand(this.dataset.scBrand)">OMODA/JAECOO</button><button class="brand-tab-btn" data-sc-brand="motormatch" onclick="scSelectBrand(this.dataset.scBrand)">Motor Match</button></div>
