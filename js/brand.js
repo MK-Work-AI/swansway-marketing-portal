@@ -3,6 +3,16 @@
 
 
 function renderBrand(b) {
+  // Guard: ensure brand has minimum required fields (handles new brands from hub_brands)
+  if (!b.pillars)   b.pillars   = [];
+  if (!b.tags)      b.tags      = [];
+  if (!b.centres)   b.centres   = [];
+  if (!b.channels)  b.channels  = [];
+  if (!b.audiences) b.audiences = [];
+  if (!b.q2)        b.q2        = '';
+  if (!b.budget)    b.budget    = '—';
+  if (!b.newTarget) b.newTarget = '—';
+  if (!b.evTarget)  b.evTarget  = '—';
   const container = document.getElementById(b.id+'-content');
   if(!container) return;
   if(container.dataset.rendered) {
