@@ -664,7 +664,6 @@ function renderBrandSites(brandId) {
     var bg = idx % 2 === 0 ? 'var(--white)' : 'var(--surface)';
     var siteAccordId = 'brs-' + site.site_id.replace(/[^a-z0-9]/gi,'_');
     var siteHasChannels = Object.keys((SITE_BUDGETS[site.site_id] || {}).channels || {}).length > 0;
-    console.log('site', site.site_id, 'hasChannels:', siteHasChannels, 'channels:', Object.keys((SITE_BUDGETS[site.site_id]||{}).channels||{}));
     html += '<tr style="background:' + bg + ';cursor:' + (siteHasChannels?'pointer':'default') + '"' + (siteHasChannels ? ' data-accord="' + siteAccordId + '"' : '') + '>';
     html += '<td style="padding:8px 12px;font-size:13px;font-weight:600">' + (siteHasChannels ? '<span style="font-size:10px;color:var(--ink-soft);margin-right:4px" id="brs-chv-'+siteAccordId+'">&#9654;</span>' : '') + site.site_name + '</td>';
     html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:var(--swansway);font-weight:700">' + (plan > 0 ? '£' + plan.toLocaleString() : '—') + '</td>';
