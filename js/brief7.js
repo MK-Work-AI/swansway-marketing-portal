@@ -2635,6 +2635,43 @@ async function bbCampAdvance(campId, currentStage) {
 }
 
 
+function bbShowDraftActions() {
+  // Only run if we have a pending draft to show actions for
+  if (!window._pendingDraftActionsId) return;
+  var fb = document.getElementById('bb-save-feedback');
+  var saveBar = document.getElementById('bb-save-bar');
+  if (!fb) return;
+  // Ensure save bar is visible
+  if (saveBar) saveBar.style.display = 'block';
+  // Resolve user
+  var _uid = CB_CURRENT_USER;
+  if (!_uid && window.SB_USER && SB_USER.email && typeof CB_TEAM !== 'undefined') {
+    var _m = Object.values(CB_TEAM).find(function(m){ return m.email && m.email.toLowerCase() === SB_USER.email.toLowerCase(); });
+    if (_m) { _uid = _m.id; CB_CURRENT_USER = _uid; }
+  }
+  var _perms = (typeof CB_PERMS !== 'undefined' && _uid) ? (CB_PERMS[_uid] || {}) : {};
+  var _canLaunch = !!(_perms.can_approve_all || _perms.can_approve_digital);
+  var _firstName = (SB_USER && SB_USER.user_metadata && SB_USER.user_metadata.full_name)
+    ? SB_USER.user_metadata.full_name.split(' ')[0] : 'there';
+  fb.style.display = 'block';
+  fb.style.color = '';
+  if (_canLaunch) {
+    fb.innerHTML = '<div class="bb-s6-confirm">'
+      + '<div class="bb-s6-tick">✓</div>'
+      + '<div class="bb-s6-msg"><strong>Brief saved, ' + _firstName + '.</strong> Ready to go live.</div>'
+      + '<button class="bb-s6-launch" onclick="bbSubmitAndLaunch()">LAUNCH CAMPAIGN</button>'
+      + '</div>';
+  } else {
+    fb.innerHTML = '<div class="bb-s6-confirm">'
+      + '<div class="bb-s6-tick">✓</div>'
+      + '<div class="bb-s6-msg"><strong>Brief saved, ' + _firstName + '.</strong> When ready, submit for approval.</div>'
+      + '<button class="bb-s6-submit-btn" onclick="bbSubmitBrief()">Submit for approval →</button>'
+      + '</div>';
+  }
+  window._pendingDraftActionsId = null;
+}
+
+
 function bbExitCampaignMode() {
   window._bbCampModeActive = false;
 
@@ -2951,36 +2988,9 @@ async function bbLoadBrief(id) {
     if (saveBtn) { saveBtn.textContent = '\u2713 Saved'; saveBtn.disabled = true; saveBtn.style.background = '#059669'; }
     if (saveBar) saveBar.style.display = 'block';
   }, 150);
-  // Re-show launch/submit button after bbGenerateBrief clears feedback div
-  // Use 1000ms to ensure CB_TEAM + CB_PERMS are loaded
-  setTimeout(function() {
-    var fb = document.getElementById('bb-save-feedback');
-    if (!fb) return;
-    // Resolve current user if not already set
-    var _uid = CB_CURRENT_USER;
-    if (!_uid && window.SB_USER && SB_USER.email && typeof CB_TEAM !== 'undefined') {
-      var _m = Object.values(CB_TEAM).find(function(m){ return m.email && m.email.toLowerCase() === SB_USER.email.toLowerCase(); });
-      if (_m) _uid = _m.id;
-    }
-    var _perms = (typeof CB_PERMS !== 'undefined' && _uid) ? (CB_PERMS[_uid] || {}) : {};
-    var _canLaunch = !!(typeof window.is_admin !== 'undefined' && window.is_admin) || _perms.can_approve_all || _perms.can_approve_digital;
-    var _firstName = (SB_USER && SB_USER.user_metadata && SB_USER.user_metadata.full_name)
-      ? SB_USER.user_metadata.full_name.split(' ')[0] : 'there';
-    fb.style.display = 'block';
-    if (_canLaunch) {
-      fb.innerHTML = '<div class="bb-s6-confirm">'
-        + '<div class="bb-s6-tick">\u2713</div>'
-        + '<div class="bb-s6-msg"><strong>Brief saved, ' + _firstName + '.</strong> Ready to go live.</div>'
-        + '<button class="bb-s6-launch" onclick="bbSubmitAndLaunch()">LAUNCH CAMPAIGN</button>'
-        + '</div>';
-    } else {
-      fb.innerHTML = '<div class="bb-s6-confirm">'
-        + '<div class="bb-s6-tick">\u2713</div>'
-        + '<div class="bb-s6-msg"><strong>Brief saved, ' + _firstName + '.</strong> When ready, submit for approval.</div>'
-        + '<button class="bb-s6-submit-btn" onclick="bbSubmitBrief()">Submit for approval \u2192</button>'
-        + '</div>';
-    }
-  }, 1000);
+  // Store brief ID so bbShowDraftActions can re-apply after Auth re-triggers
+  window._pendingDraftActionsId = _briefRef.id;
+  window._pendingDraftActionsTimer = setTimeout(bbShowDraftActions, 2000);
 }
 
 
