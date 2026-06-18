@@ -8,7 +8,12 @@ var SB_SITES = [{"site_id": "audi-blackburn", "site_name": "Audi Blackburn", "br
 
 
 const BRAND_NAMES = {"audi":"Audi","vw":"Volkswagen","vwcv":"VW Commercial","seat":"SEAT","cupra":"CUPRA","landrover":"Land Rover","jaguar":"Jaguar","honda":"Honda","peugeot":"Peugeot","byd":"BYD","omoda":"OMODA/JAECOO","motormatch":"Motor Match"};
-const BRAND_IDS = ['audi','vw','vwcv','seat','cupra','landrover','jaguar','honda','peugeot','byd','omoda','motormatch'];
+// BRAND_IDS — derived from BRANDS array at runtime (populated from hub_brands via loadHubBrands)
+function getBrandIds() { return (typeof BRANDS !== 'undefined' ? BRANDS : []).map(function(b){ return b.id; }); }
+// Legacy alias for any code that still references BRAND_IDS directly
+var BRAND_IDS = ['audi','vw','vwcv','seat','cupra','landrover','jaguar','honda','peugeot','byd','omoda','motormatch'];
+// Refresh BRAND_IDS after loadHubBrands updates BRANDS
+function refreshBrandIds() { BRAND_IDS = getBrandIds(); }
 const BRAND_COLORS = {"audi":"#BB0A21","vw":"#001E50","vwcv":"#1B4F72","seat":"#E2231A","cupra":"#C8920A","landrover":"#1D4E1D","jaguar":"#1B2631","honda":"#CC0000","peugeot":"#1B3A6B","byd":"#0066CC","omoda":"#6B21A8","motormatch":"#374151"};
 
 const BRAND_DEFAULTS = [
@@ -116,6 +121,7 @@ var BC_CURRENT_BRAND = 'audi';
 async function adminInit() {
   console.log('admin2.js loaded and adminInit running');
   if (typeof loadHubSites === 'function') loadHubSites();
+  if (typeof loadHubBrands === 'function') loadHubBrands().then(function(){ if(typeof refreshBrandIds==='function') refreshBrandIds(); });
   var sess = await SB.auth.getSession();
   if (!sess.data.session) { window.location = 'index.html'; return; }
   var email = sess.data.session.user.email;
@@ -2029,6 +2035,29 @@ async function smAddSite(brandId) {
       headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),
       body: JSON.stringify([{ site_id: siteId, site_name: name, brand_id: brandId }])
     });
+    // Create 12 months of site_budget_lines for the new site
+    var budgetRows = [];
+    for (var mi = 0; mi < 12; mi++) {
+      BC_DEFAULT_CHANNELS.forEach(function(ch) {
+        budgetRows.push({ site_id: siteId, brand_id: brandId, channel: ch.channel, month: mi, year: new Date().getFullYear(), planned: 0, actual: 0 });
+      });
+    }
+    if (budgetRows.length) {
+      await fetch(SUPA + '/site_budget_lines?on_conflict=site_id,channel,month,year', {
+        method: 'POST',
+        headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),
+        body: JSON.stringify(budgetRows)
+      });
+    }
+    // Create brand_channels rows for the new brand if they don't exist
+    var bcRows = BC_DEFAULT_CHANNELS.map(function(ch, idx) {
+      return { brand_id: brandId, channel: ch.channel, pct: 0, color: ch.color, note: '', sort_order: idx + 1 };
+    });
+    await fetch(SUPA + '/brand_channels?on_conflict=brand_id,channel', {
+      method: 'POST',
+      headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),
+      body: JSON.stringify(bcRows)
+    });
     showToast(name + ' added \u2713', 'success');
     await smLoad();
     if (typeof loadHubSites === 'function') loadHubSites();
@@ -2068,6 +2097,9 @@ async function smAddBrand() {
     showToast(name + ' added \u2713', 'success');
     document.getElementById('sm-nb-name').value = '';
     document.getElementById('sm-nb-id').value   = '';
+    if (typeof loadHubBrands === 'function') await loadHubBrands();
+    if (typeof refreshBrandIds === 'function') refreshBrandIds();
+    if (typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
     await smLoad();
   } catch(e) { showToast('Error: ' + e.message, 'error'); }
 }
