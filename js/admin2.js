@@ -171,7 +171,7 @@ function showPage(id) {
   if (btn) btn.classList.add('active');
   // Lazy-load page data
   if (id === 'dashboard')    { refreshDashboard(); } // async — runs in background
-  if (id === 'group')        { populateGroupForm(); }
+  if (id === 'group')        { populateGroupForm(); setTimeout(populateGroupForm, 2000); }
   if (id === 'channels')     { renderChannelEditor(); }
   if (id === 'brand')        { renderBrandEditor(BRAND_IDS[0]); }
   if (id === 'sitebudgets')  { sbLoad(); }
