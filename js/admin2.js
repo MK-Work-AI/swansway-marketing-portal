@@ -79,7 +79,7 @@ var BK_FIELDS = [
     {key:'autotrader_response_actual', label:'Actual (mins)', type:'number', hint:'Current average response time in minutes'},
   ]},
 ];
-var BC_DEFAULT_CHANNELS = [{"channel": "Paid Search (Google/Bing)", "color": "#4285F4"}, {"channel": "AutoTrader", "color": "#F15A22"}, {"channel": "Paid Social (Meta/TikTok/LinkedIn)", "color": "#1877F2"}, {"channel": "Display, Video & Programmatic", "color": "#34A853"}, {"channel": "Email Marketing", "color": "#EA4335"}, {"channel": "Social Organic", "color": "#9C27B0"}, {"channel": "Manufacturer Co-op", "color": "#FF9800"}, {"channel": "Events & Showroom", "color": "#607D8B"}, {"channel": "Other / Local", "color": "#795548"}];
+var BC_DEFAULT_CHANNELS = [{"channel": "Paid Search (Google/Bing)", "color": "#4285F4"}, {"channel": "AutoTrader", "color": "#F15A22"}, {"channel": "Paid Social (Meta/TikTok/LinkedIn)", "color": "#1877F2"}, {"channel": "Display, Video & Programmatic", "color": "#34A853"}, {"channel": "Email Marketing", "color": "#EA4335"}, {"channel": "Social Organic", "color": "#9C27B0"}, {"channel": "Manufacturer Co-op", "color": "#FF9800"}, {"channel": "Events & Showroom", "color": "#607D8B"}, {"channel": "Other / Local", "color": "#795548"}, {"channel": "SEO & Content", "color": "#10B981"}];
 var CT_PERM_LABELS = [
   {key:'can_approve_all',      label:'Approve any task',          desc:'Can approve all tasks across all stages'},
   {key:'can_approve_digital',  label:'Approve digital/CRM tasks', desc:'Can approve digital and CRM-specific tasks'},
