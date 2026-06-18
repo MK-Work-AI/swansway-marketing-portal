@@ -185,6 +185,7 @@ function showPage(id) {
   if (id === 'brand')        { renderBrandEditor(BRAND_IDS[0]); }
   if (id === 'sitebudgets')  { sbLoad(); }
   if (id === 'sitekpis')     { skLoad(); }
+  if (id === 'sitemanagement') { smLoad(); }
   if (id === 'sitedirectory') { sdLoad(); }
   if (id === 'sitecontacts') { scLoad(); }
   if (id === 'brandkpis')    { bkLoad(); }
@@ -1795,4 +1796,278 @@ async function sdDeleteSite(siteId, siteName) {
     await sdLoad();
     if (typeof loadHubSites === 'function') loadHubSites();
   } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ════════════════════════════════════════════════════════
+// SITE MANAGEMENT — unified hub_sites + site_contacts + hub_brands
+// ════════════════════════════════════════════════════════
+
+var SM_SITES    = [];   // from hub_sites
+var SM_CONTACTS = {};   // from site_contacts, keyed by site_id
+var SM_BRANDS   = [];   // from hub_brands
+var SM_CURRENT_BRAND = '';
+var _smPending  = {};   // { site_id: { hub: {}, contacts: {} } }
+
+async function smLoad() {
+  var el = document.getElementById('sm-content');
+  if (el) el.innerHTML = '<div style="padding:20px;color:var(--ink-soft)">Loading...</div>';
+  try {
+    var [sitesResp, contactsResp, brandsResp] = await Promise.all([
+      fetch(SUPA + '/hub_sites?select=*&order=sort_order',    { headers: getAuthHeaders() }),
+      fetch(SUPA + '/site_contacts?select=*',                 { headers: getAuthHeaders() }),
+      fetch(SUPA + '/hub_brands?select=*&order=sort_order',   { headers: getAuthHeaders() })
+    ]);
+    if (sitesResp.ok)    SM_SITES    = await sitesResp.json();
+    if (contactsResp.ok) {
+      var cRows = await contactsResp.json();
+      SM_CONTACTS = {};
+      cRows.forEach(function(r){ SM_CONTACTS[r.site_id] = r; });
+    }
+    if (brandsResp.ok)   SM_BRANDS   = await brandsResp.json();
+    if (!SM_BRANDS.length) {
+      // Fallback to hardcoded list
+      SM_BRANDS = SD_BRANDS_LIST || [];
+    }
+    _smPending = {};
+    SM_CURRENT_BRAND = SM_BRANDS.length ? SM_BRANDS[0].brand_id : '';
+    smRenderTabs();
+    smRenderContent(SM_CURRENT_BRAND);
+  } catch(e) { console.warn('smLoad:', e); }
+}
+
+function smRenderTabs() {
+  var el = document.getElementById('sm-brand-tabs');
+  if (!el) return;
+  el.innerHTML = SM_BRANDS.map(function(b) {
+    return '<button class="brand-tab-btn' + (b.brand_id === SM_CURRENT_BRAND ? ' active' : '') + '" '
+      + 'onclick="smSelectBrand(\'' + b.brand_id + '\')">' + b.brand_name + '</button>';
+  }).join('');
+}
+
+function smSelectBrand(brandId) {
+  SM_CURRENT_BRAND = brandId;
+  document.querySelectorAll('#sm-brand-tabs .brand-tab-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.textContent === SM_BRANDS.find(function(b){ return b.brand_id === brandId; }).brand_name);
+  });
+  smRenderContent(brandId);
+}
+
+function smRenderContent(brandId) {
+  var el = document.getElementById('sm-content');
+  if (!el) return;
+  var brand  = SM_BRANDS.find(function(b){ return b.brand_id === brandId; }) || {};
+  var sites  = SM_SITES.filter(function(s){ return s.brand_id === brandId; });
+  var html   = '';
+
+  // Site cards
+  sites.forEach(function(site) {
+    var c = SM_CONTACTS[site.site_id] || {};
+    html += '<div class="sm-site-card" style="border:1px solid var(--border);border-radius:6px;margin-bottom:16px;overflow:hidden">';
+
+    // Card header
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border)">';
+    html += '<div style="display:flex;align-items:center;gap:10px">';
+    html += '<span style="width:10px;height:10px;border-radius:50%;background:' + (brand.color||'#333') + ';display:inline-block"></span>';
+    html += '<span style="font-weight:700;font-size:14px">' + site.site_name + '</span>';
+    html += '<span style="font-family:var(--font-m);font-size:10px;color:var(--ink-faint);margin-left:4px">' + site.site_id + '</span>';
+    html += '</div>';
+    html += '<div style="display:flex;align-items:center;gap:8px">';
+    html += '<label style="font-size:10px;color:var(--ink-soft)">Sort order</label>';
+    html += '<input type="number" style="width:55px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;font-size:12px" '
+          + 'value="' + (site.sort_order||0) + '" '
+          + 'data-site="' + site.site_id + '" data-src="hub" data-field="sort_order" '
+          + 'oninput="smMarkDirty(this)">';
+    html += '<button onclick="smSaveSite(\'' + site.site_id + '\')" '
+          + 'style="padding:4px 12px;background:var(--swansway);color:#fff;border:none;border-radius:3px;font-size:12px;cursor:pointer;font-weight:600">Save</button>';
+    html += '<button data-site="' + site.site_id + '" data-name="' + site.site_name.replace(/"/g,'&quot;') + '" '
+          + 'onclick="smDeleteSite(this.dataset.site, this.dataset.name)" '
+          + 'style="padding:4px 10px;border:1px solid #DC2626;border-radius:3px;font-size:12px;color:#DC2626;background:transparent;cursor:pointer">Delete</button>';
+    html += '</div></div>';
+
+    // Card body
+    html += '<div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px">';
+
+    // Left: location
+    html += '<div>';
+    html += '<div style="font-size:10px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Location</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+    [['Address','address',c.address||''],['Town','town',c.town||''],
+     ['County','county',c.county||''],['Postcode','postcode',c.postcode||'']].forEach(function(f) {
+      html += '<div><label style="font-size:9px;color:var(--ink-soft);display:block;margin-bottom:3px">' + f[0] + '</label>';
+      html += '<input class="admin-input" style="width:100%;font-size:12px" value="' + f[2].replace(/"/g,'&quot;') + '" '
+            + 'data-site="' + site.site_id + '" data-src="contacts" data-field="' + f[1] + '" '
+            + 'oninput="smMarkDirty(this)"></div>';
+    });
+    html += '</div>';
+
+    // Contact links
+    html += '<div style="margin-top:10px;display:grid;grid-template-columns:1fr;gap:8px">';
+    [['Phone','phone',c.phone||''],['Website URL','website_url',c.website_url||''],
+     ['Google Maps URL','google_maps_url',c.google_maps_url||'']].forEach(function(f) {
+      html += '<div><label style="font-size:9px;color:var(--ink-soft);display:block;margin-bottom:3px">' + f[0] + '</label>';
+      html += '<input class="admin-input" style="width:100%;font-size:12px" value="' + f[2].replace(/"/g,'&quot;') + '" '
+            + 'data-site="' + site.site_id + '" data-src="contacts" data-field="' + f[1] + '" '
+            + 'oninput="smMarkDirty(this)"></div>';
+    });
+    html += '</div></div>';
+
+    // Right: team
+    html += '<div>';
+    html += '<div style="font-size:10px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Management team</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+    [['General Manager','general_manager',c.general_manager||''],
+     ['Head of Business','head_of_business',c.head_of_business||''],
+     ['Sales Manager','sales_manager',c.sales_manager||''],
+     ['Service Manager','service_manager',c.service_manager||''],
+     ['Parts Manager','parts_manager',c.parts_manager||'']].forEach(function(f) {
+      html += '<div><label style="font-size:9px;color:var(--ink-soft);display:block;margin-bottom:3px">' + f[0] + '</label>';
+      html += '<input class="admin-input" style="width:100%;font-size:12px" value="' + f[2].replace(/"/g,'&quot;') + '" '
+            + 'data-site="' + site.site_id + '" data-src="contacts" data-field="' + f[1] + '" '
+            + 'oninput="smMarkDirty(this)"></div>';
+    });
+    html += '</div></div>';
+    html += '</div></div>'; // end card body + card
+  });
+
+  // Add site to this brand
+  html += '<div style="border:2px dashed var(--border);border-radius:6px;padding:16px;margin-top:8px">';
+  html += '<div style="font-size:13px;font-weight:700;margin-bottom:12px">+ Add site to ' + (brand.brand_name||brandId) + '</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 100px auto;gap:10px;align-items:end">';
+  html += '<div><label class="admin-field-label">Site name</label>'
+        + '<input class="admin-input" id="sm-new-name" placeholder="e.g. ' + (brand.brand_name||'Brand') + ' Chester" style="width:100%"></div>';
+  html += '<div><label class="admin-field-label">Site ID <span style="font-size:9px;color:var(--ink-faint)">auto</span></label>'
+        + '<input class="admin-input" id="sm-new-id" placeholder="e.g. audi-chester" style="width:100%"></div>';
+  html += '<div><label class="admin-field-label">Sort order</label>'
+        + '<input class="admin-input" type="number" id="sm-new-order" value="' + (SM_SITES.length + 1) + '" style="width:100%"></div>';
+  html += '<button onclick="smAddSite(\'' + brandId + '\')" '
+        + 'style="padding:8px 14px;background:var(--swansway);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;white-space:nowrap">Add site</button>';
+  html += '</div></div>';
+
+  el.innerHTML = html;
+
+  // Wire auto-generate site ID from name
+  var nameInput = el.querySelector('#sm-new-name');
+  if (nameInput) {
+    nameInput.addEventListener('input', function() {
+      var v = this.value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+      var idEl = el.querySelector('#sm-new-id');
+      if (idEl) idEl.value = v;
+    });
+  }
+}
+
+function smMarkDirty(input) {
+  var sid   = input.dataset.site;
+  var src   = input.dataset.src;    // 'hub' or 'contacts'
+  var field = input.dataset.field;
+  var val   = input.type === 'number' ? parseInt(input.value) : input.value;
+  if (!_smPending[sid]) _smPending[sid] = { hub: {}, contacts: {} };
+  _smPending[sid][src][field] = val;
+}
+
+async function smSaveSite(siteId) {
+  var pending = _smPending[siteId];
+  var errors  = [];
+  var saved   = 0;
+  try {
+    if (pending && Object.keys(pending.hub).length) {
+      var r = await fetch(SUPA + '/hub_sites?site_id=eq.' + encodeURIComponent(siteId), {
+        method: 'PATCH',
+        headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
+        body: JSON.stringify(pending.hub)
+      });
+      if (!r.ok) errors.push('hub_sites: ' + r.status); else saved++;
+    }
+    if (pending && Object.keys(pending.contacts).length) {
+      // Get current contact data and merge
+      var existing = SM_CONTACTS[siteId] || {};
+      var site = SM_SITES.find(function(s){ return s.site_id === siteId; }) || {};
+      var contactRow = Object.assign({}, existing, pending.contacts, {
+        site_id: siteId, site_name: site.site_name || siteId, brand_id: site.brand_id || ''
+      });
+      var r2 = await fetch(SUPA + '/site_contacts?on_conflict=site_id', {
+        method: 'POST',
+        headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),
+        body: JSON.stringify([contactRow])
+      });
+      if (!r2.ok) errors.push('site_contacts: ' + r2.status); else saved++;
+    }
+    if (errors.length) {
+      showToast('Save error: ' + errors.join(', '), 'error');
+    } else if (saved > 0) {
+      if (!_smPending[siteId]) _smPending[siteId] = { hub: {}, contacts: {} };
+      _smPending[siteId].hub = {};
+      _smPending[siteId].contacts = {};
+      showToast(siteId + ' saved \u2713', 'success');
+      await smLoad();
+    } else {
+      showToast('Nothing to save', 'info');
+    }
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function smAddSite(brandId) {
+  var el    = document.getElementById('sm-content');
+  var name  = (el.querySelector('#sm-new-name').value || '').trim();
+  var siteId = (el.querySelector('#sm-new-id').value || '').trim();
+  var order = parseInt(el.querySelector('#sm-new-order').value) || SM_SITES.length + 1;
+  if (!name || !siteId) { showToast('Site name and ID required', 'error'); return; }
+  if (SM_SITES.find(function(s){ return s.site_id === siteId; })) {
+    showToast('Site ID already exists', 'error'); return;
+  }
+  var brand = SM_BRANDS.find(function(b){ return b.brand_id === brandId; }) || {};
+  try {
+    var r = await fetch(SUPA + '/hub_sites?on_conflict=site_id', {
+      method: 'POST',
+      headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),
+      body: JSON.stringify([{ site_id: siteId, site_name: name, brand_id: brandId, brand_name: brand.brand_name || brandId, sort_order: order }])
+    });
+    if (!r.ok) throw new Error(await r.text());
+    // Create stub contact row
+    await fetch(SUPA + '/site_contacts?on_conflict=site_id', {
+      method: 'POST',
+      headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),
+      body: JSON.stringify([{ site_id: siteId, site_name: name, brand_id: brandId }])
+    });
+    showToast(name + ' added \u2713', 'success');
+    await smLoad();
+    if (typeof loadHubSites === 'function') loadHubSites();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function smDeleteSite(siteId, siteName) {
+  if (!confirm('Delete ' + siteName + '?\n\nThis removes it from the site directory. Budget and KPI data remain in Supabase.')) return;
+  try {
+    var r = await fetch(SUPA + '/hub_sites?site_id=eq.' + encodeURIComponent(siteId), {
+      method: 'DELETE', headers: getAuthHeaders({'Prefer':'return=minimal'})
+    });
+    if (!r.ok) throw new Error(r.status);
+    showToast(siteName + ' deleted', 'success');
+    await smLoad();
+    if (typeof loadHubSites === 'function') loadHubSites();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function smAddBrand() {
+  var name    = (document.getElementById('sm-nb-name').value    || '').trim();
+  var brandId = (document.getElementById('sm-nb-id').value      || '').trim();
+  var color   = (document.getElementById('sm-nb-color').value   || '#333333');
+  var segment = (document.getElementById('sm-nb-segment').value || '').trim();
+  if (!name || !brandId) { showToast('Brand name and ID required', 'error'); return; }
+  if (SM_BRANDS.find(function(b){ return b.brand_id === brandId; })) {
+    showToast('Brand ID already exists', 'error'); return;
+  }
+  var maxOrder = SM_BRANDS.reduce(function(m,b){ return Math.max(m, b.sort_order||0); }, 0);
+  try {
+    var r = await fetch(SUPA + '/hub_brands?on_conflict=brand_id', {
+      method: 'POST',
+      headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),
+      body: JSON.stringify([{ brand_id: brandId, brand_name: name, color: color, segment: segment, sort_order: maxOrder + 1 }])
+    });
+    if (!r.ok) throw new Error(await r.text());
+    showToast(name + ' added \u2713', 'success');
+    document.getElementById('sm-nb-name').value = '';
+    document.getElementById('sm-nb-id').value   = '';
+    await smLoad();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
 }
