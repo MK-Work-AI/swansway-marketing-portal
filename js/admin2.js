@@ -888,7 +888,7 @@ async function scSave() {
   try {
     var rows = Object.keys(SC_DATA).map(function(sid){
       var d = SC_DATA[sid];
-      return {site_id:sid,site_name:d.site_name||sid,brand_id:d.brand_id||'',general_manager:d.general_manager||'',head_of_business:d.head_of_business||'',sales_manager:d.sales_manager||'',service_manager:d.service_manager||'',parts_manager:d.parts_manager||'',updated_at:new Date().toISOString()};
+      return {site_id:sid,site_name:d.site_name||sid,brand_id:d.brand_id||'',address:d.address||'',phone:d.phone||'',website:d.website||'',general_manager:d.general_manager||'',head_of_business:d.head_of_business||'',sales_manager:d.sales_manager||'',service_manager:d.service_manager||'',parts_manager:d.parts_manager||'',updated_at:new Date().toISOString()};
     });
     var r = await fetch(SUPA + '/site_contacts?on_conflict=site_id', {
       method:'POST',
