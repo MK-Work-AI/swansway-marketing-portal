@@ -173,6 +173,17 @@ function updateBrandBudgetsFromSites() {
         ? '£' + (total / 1000000).toFixed(2) + 'M'
         : '£' + Math.round(total / 1000) + 'K';
     }
+    // Derive sitenames and site count from HUB_SITES
+    brand.sites = sites.length;
+    brand.sitenames = sites.map(function(s) {
+      return s.site_name
+        .replace(brand.name + ' ', '')
+        .replace('VW Commercial ', '')
+        .replace('VWC ', '')
+        .replace('VW ', '')
+        .replace('Motor Match ', '')
+        .trim();
+    }).join(' · ');
   });
   // Update group budget metric
   var groupTotal = Object.values(SITE_BUDGETS).reduce(function(s, d) { return s + (d.annual_planned || 0); }, 0);
