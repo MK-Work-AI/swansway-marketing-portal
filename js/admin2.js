@@ -845,9 +845,18 @@ function scRenderContent(brandId) {
     hdr.textContent = site.site_name;
     sec.appendChild(hdr);
     var grid = document.createElement('div');
+    // Contact info grid — address fields + phone + website
     var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px';
-    [['Address','address',d.address||''],['Phone','phone',d.phone||''],['Website','website',d.website||'']].forEach(function(item) {
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px';
+    [
+      ['Address','address',d.address||''],
+      ['Town','town',d.town||''],
+      ['County','county',d.county||''],
+      ['Postcode','postcode',d.postcode||''],
+      ['Phone','phone',d.phone||''],
+      ['Website URL','website_url',d.website_url||''],
+      ['Google Maps URL','google_maps_url',d.google_maps_url||'']
+    ].forEach(function(item) {
       var box = document.createElement('div');
       var lbl = document.createElement('label');
       lbl.style.cssText = 'font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;display:block;margin-bottom:4px';
@@ -888,7 +897,7 @@ async function scSave() {
   try {
     var rows = Object.keys(SC_DATA).map(function(sid){
       var d = SC_DATA[sid];
-      return {site_id:sid,site_name:d.site_name||sid,brand_id:d.brand_id||'',address:d.address||'',phone:d.phone||'',website:d.website||'',general_manager:d.general_manager||'',head_of_business:d.head_of_business||'',sales_manager:d.sales_manager||'',service_manager:d.service_manager||'',parts_manager:d.parts_manager||'',updated_at:new Date().toISOString()};
+      return {site_id:sid,site_name:d.site_name||sid,brand_id:d.brand_id||'',address:d.address||'',town:d.town||'',county:d.county||'',postcode:d.postcode||'',phone:d.phone||'',website_url:d.website_url||'',google_maps_url:d.google_maps_url||'',general_manager:d.general_manager||'',head_of_business:d.head_of_business||'',sales_manager:d.sales_manager||'',service_manager:d.service_manager||'',parts_manager:d.parts_manager||'',updated_at:new Date().toISOString()};
     });
     var r = await fetch(SUPA + '/site_contacts?on_conflict=site_id', {
       method:'POST',
