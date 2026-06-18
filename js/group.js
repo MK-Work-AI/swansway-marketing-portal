@@ -120,7 +120,7 @@ async function loadChannelCommitments() {
         'community':'Social Organic', 'events':'Events & Showroom',
         'pr':'Other / Local', 'reviews':'Other / Local',
         'motpress':'Other / Local', 'awards':'Other / Local',
-        'seo':'Other / Local', 'content':'Other / Local'
+        'seo':'SEO & Content', 'content':'SEO & Content'
       };
       // Distribute channel split across sites and months
       Object.keys(split).forEach(function(channelRaw) {
