@@ -413,7 +413,16 @@ function renderBrandEditor(id) {
     + '<div style="display:grid;gap:10px">'
     + brandField('Brand name', 'b-'+id+'-name', b.name, 'text')
     + brandField('Segment', 'b-'+id+'-segment', b.segment, 'text')
-    + brandField('Site names', 'b-'+id+'-sitenames', b.sitenames, 'text')
+    + (function() {
+        var bSites = SB_SITES.filter(function(s){ return s.brand_id === id; });
+        var names = bSites.map(function(s){
+          return s.site_name.replace(b.name+' ','').replace('VW Commercial ','').replace('VWC ','').replace('VW ','').replace('Motor Match ','').trim();
+        }).join(' · ');
+        return '<div class="admin-field"><label class="admin-field-label">Site names <span style="color:var(--ink-faint);font-size:9px">from Site Directory</span></label>'
+          + '<div style="padding:8px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:4px;font-size:13px;color:var(--ink-soft)">'
+          + (names || b.sitenames || '—')
+          + '</div></div>';
+      }())
     + brandField('Q2/Current focus', 'b-'+id+'-q2Focus', b.q2Focus, 'text')
     + '</div></div></div>';
 }
@@ -427,7 +436,7 @@ function saveBrand(id) {
   var b = STATE.brands.find(function(x){return x.id===id;});
   if (!b) return;
   var numFields = ['budget','newUnits','evPct','leads','cpl','convRate','usedUnits','fleetUnits','retention','nps'];
-  var strFields = ['name','segment','sitenames','q2Focus'];
+  var strFields = ['name','segment','q2Focus'];
   numFields.forEach(function(f) {
     var el = document.getElementById('b-'+id+'-'+f);
     if (el) b[f] = parseFloat(el.value)||0;
