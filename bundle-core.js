@@ -922,6 +922,86 @@ async function loadHubSites() {
 }
 
 
+async function loadHubBrands() {
+  try {
+    var resp = await fetch(
+      SUPABASE_URL + '/rest/v1/hub_brands?select=brand_id,brand_name,color,segment,sort_order&order=sort_order',
+      { headers: getAuthHeaders() }
+    );
+    if (!resp.ok) {
+      console.warn('loadHubBrands: failed', resp.status, '- using fallback');
+      return;
+    }
+    var rows = await resp.json();
+    if (!rows || !rows.length) {
+      console.warn('loadHubBrands: empty - using fallback');
+      return;
+    }
+
+    rows.forEach(function(row) {
+      // ── Update BRANDS (in-place, preserve all computed fields) ──
+      var existing = BRANDS.find(function(b){ return b.id === row.brand_id; });
+      if (existing) {
+        // Only update identity fields — never touch computed/runtime fields
+        existing.name    = row.brand_name;
+        existing.color   = row.color;
+        existing.segment = row.segment;
+      } else {
+        // New brand — add with safe defaults for all fields used by the portal
+        BRANDS.push({
+          id:         row.brand_id,
+          name:       row.brand_name,
+          color:      row.color,
+          segment:    row.segment,
+          sites:      0,
+          sitenames:  '',
+          budget:     '—',
+          newTarget:  '—',
+          evTarget:   '—',
+          q2:         '',
+          progress:   0,
+          tags:       [],
+          pillars:    [],
+          centres:    [],
+          channels:   [],
+          audiences:  []
+        });
+      }
+
+      // ── Update BUDGET_BRANDS (in-place, preserve annual/channels) ──
+      var bb = BUDGET_BRANDS.find(function(b){ return b.id === row.brand_id; });
+      if (bb) {
+        bb.name  = row.brand_name;
+        bb.color = row.color;
+      } else {
+        BUDGET_BRANDS.push({
+          id:       row.brand_id,
+          name:     row.brand_name,
+          color:    row.color,
+          annual:   0,
+          channels: []
+        });
+      }
+    });
+
+    // Sort both arrays to match hub_brands sort_order
+    var order = rows.map(function(r){ return r.brand_id; });
+    BRANDS.sort(function(a,b){
+      var ai = order.indexOf(a.id); var bi = order.indexOf(b.id);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
+    BUDGET_BRANDS.sort(function(a,b){
+      var ai = order.indexOf(a.id); var bi = order.indexOf(b.id);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
+
+    console.log('Hub brands loaded from Supabase:', rows.length, 'brands');
+  } catch(e) {
+    console.warn('loadHubBrands exception - using fallback:', e);
+  }
+}
+
+
 // HUB_MONTHS
 var HUB_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -1365,7 +1445,8 @@ async function sbHandleSession(session) {
       bbLoadBrief(_briefId);
     }
   }
-  if(typeof loadHubSites === 'function') await loadHubSites();
+  if(typeof loadHubSites === 'function')  await loadHubSites();
+  if(typeof loadHubBrands === 'function')  await loadHubBrands();
   if(typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
   if(typeof renderGroupBudgetChart === 'function') setTimeout(renderGroupBudgetChart, 500);
   if(typeof mtLoad === 'function') mtLoad();
