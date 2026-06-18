@@ -215,6 +215,26 @@ function updateBrandKPIsFromSites() {
       }
     }
   });
+
+  // Campaign count pill
+  if (typeof BUILT_IN_CAMPAIGNS !== 'undefined' && BUILT_IN_CAMPAIGNS.length) {
+    BRANDS.forEach(function(brand) {
+      var bCamps = BUILT_IN_CAMPAIGNS.filter(function(c){ return c.brand_id === brand.id; });
+      var committed = bCamps.reduce(function(s,c){ return s+(parseInt(c.budget)||0); }, 0);
+      brand.campCount = bCamps.length;
+      brand.campCommitted = committed > 0 ? '£' + (committed >= 1000 ? Math.round(committed/1000)+'K' : committed.toLocaleString()) + ' committed' : '';
+    });
+    document.querySelectorAll('.brand-hero-tags').forEach(function(tagsEl) {
+      var cont = tagsEl.closest('[id$="-content"]');
+      if (!cont) return;
+      var brand = BRANDS.find(function(b){ return b.id === cont.id.replace('-content',''); });
+      if (!brand || !brand.campCount) return;
+      var label = brand.campCount + ' campaign' + (brand.campCount !== 1 ? 's' : '') + (brand.campCommitted ? ' · ' + brand.campCommitted : '');
+      var existing = tagsEl.querySelector('.bh-camp-pill');
+      if (existing) { existing.textContent = label; }
+      else { var sp = document.createElement('span'); sp.className = 'brand-hero-tag bh-camp-pill'; sp.textContent = label; tagsEl.appendChild(sp); }
+    });
+  }
 }
 
 function renderBrandCentres(brandId) {
