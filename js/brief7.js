@@ -2952,11 +2952,18 @@ async function bbLoadBrief(id) {
     if (saveBar) saveBar.style.display = 'block';
   }, 150);
   // Re-show launch/submit button after bbGenerateBrief clears feedback div
+  // Use 1000ms to ensure CB_TEAM + CB_PERMS are loaded
   setTimeout(function() {
     var fb = document.getElementById('bb-save-feedback');
     if (!fb) return;
-    var _perms = CB_PERMS[CB_CURRENT_USER] || {};
-    var _canLaunch = _perms.can_approve_all || _perms.can_approve_digital;
+    // Resolve current user if not already set
+    var _uid = CB_CURRENT_USER;
+    if (!_uid && window.SB_USER && SB_USER.email && typeof CB_TEAM !== 'undefined') {
+      var _m = Object.values(CB_TEAM).find(function(m){ return m.email && m.email.toLowerCase() === SB_USER.email.toLowerCase(); });
+      if (_m) _uid = _m.id;
+    }
+    var _perms = (typeof CB_PERMS !== 'undefined' && _uid) ? (CB_PERMS[_uid] || {}) : {};
+    var _canLaunch = !!(typeof window.is_admin !== 'undefined' && window.is_admin) || _perms.can_approve_all || _perms.can_approve_digital;
     var _firstName = (SB_USER && SB_USER.user_metadata && SB_USER.user_metadata.full_name)
       ? SB_USER.user_metadata.full_name.split(' ')[0] : 'there';
     fb.style.display = 'block';
@@ -2973,7 +2980,7 @@ async function bbLoadBrief(id) {
         + '<button class="bb-s6-submit-btn" onclick="bbSubmitBrief()">Submit for approval \u2192</button>'
         + '</div>';
     }
-  }, 400);
+  }, 1000);
 }
 
 
