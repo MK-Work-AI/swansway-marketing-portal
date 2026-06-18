@@ -991,50 +991,58 @@ function renderBrandChannelMix(brandId) {
 
   // Header row
   html += '<div style="padding:0 20px 20px">';
-  html += '<div style="display:grid;grid-template-columns:150px 1fr 90px 90px 90px;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:4px">';
+  html += '<div style="display:grid;grid-template-columns:160px 1fr 100px 100px 100px;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:4px">';
   html += '<div style="font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em">Channel</div>';
   html += '<div style="font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em">Allocation</div>';
-  html += '<div style="font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase;text-align:right">Recommended</div>';
   html += '<div style="font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase;text-align:right">Planned</div>';
   html += '<div style="font-size:9px;font-family:var(--font-m);color:#D97706;text-transform:uppercase;text-align:right">Committed</div>';
+  html += '<div style="font-size:9px;font-family:var(--font-m);color:#059669;text-transform:uppercase;text-align:right">Remaining</div>';
   html += '</div>';
 
+  var grandPlanned = 0, grandCommitted = 0;
   channels.forEach(function(ch) {
-    var rec = Math.round(brandBudget * (parseFloat(ch.pct) || 0) / 100);
-    var pct = parseFloat(ch.pct) || 0;
     var plan = Math.round(sitePlanned[ch.channel] || 0);
-    var cmt = Math.round(siteCommitted[ch.channel] || 0);
-    var maxV = Math.max(rec, plan, 1);
-    var recW = Math.min(Math.round(rec / maxV * 100), 100);
-    var planW = Math.min(Math.round(plan / maxV * 100), 100);
+    var cmt  = Math.round(siteCommitted[ch.channel] || 0);
+    var rem  = plan - cmt;
     var cPct = plan > 0 ? Math.min(Math.round(cmt / plan * 100), 100) : 0;
+    var planPct = brandBudget > 0 ? Math.min(Math.round(plan / brandBudget * 100), 100) : 0;
     var cCol = cPct > 100 ? '#DC2626' : cPct > 85 ? '#D97706' : '#059669';
-    var diff = plan - rec;
-    var diffStr = diff === 0 || plan === 0 ? '' : (diff > 0 ? '+' : '') + '&#163;' + Math.abs(diff).toLocaleString();
-    var diffCol = diff > 0 ? '#059669' : '#DC2626';
-    html += '<div style="display:grid;grid-template-columns:150px 1fr 90px 90px 90px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">';
+    var remCol = rem < 0 ? '#DC2626' : rem < plan * 0.1 ? '#D97706' : '#059669';
+    grandPlanned += plan; grandCommitted += cmt;
+    html += '<div style="display:grid;grid-template-columns:160px 1fr 100px 100px 100px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">';
     html += '<div><div style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px">';
     html += '<span style="width:8px;height:8px;border-radius:50%;background:' + (ch.color||'#333') + ';flex-shrink:0;display:inline-block"></span>';
     html += ch.channel + '</div>';
     if (ch.note) html += '<div style="font-size:10px;color:var(--ink-faint);margin-top:2px">' + ch.note + '</div>';
     html += '</div>';
     html += '<div>';
-    html += '<div style="height:4px;background:var(--surface-2);border-radius:2px;margin-bottom:3px;position:relative">';
-    html += '<div style="height:4px;border-radius:2px;background:' + (ch.color||'#333') + ';width:' + recW + '%;opacity:0.3;position:absolute;top:0;left:0"></div>';
-    html += '<div style="height:4px;border-radius:2px;background:' + (ch.color||'#333') + ';width:' + planW + '%;position:absolute;top:0;left:0"></div>';
+    html += '<div style="height:5px;background:var(--surface-2);border-radius:3px;margin-bottom:3px;overflow:hidden">';
+    html += '<div style="height:5px;border-radius:3px;background:' + (ch.color||'#333') + ';width:' + planPct + '%"></div>';
     html += '</div>';
-    if (cmt > 0) { html += '<div style="height:3px;background:var(--surface-2);border-radius:2px"><div style="height:3px;border-radius:2px;background:' + cCol + ';width:' + cPct + '%"></div></div>'; }
+    if (cmt > 0) {
+      html += '<div style="height:3px;background:var(--surface-2);border-radius:2px;overflow:hidden">';
+      html += '<div style="height:3px;border-radius:2px;background:' + cCol + ';width:' + cPct + '%"></div>';
+      html += '</div>';
+    }
+    html += '<div style="font-size:9px;font-family:var(--font-m);color:var(--ink-soft);margin-top:2px">' + planPct + '% of budget</div>';
     html += '</div>';
-    html += '<div style="text-align:right;font-size:11px;font-family:var(--font-m);color:var(--ink-soft)">' + (rec > 0 ? '&#163;' + rec.toLocaleString() : '&mdash;') + '<br><span style="font-size:9px">' + pct + '%</span></div>';
-    html += '<div style="text-align:right;font-size:11px;font-family:var(--font-m);font-weight:' + (plan>0?'700':'400') + ';color:var(--ink)">' + (plan > 0 ? '&#163;' + plan.toLocaleString() : '&mdash;') + (diffStr ? '<br><span style="font-size:9px;color:' + diffCol + '">' + diffStr + '</span>' : '') + '</div>';
-    html += '<div style="text-align:right;font-size:11px;font-family:var(--font-m);font-weight:' + (cmt>0?'700':'400') + ';color:' + (cmt>0?cCol:'var(--ink-soft)') + '">' + (cmt > 0 ? '&#163;' + cmt.toLocaleString() : '&mdash;') + (cmt>0?'<br><span style="font-size:9px">'+cPct+'% used</span>':'') + '</div>';
+    html += '<div style="text-align:right;font-family:var(--font-m);font-size:12px;font-weight:' + (plan>0?'700':'400') + ';color:var(--ink)">' + (plan > 0 ? '&#163;' + plan.toLocaleString() : '&mdash;') + '</div>';
+    html += '<div style="text-align:right;font-family:var(--font-m);font-size:12px;font-weight:' + (cmt>0?'700':'400') + ';color:' + (cmt>0?cCol:'var(--ink-soft)') + '">' + (cmt > 0 ? '&#163;' + cmt.toLocaleString() : '&mdash;') + (cmt>0?'<div style="font-size:9px">'+cPct+'% used</div>':'') + '</div>';
+    html += '<div style="text-align:right;font-family:var(--font-m);font-size:12px;font-weight:' + (plan>0?'700':'400') + ';color:' + (plan>0?remCol:'var(--ink-soft)') + '">' + (plan > 0 ? (rem<0?'-':'') + '&#163;' + Math.abs(rem).toLocaleString() : '&mdash;') + '</div>';
     html += '</div>';
   });
 
-  // Total check
-  var totalPct = channels.reduce(function(s,c){return s+(parseFloat(c.pct)||0);},0);
-  html += '<div style="padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--ink-soft)">Total: <strong>' + totalPct.toFixed(1) + '%</strong> of £' + brandBudget.toLocaleString() + ' = £' + Math.round(brandBudget*totalPct/100).toLocaleString() + ' allocated</div>';
+  // Totals row
+  var grandRem = grandPlanned - grandCommitted;
+  html += '<div style="display:grid;grid-template-columns:160px 1fr 100px 100px 100px;gap:8px;padding:10px 0;background:var(--surface);margin-top:4px;border-radius:4px">';
+  html += '<div style="font-size:12px;font-weight:700;font-family:var(--font-m);padding-left:8px">Total</div>';
+  html += '<div></div>';
+  html += '<div style="text-align:right;font-family:var(--font-m);font-size:12px;font-weight:700">' + (grandPlanned > 0 ? '&#163;' + grandPlanned.toLocaleString() : '&mdash;') + '</div>';
+  html += '<div style="text-align:right;font-family:var(--font-m);font-size:12px;font-weight:700;color:#D97706">' + (grandCommitted > 0 ? '&#163;' + grandCommitted.toLocaleString() : '&mdash;') + '</div>';
+  html += '<div style="text-align:right;font-family:var(--font-m);font-size:12px;font-weight:700;color:' + (grandRem<0?'#DC2626':'#059669') + '">' + (grandPlanned > 0 ? (grandRem<0?'-':'') + '&#163;' + Math.abs(grandRem).toLocaleString() : '&mdash;') + '</div>';
   html += '</div>';
+  html += '</div>';
+
 
   el.innerHTML = html;
 }
