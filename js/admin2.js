@@ -845,13 +845,19 @@ function scRenderContent(brandId) {
     hdr.textContent = site.site_name;
     sec.appendChild(hdr);
     var grid = document.createElement('div');
+    var grid = document.createElement('div');
     grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px';
-    [['Address',(d.address||'')+(d.town?', '+d.town:'')+(d.postcode?', '+d.postcode:'')],['Phone',d.phone||''],['Website',d.website_url?'<a href="'+d.website_url+'" target="_blank" style="color:var(--swansway);font-size:11px">View site</a>':'—']]
-    .forEach(function(item){
-      var box=document.createElement('div'); box.style.cssText='background:var(--white);border:1px solid var(--border);border-radius:3px;padding:10px 12px';
-      var l=document.createElement('div'); l.style.cssText='font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px'; l.textContent=item[0];
-      var v=document.createElement('div'); v.style.cssText='font-size:12px;color:var(--ink)'; v.innerHTML=item[1]||'<span style="color:var(--ink-faint)">—</span>';
-      box.appendChild(l); box.appendChild(v); grid.appendChild(box);
+    [['Address','address',d.address||''],['Phone','phone',d.phone||''],['Website','website',d.website||'']].forEach(function(item) {
+      var box = document.createElement('div');
+      var lbl = document.createElement('label');
+      lbl.style.cssText = 'font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;display:block;margin-bottom:4px';
+      lbl.textContent = item[0];
+      var inp = document.createElement('input');
+      inp.type = 'text'; inp.value = item[2];
+      inp.style.cssText = 'width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:3px;font-size:12px;box-sizing:border-box';
+      inp.dataset.siteId = site.site_id; inp.dataset.field = item[1];
+      inp.addEventListener('change', function(){ scSetVal(this.dataset.siteId, this.dataset.field, this.value); });
+      box.appendChild(lbl); box.appendChild(inp); grid.appendChild(box);
     });
     sec.appendChild(grid);
     var mgGrid = document.createElement('div');
