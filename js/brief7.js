@@ -2636,8 +2636,7 @@ async function bbCampAdvance(campId, currentStage) {
 
 
 function bbShowDraftActions() {
-  // Only run if we have a pending draft to show actions for
-  if (!window._pendingDraftActionsId) return;
+  console.log('bbShowDraftActions called, pendingId:', window._pendingDraftActionsId, '_lastSavedBriefId:', window._lastSavedBriefId);
   var fb = document.getElementById('bb-save-feedback');
   var saveBar = document.getElementById('bb-save-bar');
   if (!fb) return;
@@ -2990,6 +2989,7 @@ async function bbLoadBrief(id) {
   }, 150);
   // Store brief ID so bbShowDraftActions can re-apply after Auth re-triggers
   window._pendingDraftActionsId = _briefRef.id;
+  console.log('bbLoadBrief draft path: setting pendingDraftActionsId=', _briefRef.id);
   window._pendingDraftActionsTimer = setTimeout(bbShowDraftActions, 2000);
 }
 
