@@ -903,6 +903,25 @@ const CAL_BRAND_ORDER = ['All brands','Audi','Volkswagen','VW Commercial','SEAT'
 var HUB_SITES = [{"site_id": "audi-blackburn", "site_name": "Audi Blackburn", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-carlisle", "site_name": "Audi Carlisle", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-crewe", "site_name": "Audi Crewe", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-preston", "site_name": "Audi Preston", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-stafford", "site_name": "Audi Stafford", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "audi-stoke", "site_name": "Audi Stoke", "brand_id": "audi", "brand_name": "Audi"}, {"site_id": "vw-wrexham", "site_name": "VW Wrexham", "brand_id": "vw", "brand_name": "Volkswagen"}, {"site_id": "vw-crewe", "site_name": "VW Crewe", "brand_id": "vw", "brand_name": "Volkswagen"}, {"site_id": "vw-oldham", "site_name": "VW Oldham", "brand_id": "vw", "brand_name": "Volkswagen"}, {"site_id": "vwcv-wrexham", "site_name": "VWC Wrexham", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "vwcv-liverpool", "site_name": "VWC Liverpool", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "vwcv-lancashire", "site_name": "VWC Lancashire", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "vwcv-birmingham", "site_name": "VWC Birmingham", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "vwcv-oldham", "site_name": "VWC Oldham", "brand_id": "vwcv", "brand_name": "VW Commercial"}, {"site_id": "seat-crewe", "site_name": "SEAT Crewe", "brand_id": "seat", "brand_name": "SEAT"}, {"site_id": "seat-oldham", "site_name": "SEAT Oldham", "brand_id": "seat", "brand_name": "SEAT"}, {"site_id": "cupra-crewe", "site_name": "CUPRA Crewe", "brand_id": "cupra", "brand_name": "CUPRA"}, {"site_id": "cupra-oldham", "site_name": "CUPRA Oldham", "brand_id": "cupra", "brand_name": "CUPRA"}, {"site_id": "lr-stafford", "site_name": "Land Rover Stafford", "brand_id": "landrover", "brand_name": "Land Rover"}, {"site_id": "jag-crewe", "site_name": "Jaguar Crewe", "brand_id": "jaguar", "brand_name": "Jaguar"}, {"site_id": "honda-stockport", "site_name": "Honda Stockport", "brand_id": "honda", "brand_name": "Honda"}, {"site_id": "honda-bolton", "site_name": "Honda Bolton", "brand_id": "honda", "brand_name": "Honda"}, {"site_id": "peugeot-chester", "site_name": "Peugeot Chester", "brand_id": "peugeot", "brand_name": "Peugeot"}, {"site_id": "peugeot-crewe", "site_name": "Peugeot Crewe", "brand_id": "peugeot", "brand_name": "Peugeot"}, {"site_id": "byd-crewe", "site_name": "BYD Crewe", "brand_id": "byd", "brand_name": "BYD"}, {"site_id": "byd-chester", "site_name": "BYD Chester", "brand_id": "byd", "brand_name": "BYD"}, {"site_id": "byd-stoke", "site_name": "BYD Stoke", "brand_id": "byd", "brand_name": "BYD"}, {"site_id": "omoda-stockport", "site_name": "OMODA/JAECOO Stockport", "brand_id": "omoda", "brand_name": "OMODA/JAECOO"}, {"site_id": "mm-crewe", "site_name": "Motor Match Crewe", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "mm-stockport", "site_name": "Motor Match Stockport", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "mm-bolton", "site_name": "Motor Match Bolton", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "mm-chester", "site_name": "Motor Match Chester", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "mm-stoke", "site_name": "Motor Match Stoke", "brand_id": "motormatch", "brand_name": "Motor Match"}, {"site_id": "cupra-bolton", "site_name": "CUPRA Bolton Service", "brand_id": "cupra", "brand_name": "CUPRA"}, {"site_id": "seat-bolton", "site_name": "SEAT Bolton Service", "brand_id": "seat", "brand_name": "SEAT"}]
 var HUB_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+async function loadHubSites() {
+  try {
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/hub_sites?select=site_id,site_name,brand_id,brand_name,sort_order&order=sort_order', {
+      headers: getAuthHeaders()
+    });
+    if (!resp.ok) { console.warn('loadHubSites: failed', resp.status, '- using fallback'); return; }
+    var rows = await resp.json();
+    if (!rows || !rows.length) { console.warn('loadHubSites: empty - using fallback'); return; }
+    HUB_SITES = rows;
+    if (typeof SB_SITES !== 'undefined') {
+      SB_SITES = rows.map(function(r) {
+        return { site_id: r.site_id, site_name: r.site_name, brand_id: r.brand_id, brand_name: r.brand_name };
+      });
+    }
+    console.log('Hub sites loaded from Supabase:', rows.length, 'sites');
+  } catch(e) { console.warn('loadHubSites exception - using fallback:', e); }
+}
+
+
 // HUB_MONTHS
 var HUB_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -1325,7 +1344,7 @@ function sbInit() {
 }
 
 
-function sbHandleSession(session) {
+async function sbHandleSession(session) {
   SB_USER = session.user;
   window.SB_ACCESS_TOKEN = session.access_token;
   showUserState(SB_USER);
@@ -1346,6 +1365,7 @@ function sbHandleSession(session) {
       bbLoadBrief(_briefId);
     }
   }
+  if(typeof loadHubSites === 'function') await loadHubSites();
   if(typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
   if(typeof renderGroupBudgetChart === 'function') setTimeout(renderGroupBudgetChart, 500);
   if(typeof mtLoad === 'function') mtLoad();
