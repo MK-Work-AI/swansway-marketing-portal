@@ -2921,6 +2921,7 @@ function bbInitFromBrief(brief) {
 async function bbLoadBrief(id) {
   // Sanitise ID — strip any non UUID characters (letters, numbers, hyphens only)
   if (id) id = id.replace(/[^a-f0-9\-]/gi, '');
+  console.log('bbLoadBrief called id=', id);
   if (!id) return;
   window._bbSuppressNewBrief = true;
   window._bbBriefLoading = true;
@@ -2956,6 +2957,7 @@ async function bbLoadBrief(id) {
   bbSetUrlBrief(brief.id);
 
   // ── Route by status ──
+  console.log('bbLoadBrief: brief found, status=', brief.status);
   if (brief.status === 'campaigned') {
     // Hide step UI, go straight to campaign task view
     var s6  = document.getElementById('bb-step-6');
