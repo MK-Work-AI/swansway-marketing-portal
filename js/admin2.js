@@ -382,7 +382,14 @@ function renderBrandEditor(id) {
   if (!c) return;
   c.innerHTML = '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px">'
     + '<div><div style="font-family:var(--font-d);font-size:22px;font-weight:800;color:'+BRAND_COLORS[id]+'">'+b.name+'</div>'
-    + '<div style="font-size:13px;color:var(--ink-soft)">'+b.segment+' · '+b.sites+' site'+(b.sites>1?'s':'')+' · '+(b.sitenames||'')+'</div></div>'
+    + (function(){
+        var bSites = SB_SITES.filter(function(s){ return s.brand_id === id; });
+        var names = bSites.map(function(s){
+          return s.site_name.replace(b.name+' ','').replace('VW Commercial ','').replace('VWC ','').replace('VW ','').replace('Motor Match ','').trim();
+        }).join(' · ');
+        var count = bSites.length || b.sites;
+        return '<div style="font-size:13px;color:var(--ink-soft)">'+b.segment+' · '+count+' site'+(count>1?'s':'')+' · '+(names||b.sitenames||'')+'</div></div>';
+      }())
     + '<div style="display:flex;gap:8px">'
     + '<button class="btn btn-accent" onclick=\"saveBrand(\''+id+'\')\">Save '+b.name+'</button>'
     + '</div></div>'
