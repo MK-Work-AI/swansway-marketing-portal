@@ -280,11 +280,67 @@ async function refreshDashboard() {
 /* ══ GROUP SETTINGS ══ */
 function populateGroupForm() {
   var g = STATE.group;
-  var fields = ['name','year','desc','budget','evPct','coopPct','units','leads','evSales','conv','retention','nps','cpl'];
-  fields.forEach(function(f) {
-    var el = document.getElementById('gs-'+f);
-    if (el) el.value = g[f] || GROUP_DEFAULTS[f] || '';
-  });
+
+  // Identity — manual
+  var name = document.getElementById('gs-name');
+  var year = document.getElementById('gs-year');
+  var desc = document.getElementById('gs-desc');
+  if (name) name.value = g.name || GROUP_DEFAULTS.name || '';
+  if (year) year.value = g.year || GROUP_DEFAULTS.year || '';
+  if (desc) desc.value = g.desc || GROUP_DEFAULTS.desc || '';
+
+  // Manual targets (editable)
+  var evPct   = document.getElementById('gs-evPct');
+  var coopPct = document.getElementById('gs-coopPct');
+  if (evPct)   evPct.value   = g.evPct   || GROUP_DEFAULTS.evPct   || '';
+  if (coopPct) coopPct.value = g.coopPct || GROUP_DEFAULTS.coopPct || '';
+
+  // Derived from site data — read only
+  // Budget: sum of all site annual planned
+  var budget = 0;
+  if (typeof SITE_BUDGETS !== 'undefined') {
+    Object.values(SITE_BUDGETS).forEach(function(s){ budget += s.annual_planned || 0; });
+  }
+
+  // KPIs: aggregate from SITE_KPIS
+  var totalUnitsTarget = 0, totalLeadsTarget = 0;
+  var evSum = 0, evCount = 0, convSum = 0, retSum = 0, npsSum = 0, cplSum = 0, kpiCount = 0;
+  if (typeof SITE_KPIS !== 'undefined' && typeof HUB_SITES !== 'undefined') {
+    HUB_SITES.forEach(function(site) {
+      var d = SITE_KPIS[site.site_id] || {};
+      totalUnitsTarget += d.units_target || 0;
+      totalLeadsTarget += d.leads_target || 0;
+      if (d.ev_pct_target > 0)      { evSum  += d.ev_pct_target;      evCount++;  }
+      if (d.conversion_target > 0)  { convSum += d.conversion_target;  kpiCount++; }
+      if (d.retention_target > 0)   { retSum  += d.retention_target;               }
+      if (d.nps_target > 0)         { npsSum  += d.nps_target;                     }
+      if (d.cpl_target > 0)         { cplSum  += d.cpl_target;                     }
+    });
+  }
+  var evAvg   = evCount  > 0 ? Math.round(evSum  / evCount * 10) / 10 : 0;
+  var convAvg = kpiCount > 0 ? Math.round(convSum / kpiCount * 10) / 10 : 0;
+  var retAvg  = kpiCount > 0 ? Math.round(retSum  / kpiCount * 10) / 10 : 0;
+  var npsAvg  = kpiCount > 0 ? Math.round(npsSum  / kpiCount) : 0;
+  var cplAvg  = kpiCount > 0 ? Math.round(cplSum  / kpiCount) : 0;
+
+  function setDerived(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.value = val || '';
+    el.readOnly = true;
+    el.style.background = 'var(--surface)';
+    el.style.color = 'var(--ink-soft)';
+    el.title = 'Derived from site data — edit in Site KPIs or Site Budgets';
+  }
+
+  setDerived('gs-budget',    budget > 0 ? budget : '');
+  setDerived('gs-units',     totalUnitsTarget > 0 ? totalUnitsTarget : '');
+  setDerived('gs-leads',     totalLeadsTarget > 0 ? totalLeadsTarget : '');
+  setDerived('gs-evSales',   evAvg   > 0 ? evAvg   : '');
+  setDerived('gs-conv',      convAvg > 0 ? convAvg : '');
+  setDerived('gs-retention', retAvg  > 0 ? retAvg  : '');
+  setDerived('gs-nps',       npsAvg  > 0 ? npsAvg  : '');
+  setDerived('gs-cpl',       cplAvg  > 0 ? cplAvg  : '');
 }
 function collectGroupForm() {
   var g = STATE.group;
