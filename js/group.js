@@ -113,8 +113,8 @@ async function loadChannelCommitments() {
       // Map BB_PESO channel IDs to BC_DEFAULT_CHANNELS names
       var CHANNEL_ID_MAP = {
         'google':'Paid Search (Google/Bing)', 'autotrader':'AutoTrader',
-        'meta':'Paid Social (Meta/TikTok/LinkedIn)', 'youtube':'Display & Programmatic',
-        'tiktok':'Display & Programmatic', 'linkedin':'Display & Programmatic',
+        'meta':'Paid Social (Meta/TikTok/LinkedIn)', 'youtube':'Display, Video & Programmatic',
+        'tiktok':'Display, Video & Programmatic', 'linkedin':'Display, Video & Programmatic',
         'crm':'Email Marketing', 'organic':'Social Organic',
         'influencer':'Social Organic', 'ugc':'Social Organic',
         'community':'Social Organic', 'events':'Events & Showroom',
