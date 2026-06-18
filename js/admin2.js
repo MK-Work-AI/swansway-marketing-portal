@@ -115,6 +115,7 @@ var BC_CURRENT_BRAND = 'audi';
 /* ══ INIT ══ */
 async function adminInit() {
   console.log('admin2.js loaded and adminInit running');
+  if (typeof loadHubSites === 'function') loadHubSites();
   var sess = await SB.auth.getSession();
   if (!sess.data.session) { window.location = 'index.html'; return; }
   var email = sess.data.session.user.email;
@@ -184,6 +185,7 @@ function showPage(id) {
   if (id === 'brand')        { renderBrandEditor(BRAND_IDS[0]); }
   if (id === 'sitebudgets')  { sbLoad(); }
   if (id === 'sitekpis')     { skLoad(); }
+  if (id === 'sitedirectory') { sdLoad(); }
   if (id === 'sitecontacts') { scLoad(); }
   if (id === 'brandkpis')    { bkLoad(); }
   if (id === 'brandchannels'){ bcLoad(); }
@@ -1639,4 +1641,143 @@ async function saSave() {
     showToast('Save failed: ' + e.message, 'error');
   }
   if (btn) { btn.textContent = 'Save approvers'; btn.disabled = false; }
+}
+
+
+// ════ SITE DIRECTORY ════
+var SD_DATA = [];
+var SD_BRANDS_LIST = [
+  {id:'audi',name:'Audi'},{id:'vw',name:'Volkswagen'},{id:'vwcv',name:'VW Commercial'},
+  {id:'seat',name:'SEAT'},{id:'cupra',name:'CUPRA'},{id:'landrover',name:'Land Rover'},
+  {id:'jaguar',name:'Jaguar'},{id:'honda',name:'Honda'},{id:'peugeot',name:'Peugeot'},
+  {id:'byd',name:'BYD'},{id:'omoda',name:'OMODA / JAECOO'},{id:'motormatch',name:'Motor Match'}
+];
+var _sdPending = {};
+
+async function sdLoad() {
+  var el = document.getElementById('sd-content');
+  if (el) el.innerHTML = '<div style="padding:20px;color:var(--ink-soft)">Loading...</div>';
+  try {
+    var r = await fetch(SUPA + '/hub_sites?select=*&order=sort_order', { headers: getAuthHeaders() });
+    if (!r.ok) throw new Error(r.status);
+    SD_DATA = await r.json();
+    _sdPending = {};
+    sdRender();
+  } catch(e) { console.warn('sdLoad:', e); }
+}
+
+function sdRender() {
+  var el = document.getElementById('sd-content');
+  if (!el) return;
+  var byBrand = {};
+  SD_DATA.forEach(function(s) { if (!byBrand[s.brand_id]) byBrand[s.brand_id]=[]; byBrand[s.brand_id].push(s); });
+
+  var html = '';
+  // Add form
+  html += '<div style="background:var(--surface);border-radius:8px;padding:20px;margin-bottom:24px">';
+  html += '<div style="font-size:14px;font-weight:700;margin-bottom:12px">Add new site</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 160px auto;gap:12px;align-items:end">';
+  html += '<div><label class="admin-field-label">Site name</label><input class="admin-input" id="sd-new-name" placeholder="e.g. Audi Chester" style="width:100%"></div>';
+  html += '<div><label class="admin-field-label">Brand</label><select class="admin-input" id="sd-new-brand" style="width:100%">';
+  SD_BRANDS_LIST.forEach(function(b) { html += '<option value="'+b.id+'">'+b.name+'</option>'; });
+  html += '</select></div>';
+  html += '<div><label class="admin-field-label">Site ID</label><input class="admin-input" id="sd-new-id" placeholder="audi-chester" style="width:100%"></div>';
+  html += '<button onclick="sdAddSite()" style="padding:8px 14px;background:var(--swansway);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;white-space:nowrap">+ Add site</button>';
+  html += '</div></div>';
+
+  SD_BRANDS_LIST.forEach(function(brand) {
+    var sites = byBrand[brand.id] || [];
+    if (!sites.length) return;
+    html += '<div style="margin-bottom:20px">';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">'+brand.name+' ('+sites.length+')</div>';
+    html += '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:var(--surface)">';
+    html += '<th style="padding:6px 10px;text-align:left;font-size:10px;font-family:var(--font-m);color:var(--ink-soft)">Site name</th>';
+    html += '<th style="padding:6px 10px;text-align:left;font-size:10px;font-family:var(--font-m);color:var(--ink-soft)">Site ID</th>';
+    html += '<th style="padding:6px 10px;text-align:left;font-size:10px;font-family:var(--font-m);color:var(--ink-soft);width:60px">Order</th>';
+    html += '<th style="padding:6px 10px;width:70px"></th></tr></thead><tbody>';
+    sites.forEach(function(s, si) {
+      html += '<tr style="border-bottom:1px solid var(--border);background:'+(si%2===0?'transparent':'var(--surface)')+'">>';
+      html += '<td style="padding:5px 10px"><input class="admin-input" data-site="'+s.site_id+'" data-field="site_name" style="width:100%;font-size:12px" value="'+s.site_name.replace(/"/g,'&quot;')+'" oninput="sdMarkDirty(this)"></td>';
+      html += '<td style="padding:5px 10px;font-family:var(--font-m);font-size:11px;color:var(--ink-soft)">'+s.site_id+'</td>';
+      html += '<td style="padding:5px 10px"><input class="admin-input" type="number" data-site="'+s.site_id+'" data-field="sort_order" style="width:55px;font-size:12px" value="'+s.sort_order+'" oninput="sdMarkDirty(this)"></td>';
+      html += '<td style="padding:5px 10px;text-align:right"><button data-site="'+s.site_id+'" data-name="'+s.site_name.replace(/"/g,'&quot;')+'" onclick="sdDeleteSite(this.dataset.site,this.dataset.name)" style="font-size:11px;padding:3px 8px;border:1px solid #DC2626;border-radius:3px;color:#DC2626;background:transparent;cursor:pointer">Delete</button></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  });
+
+  html += '<div style="margin-top:12px;display:flex;align-items:center;gap:12px"><button onclick="sdSaveAll()" style="padding:8px 16px;background:var(--swansway);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600">Save changes</button><span id="sd-save-status" style="font-size:12px;color:var(--ink-soft)"></span></div>';
+  el.innerHTML = html;
+
+  // Auto-generate site ID from name input
+  var nameInput = document.getElementById('sd-new-name');
+  if (nameInput) {
+    nameInput.addEventListener('input', function() {
+      var v = this.value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+      var idEl = document.getElementById('sd-new-id');
+      if (idEl) idEl.value = v;
+    });
+  }
+}
+
+function sdMarkDirty(input) {
+  var sid = input.dataset.site;
+  var field = input.dataset.field;
+  if (!_sdPending[sid]) _sdPending[sid] = {};
+  _sdPending[sid][field] = field === 'sort_order' ? parseInt(input.value) : input.value;
+}
+
+async function sdSaveAll() {
+  var status = document.getElementById('sd-save-status');
+  var siteIds = Object.keys(_sdPending);
+  if (!siteIds.length) { if (status) status.textContent = 'Nothing to save'; return; }
+  if (status) status.textContent = 'Saving...';
+  try {
+    for (var i = 0; i < siteIds.length; i++) {
+      var sid = siteIds[i];
+      var r = await fetch(SUPA + '/hub_sites?site_id=eq.' + encodeURIComponent(sid), {
+        method: 'PATCH',
+        headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'return=minimal'}),
+        body: JSON.stringify(_sdPending[sid])
+      });
+      if (!r.ok) throw new Error('Failed for ' + sid + ': ' + r.status);
+    }
+    _sdPending = {};
+    if (status) { status.textContent = 'Saved \u2713'; setTimeout(function(){ status.textContent=''; }, 3000); }
+    await sdLoad();
+    if (typeof loadHubSites === 'function') loadHubSites();
+  } catch(e) { if (status) status.textContent = 'Error: ' + e.message; }
+}
+
+async function sdAddSite() {
+  var name = (document.getElementById('sd-new-name').value||'').trim();
+  var brandId = document.getElementById('sd-new-brand').value;
+  var siteId = (document.getElementById('sd-new-id').value||'').trim();
+  if (!name || !siteId) { alert('Site name and ID required'); return; }
+  var brand = SD_BRANDS_LIST.find(function(b){ return b.id === brandId; });
+  var maxOrder = SD_DATA.reduce(function(m,s){ return Math.max(m,s.sort_order||0); }, 0);
+  try {
+    var r = await fetch(SUPA + '/hub_sites?on_conflict=site_id', {
+      method: 'POST',
+      headers: getAuthHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),
+      body: JSON.stringify([{site_id:siteId, site_name:name, brand_id:brandId, brand_name:brand?brand.name:brandId, sort_order:maxOrder+1}])
+    });
+    if (!r.ok) throw new Error(await r.text());
+    document.getElementById('sd-new-name').value='';
+    document.getElementById('sd-new-id').value='';
+    await sdLoad();
+    if (typeof loadHubSites === 'function') loadHubSites();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function sdDeleteSite(siteId, siteName) {
+  if (!confirm('Delete ' + siteName + '?\n\nThis will remove it from the site directory. Site budget and KPI data will remain.')) return;
+  try {
+    var r = await fetch(SUPA + '/hub_sites?site_id=eq.' + encodeURIComponent(siteId), {
+      method: 'DELETE', headers: getAuthHeaders({'Prefer':'return=minimal'})
+    });
+    if (!r.ok) throw new Error(r.status);
+    await sdLoad();
+    if (typeof loadHubSites === 'function') loadHubSites();
+  } catch(e) { alert('Error: ' + e.message); }
 }
