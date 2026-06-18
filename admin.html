@@ -27,9 +27,9 @@ if (typeof navToggle === 'undefined') {
   <link rel="stylesheet" href="shared.css?v=2">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js?v=2"></script>
-  <script src="bundle-core.js?v=106"></script>
+  <script src="bundle-core.js?v=107"></script>
   <script src="js/group.js?v=110" defer></script>
-  <script src="js/admin2.js?v=126" defer></script>
+  <script src="js/admin2.js?v=127" defer></script>
   <style>
     .admin-layout { display:flex; min-height:calc(100vh - 120px); gap:0; }
     .admin-sidebar { width:220px; flex-shrink:0; background:var(--white); border-right:1px solid var(--border); padding:1rem 0; }
@@ -184,8 +184,7 @@ if (typeof navToggle === 'undefined') {
       <div class="admin-sidebar-label">Site Data</div>
       <button class="snav" data-page="sitebudgets" onclick="showPage('sitebudgets')">💷 Site Budgets</button>
       <button class="snav" data-page="sitekpis" onclick="showPage('sitekpis')">📊 Site KPIs</button>
-      <button class="snav" data-page="sitedirectory" onclick="showPage('sitedirectory')">📍 Site Directory</button>
-      <button class="snav" data-page="sitecontacts" onclick="showPage('sitecontacts')">📋 Site Contacts</button>
+      <button class="snav" data-page="sitemanagement" onclick="showPage('sitemanagement')">🏢 Site Management</button>
     </div>
     <div class="admin-sidebar-section">
       <div class="admin-sidebar-label">Brand Data</div>
@@ -316,7 +315,30 @@ if (typeof navToggle === 'undefined') {
     </div>
 
     <!-- SITE DIRECTORY -->
-    <div class="admin-page" id="page-sitedirectory" style="display:none">
+    <div class="admin-page" id="page-sitemanagement" style="display:none">
+        <div class="admin-page-header">
+          <div>
+            <div class="admin-page-title">Site Management</div>
+            <div class="admin-page-sub">Manage all dealership sites — contacts, location, team and directory in one place</div>
+          </div>
+        </div>
+        <div id="sm-brand-tabs" class="brand-tabs" style="padding:0 20px"></div>
+        <div id="sm-content" style="padding:16px 20px 20px"></div>
+        <div style="padding:0 20px 40px">
+          <div style="border-top:2px solid var(--border);padding-top:20px;margin-top:8px">
+            <div style="font-size:14px;font-weight:700;margin-bottom:12px">+ Add new brand</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 120px 1fr auto;gap:10px;align-items:end">
+              <div><label class="admin-field-label">Brand name</label><input class="admin-input" id="sm-nb-name" placeholder="e.g. Skoda" style="width:100%"></div>
+              <div><label class="admin-field-label">Brand ID</label><input class="admin-input" id="sm-nb-id" placeholder="e.g. skoda" style="width:100%"></div>
+              <div><label class="admin-field-label">Colour</label><input type="color" id="sm-nb-color" value="#333333" style="width:100%;height:36px;border:1px solid var(--border);border-radius:4px;padding:2px"></div>
+              <div><label class="admin-field-label">Segment</label><input class="admin-input" id="sm-nb-segment" placeholder="e.g. Premium" style="width:100%"></div>
+              <button onclick="smAddBrand()" style="padding:8px 14px;background:var(--swansway);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;white-space:nowrap">Add brand</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-page" id="page-sitedirectory" style="display:none">
         <div class="admin-page-header">
           <div>
             <div class="admin-page-title">Site Directory</div>
