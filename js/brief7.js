@@ -73,6 +73,7 @@ function bbGoStep(n) {
   }
   if (n === 5) {
     setTimeout(bbRenderStep5Context, 100);
+    setTimeout(bbRenderChannelSplit, 150);  // Channel split moved to step 5
     var _notesEl = document.getElementById('bb-notes');
     if (_notesEl && BB.notes) _notesEl.value = BB.notes;
   }
