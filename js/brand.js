@@ -185,6 +185,38 @@ function updateBrandBudgetsFromSites() {
 }
 
 
+function updateBrandKPIsFromSites() {
+  if (typeof SITE_KPIS === 'undefined' || !Object.keys(SITE_KPIS).length) return;
+  BRANDS.forEach(function(brand) {
+    var sites = HUB_SITES.filter(function(s) { return s.brand_id === brand.id; });
+    if (!sites.length) return;
+    var totalUnits = 0, evSum = 0, evCount = 0;
+    sites.forEach(function(site) {
+      var d = SITE_KPIS[site.site_id] || {};
+      totalUnits += d.units_target || 0;
+      if (d.ev_pct_target > 0) { evSum += d.ev_pct_target; evCount++; }
+    });
+    if (totalUnits > 0) brand.newTarget = totalUnits.toLocaleString() + ' units';
+    if (evCount > 0)    brand.evTarget  = Math.round(evSum / evCount) + '%';
+  });
+  // Re-render hero tags on the active brand page
+  document.querySelectorAll('.brand-hero-tag').forEach(function(el) {
+    var text = el.textContent;
+    if (text.startsWith('New car target:') || text.startsWith('EV/hybrid target:') || text.startsWith('Budget:')) {
+      var brandId = el.closest('[id$="-content"]');
+      if (brandId) {
+        var bId = brandId.id.replace('-content','');
+        var brand = BRANDS.find(function(b){ return b.id === bId; });
+        if (brand) {
+          if (text.startsWith('New car target:')) el.textContent = 'New car target: ' + (brand.newTarget || '—');
+          if (text.startsWith('EV/hybrid target:')) el.textContent = 'EV/hybrid target: ' + (brand.evTarget || '—');
+          if (text.startsWith('Budget:')) el.textContent = 'Budget: ' + (brand.budget || '—');
+        }
+      }
+    }
+  });
+}
+
 function renderBrandCentres(brandId) {
   var el = document.getElementById(brandId + '-centres-list');
   if (!el) return;
@@ -393,7 +425,9 @@ function renderBrandCampaigns(brandId) {
 
 
 function renderBrandKPIs(brandId) {
-  var el = document.getElementById(brandId + '-brand-kpis');
+  // Update hero pills with live KPI data
+  if (typeof updateBrandKPIsFromSites === 'function') updateBrandKPIsFromSites();
+  if (typeof updateBrandBudgetsFromSites === 'function') updateBrandBudgetsFromSites();  var el = document.getElementById(brandId + '-brand-kpis');
   if (!el) return;
   var brand = BRANDS.find(function(b) { return b.id === brandId; });
   if (!brand) return;
