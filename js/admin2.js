@@ -283,7 +283,7 @@ function populateGroupForm() {
   var fields = ['name','year','desc','budget','evPct','coopPct','units','leads','evSales','conv','retention','nps','cpl'];
   fields.forEach(function(f) {
     var el = document.getElementById('gs-'+f);
-    if (el) el.value = g[f] || '';
+    if (el) el.value = g[f] || GROUP_DEFAULTS[f] || '';
   });
 }
 function collectGroupForm() {
