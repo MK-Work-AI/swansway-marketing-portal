@@ -2940,16 +2940,40 @@ async function bbLoadBrief(id) {
     return;
   }
 
-  // Draft — show step 6 with save bar
+  // Draft — show step 6 with save bar + action button
+  var _briefRef = brief; // capture for closure
   setTimeout(function() {
     bbGoStep(6);
     var saveBtn = document.getElementById('bb-save-btn');
     var saveBar = document.getElementById('bb-save-bar');
     var titleEl = document.getElementById('bb-brief-title');
-    if (titleEl) titleEl.value = brief.title || '';
+    if (titleEl) titleEl.value = _briefRef.title || '';
     if (saveBtn) { saveBtn.textContent = '\u2713 Saved'; saveBtn.disabled = true; saveBtn.style.background = '#059669'; }
     if (saveBar) saveBar.style.display = 'block';
   }, 150);
+  // Re-show launch/submit button after bbGenerateBrief clears feedback div
+  setTimeout(function() {
+    var fb = document.getElementById('bb-save-feedback');
+    if (!fb) return;
+    var _perms = CB_PERMS[CB_CURRENT_USER] || {};
+    var _canLaunch = _perms.can_approve_all || _perms.can_approve_digital;
+    var _firstName = (SB_USER && SB_USER.user_metadata && SB_USER.user_metadata.full_name)
+      ? SB_USER.user_metadata.full_name.split(' ')[0] : 'there';
+    fb.style.display = 'block';
+    if (_canLaunch) {
+      fb.innerHTML = '<div class="bb-s6-confirm">'
+        + '<div class="bb-s6-tick">\u2713</div>'
+        + '<div class="bb-s6-msg"><strong>Brief saved, ' + _firstName + '.</strong> Ready to go live.</div>'
+        + '<button class="bb-s6-launch" onclick="bbSubmitAndLaunch()">LAUNCH CAMPAIGN</button>'
+        + '</div>';
+    } else {
+      fb.innerHTML = '<div class="bb-s6-confirm">'
+        + '<div class="bb-s6-tick">\u2713</div>'
+        + '<div class="bb-s6-msg"><strong>Brief saved, ' + _firstName + '.</strong> When ready, submit for approval.</div>'
+        + '<button class="bb-s6-submit-btn" onclick="bbSubmitBrief()">Submit for approval \u2192</button>'
+        + '</div>';
+    }
+  }, 400);
 }
 
 
