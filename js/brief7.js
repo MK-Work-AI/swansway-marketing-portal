@@ -3251,6 +3251,35 @@ async function bbLoadBrief(id) {
       if (titleEl) titleEl.value = brief.title || '';
       if (saveBtn) { saveBtn.textContent = '\u2713 Saved'; saveBtn.disabled = true; saveBtn.style.background = '#059669'; }
       if (saveBar) saveBar.style.display = 'block';
+      // Show launch/submit action for draft briefs re-opened from the panel
+      if (brief.status === 'draft') {
+        var fb = document.getElementById('bb-save-feedback');
+        if (fb) {
+          var _uid2 = CB_CURRENT_USER;
+          if (!_uid2 && window.SB_USER && SB_USER.email && typeof CB_TEAM !== 'undefined') {
+            var _m2 = Object.values(CB_TEAM).find(function(m){ return m.email && m.email.toLowerCase() === SB_USER.email.toLowerCase(); });
+            if (_m2) { _uid2 = _m2.id; CB_CURRENT_USER = _uid2; }
+          }
+          var _perms2 = (typeof CB_PERMS !== 'undefined' && _uid2) ? (CB_PERMS[_uid2] || {}) : {};
+          var _canLaunch2 = _perms2.can_approve_all || _perms2.can_approve_digital;
+          var _firstName2 = (SB_USER && SB_USER.user_metadata && SB_USER.user_metadata.full_name)
+            ? SB_USER.user_metadata.full_name.split(' ')[0] : 'there';
+          fb.style.display = 'block';
+          if (_canLaunch2) {
+            fb.innerHTML = '<div class="bb-s6-confirm">'
+              + '<div class="bb-s6-tick">\u2713</div>'
+              + '<div class="bb-s6-msg"><strong>Brief saved, ' + _firstName2 + '.</strong> Ready to go live.</div>'
+              + '<button class="bb-s6-launch" onclick="bbSubmitAndLaunch()">LAUNCH CAMPAIGN</button>'
+              + '</div>';
+          } else {
+            fb.innerHTML = '<div class="bb-s6-confirm">'
+              + '<div class="bb-s6-tick">\u2713</div>'
+              + '<div class="bb-s6-msg"><strong>Brief saved, ' + _firstName2 + '.</strong> When ready, submit for approval.</div>'
+              + '<button class="bb-s6-submit-btn" onclick="bbSubmitBrief()">Submit for approval \u2192</button>'
+              + '</div>';
+          }
+        }
+      }
     }, 150);
   }, 100);
 
