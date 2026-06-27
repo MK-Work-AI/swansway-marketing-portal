@@ -69,7 +69,7 @@ document.addEventListener('click',navCloseAll);
   .pl-section-sep { flex:1; }
 
   /* ── Card grid ── */
-  .pl-card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:10px; width:100%; }
+  .pl-card-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:10px; width:100%; }
   .pl-card { background:var(--white); border:1px solid var(--border); border-radius:6px; padding:14px 16px; cursor:pointer; transition:box-shadow .15s, border-color .15s; }
   .pl-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.09); border-color:#C5BFB8; }
   .pl-event-card { border-left:4px solid var(--swansway); }
@@ -405,7 +405,7 @@ document.addEventListener('click',navCloseAll);
 <script src="bundle-core.js?v=105"></script>
 <script src="js/group.js?v=110" defer></script>
 <script src="js/admin2.js?v=110" defer></script>
-<script src="js/planner.js?v=204" defer></script>
+<script src="js/planner.js?v=205" defer></script>
 <script>
 window.addEventListener('load', function() {
   if (typeof plInit === 'function') plInit();
