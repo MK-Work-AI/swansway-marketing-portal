@@ -109,21 +109,25 @@ function plBuildSidebar() {
   if (totalEl) totalEl.textContent = total || '';
 
   var html = '';
-  var brandsInData = {};
-  PL.events.forEach(function(e) { brandsInData[e.brand_id] = true; });
-  PL.activities.forEach(function(a) { brandsInData[a.brand_id] = true; });
-
   Object.keys(BRAND_NAMES).forEach(function(bid) {
-    var color = BRAND_COLORS[bid] || '#666';
-    var name  = BRAND_NAMES[bid];
-    var count = brandCounts[bid] || '';
-    html += '<button class="pl-brand-btn" data-brand="' + bid + '" onclick="plSetBrand(\'' + bid + '\',this)">'
+    var color  = BRAND_COLORS[bid] || '#666';
+    var name   = BRAND_NAMES[bid];
+    var count  = brandCounts[bid] || '';
+    var active = PL.brand === bid ? ' active' : '';
+    html += '<button class="pl-brand-btn' + active + '" data-brand="' + bid + '" onclick="plSetBrand(\'' + bid + '\',this)">'
       + '<span class="pl-brand-dot" style="background:' + color + '"></span>'
       + plEsc(name)
       + '<span class="pl-brand-count">' + (count || '') + '</span>'
       + '</button>';
   });
   container.innerHTML = html;
+
+  // Restore active state on All brands button
+  var allBtn = document.querySelector('.pl-brand-btn[data-brand="all"]');
+  if (allBtn) {
+    if (PL.brand === 'all') allBtn.classList.add('active');
+    else allBtn.classList.remove('active');
+  }
 }
 
 /* ── Build filter dropdowns ── */
@@ -695,8 +699,11 @@ async function plSaveEvent(id) {
     plCloseModal();
     plShowToast((id ? 'Event updated' : 'Event added') + ' ✓', '#059669');
     await plLoadData();
-    plBuildSidebar();
-    plRender();
+    plBuildSidebar();  // preserves PL.brand active state
+    plUpdateKPIs();
+    plRenderEvents();
+    plRenderActivities();
+    plUpdateSubtitle();
   } catch(e) {
     if (errEl) { errEl.textContent = 'Save failed: ' + e.message; errEl.style.display = 'block'; }
     if (saveBtn) { saveBtn.textContent = 'Save changes'; saveBtn.disabled = false; }
@@ -712,8 +719,10 @@ async function plDeleteEvent(id) {
     plCloseModal();
     plShowToast('Event deleted', '#DC2626');
     await plLoadData();
-    plBuildSidebar();
-    plRender();
+    plBuildSidebar();  // preserves PL.brand active state
+    plUpdateKPIs();
+    plRenderEvents();
+    plRenderActivities();
   } catch(e) { plShowToast('Delete failed: ' + e.message, '#DC2626'); }
 }
 
