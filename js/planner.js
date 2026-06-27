@@ -276,50 +276,33 @@ function plRenderActivities() {
     return;
   }
 
-  // Group by type
-  var byType = {};
+  // Flat grid — type badge shown on each card, same layout as events
+  var html = '<div class="pl-card-grid">';
+
   PL.activities.forEach(function(a) {
-    var tid = a.type_id || 'other';
-    if (!byType[tid]) byType[tid] = [];
-    byType[tid].push(a);
-  });
+    var type     = PL.actTypes.find(function(t) { return t.id === a.type_id; });
+    var tname    = type ? type.name : (a.type_id || '');
+    var tcolor   = type ? type.colour_hex : '#6B7280';
+    var progress = plGetProgress(a);
+    var budget   = a.total_budget ? '£' + Number(a.total_budget).toLocaleString('en-GB') : 'Budget TBC';
+    var assigned = plGetTeamName(a.assigned_to);
 
-  var html = '';
-  Object.keys(byType).forEach(function(tid) {
-    var type  = PL.actTypes.find(function(t) { return t.id === tid; });
-    var tname = type ? type.name : tid;
-    var tcolor = type ? type.colour_hex : '#6B7280';
-    var acts  = byType[tid];
-
-    html += '<div class="pl-type-group">'
-      + '<div class="pl-type-group-hdr">'
-      + '<span class="pl-type-badge" style="background:' + tcolor + '">' + plE(tname) + '</span>'
-      + '<span class="pl-type-group-count">' + acts.length + '</span>'
+    html += '<div class="pl-card pl-act-card" data-id="' + a.id + '" style="border-left-color:' + tcolor + '">'
+      + '<div class="pl-card-top">'
+      + (tname ? '<span class="pl-type-badge" style="background:' + tcolor + '">' + plE(tname) + '</span>' : '')
+      + plRagPill(a.rag_status)
       + '</div>'
-      + '<div class="pl-card-grid">';
-
-    acts.forEach(function(a) {
-      var progress = plGetProgress(a);
-      var budget   = a.total_budget ? '£' + Number(a.total_budget).toLocaleString('en-GB') : 'Budget TBC';
-      var assigned = plGetTeamName(a.assigned_to);
-
-      html += '<div class="pl-card pl-act-card" data-id="' + a.id + '">'
-        + '<div class="pl-card-top">'
-        + plRagPill(a.rag_status)
-        + '<span class="pl-budget-chip">' + plE(budget) + '</span>'
-        + '</div>'
-        + '<div class="pl-card-title">' + plE(a.title||'') + '</div>'
-        + '<div class="pl-card-meta">'
-        + (assigned ? '<span class="pl-meta-item">👤 ' + plE(assigned) + '</span>' : '')
-        + '<span class="pl-meta-item">📋 ' + progress.done + '/' + progress.total + ' deliverables</span>'
-        + '</div>'
-        + (progress.total > 0 ? '<div class="pl-progress-bar"><div class="pl-progress-fill" style="width:' + progress.pct + '%;background:' + (progress.pct === 100 ? '#059669' : progress.pct > 50 ? '#F59E0B' : '#94A3B8') + '"></div></div>' : '')
-        + '</div>';
-    });
-
-    html += '</div></div>';
+      + '<div class="pl-card-title">' + plE(a.title||'') + '</div>'
+      + '<div class="pl-card-meta">'
+      + (assigned ? '<span class="pl-meta-item">👤 ' + plE(assigned) + '</span>' : '')
+      + '<span class="pl-meta-item">📋 ' + progress.done + '/' + progress.total + ' deliverables</span>'
+      + (budget !== 'Budget TBC' ? '<span class="pl-meta-item">💷 ' + plE(budget) + '</span>' : '')
+      + '</div>'
+      + (progress.total > 0 ? '<div class="pl-progress-bar"><div class="pl-progress-fill" style="width:' + progress.pct + '%;background:' + (progress.pct === 100 ? '#059669' : progress.pct > 50 ? '#F59E0B' : '#94A3B8') + '"></div></div>' : '')
+      + '</div>';
   });
 
+  html += '</div>';
   body.innerHTML = html;
 
   body.querySelectorAll('.pl-act-card').forEach(function(card) {
