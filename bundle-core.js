@@ -1,4 +1,4 @@
-// v100
+// v101
 // Swansway Marketing Portal — Shared JS v4
 var PLAN_YEAR = new Date().getFullYear();
 const SUPABASE_URL = 'https://humitzrleflxnlnodpde.supabase.co';
@@ -1530,7 +1530,9 @@ function handleUserPillClick() {
 
 function openAuth() {
   document.getElementById('auth-overlay').classList.add('open');
-  document.getElementById('auth-email').focus();
+  authShowSignIn();
+  var el = document.getElementById('auth-email');
+  if (el) el.focus();
 }
 
 
@@ -1539,17 +1541,79 @@ function closeAuth() {
 }
 
 
-function switchAuthTab(tab) {
-  document.getElementById('auth-tab-in').classList.toggle('active', tab==='in');
-  document.getElementById('auth-tab-up').classList.toggle('active', tab==='up');
-  document.getElementById('auth-form-in').style.display = tab==='in' ? 'block' : 'none';
-  document.getElementById('auth-form-up').style.display = tab==='up' ? 'block' : 'none';
+async function authEmail() {
+  var email    = (document.getElementById('auth-email')    || {}).value || '';
+  var password = (document.getElementById('auth-password') || {}).value || '';
+  var errEl    = document.getElementById('auth-err-in');
+  var btn      = document.getElementById('auth-signin-btn');
+  if (errEl) errEl.style.display = 'none';
+  if (!email || !password) {
+    if (errEl) { errEl.textContent = 'Please enter your email and password.'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (btn) { btn.textContent = 'Signing in\u2026'; btn.disabled = true; }
+  try {
+    var result = await SB.auth.signInWithPassword({ email: email.trim(), password: password });
+    if (result.error) {
+      var msg = result.error.message || 'Sign in failed.';
+      if (msg.toLowerCase().includes('invalid')) msg = 'Incorrect email or password. Please try again.';
+      if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+    }
+    // Success handled by onAuthStateChange → sbHandleSession
+  } catch(e) {
+    if (errEl) { errEl.textContent = 'Something went wrong. Please try again.'; errEl.style.display = 'block'; }
+  } finally {
+    if (btn) { btn.textContent = 'Sign in'; btn.disabled = false; }
+  }
 }
 
 
-function authGoogle() {
-  if (!SB) { alert('Supabase not configured'); return; }
-  SB.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: 'https://mk-work-ai.github.io/swansway-marketing-portal/' } });
+async function authForgotPassword() {
+  var email = (document.getElementById('auth-reset-email') || {}).value || '';
+  var errEl = document.getElementById('auth-err-forgot');
+  var okEl  = document.getElementById('auth-ok-forgot');
+  if (errEl) errEl.style.display = 'none';
+  if (okEl)  okEl.style.display  = 'none';
+  if (!email) {
+    if (errEl) { errEl.textContent = 'Please enter your email address.'; errEl.style.display = 'block'; }
+    return;
+  }
+  try {
+    var result = await SB.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: 'https://mk-work-ai.github.io/swansway-marketing-portal/'
+    });
+    if (result.error) {
+      if (errEl) { errEl.textContent = result.error.message; errEl.style.display = 'block'; }
+    } else {
+      if (okEl) { okEl.textContent = 'Reset link sent \u2014 check your inbox.'; okEl.style.display = 'block'; }
+    }
+  } catch(e) {
+    if (errEl) { errEl.textContent = 'Something went wrong. Please try again.'; errEl.style.display = 'block'; }
+  }
+}
+
+
+function authShowForgot() {
+  var formIn     = document.getElementById('auth-form-in');
+  var formForgot = document.getElementById('auth-form-forgot');
+  if (formIn)     formIn.style.display     = 'none';
+  if (formForgot) formForgot.style.display = 'block';
+  var el = document.getElementById('auth-reset-email');
+  if (el) { el.value = ''; el.focus(); }
+}
+
+
+function authShowSignIn() {
+  var formIn     = document.getElementById('auth-form-in');
+  var formForgot = document.getElementById('auth-form-forgot');
+  if (formIn)     formIn.style.display     = 'block';
+  if (formForgot) formForgot.style.display = 'none';
+  var errIn     = document.getElementById('auth-err-in');
+  var errForgot = document.getElementById('auth-err-forgot');
+  var okForgot  = document.getElementById('auth-ok-forgot');
+  if (errIn)     errIn.style.display     = 'none';
+  if (errForgot) errForgot.style.display = 'none';
+  if (okForgot)  okForgot.style.display  = 'none';
 }
 
 
