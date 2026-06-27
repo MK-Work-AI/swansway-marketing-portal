@@ -173,7 +173,8 @@ async function plRenderBudgetStrip() {
   try {
     var months = PL_Q_MONTHS[PL.quarter];
     var siteIds = PL.sites.filter(function(s) { return s.brand_id === PL.brand; }).map(function(s) { return s.site_id; });
-    if (!siteIds.length) { el.innerHTML = ''; return; }
+    console.log('Budget strip: brand=' + PL.brand + ' sites=' + siteIds.length + ' months=' + months + ' total sites in PL=' + PL.sites.length);
+    if (!siteIds.length) { el.innerHTML = '<span style="color:#DC2626;font-size:11px">No sites found for ' + PL.brand + '</span>'; return; }
 
     var [sblR, evR, actR] = await Promise.all([
       fetch(SUPA_PL + '/site_budget_lines?site_id=in.(' + siteIds.join(',') + ')&month=in.(' + months.join(',') + ')&year=eq.' + PL.year + '&select=planned,actual', { headers: getAuthHeaders() }),
@@ -589,87 +590,141 @@ async function plToggleBudgetDetail(actId) {
   el.innerHTML = '<div class="pl-loading-sm">Loading budget data…</div>';
 
   try {
-    var months   = PL_Q_MONTHS[PL.quarter];
-    var siteIds  = PL.sites.filter(function(s) { return s.brand_id === PL.brand; }).map(function(s) { return s.site_id; });
-    var topChans = ['paid-search','autotrader','paid-social','display','email','social-organic','mfr-coop','events-showroom'];
+    var months    = PL_Q_MONTHS[PL.quarter];
+    var mNames    = PL_MONTHS;
+    var brandSites = PL.sites.filter(function(s) { return s.brand_id === PL.brand; });
+    var siteIds   = brandSites.map(function(s) { return s.site_id; });
 
+    if (!siteIds.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--ink-faint);padding:8px">No sites found for this brand.</div>';
+      return;
+    }
+
+    // Load: site_budget_lines, existing allocations, and channels with mapping
     var [sblR, ablR, chanR] = await Promise.all([
-      fetch(SUPA_PL + '/site_budget_lines?site_id=in.(' + siteIds.join(',') + ')&month=in.(' + months.join(',') + ')&year=eq.' + PL.year + '&select=site_id,channel,month,planned,actual', { headers: getAuthHeaders() }),
-      fetch(SUPA_PL + '/activity_budget_lines?activity_id=eq.' + actId + '&select=*', { headers: getAuthHeaders() }),
-      fetch(SUPA_PL + '/activity_channels?id=in.(' + topChans.join(',') + ')&select=id,name&order=sort_order', { headers: getAuthHeaders() }),
+      fetch(SUPA_PL + '/site_budget_lines?site_id=in.(' + siteIds.join(',') + ')&month=in.(' + months.join(',') + ')&year=eq.' + PL.year + '&select=site_id,channel,month,planned,actual&limit=5000', { headers: getAuthHeaders() }),
+      fetch(SUPA_PL + '/activity_budget_lines?activity_id=eq.' + actId + '&select=id,site_id,channel_id,month,year,planned,actual', { headers: getAuthHeaders() }),
+      fetch(SUPA_PL + '/activity_channels?active=eq.true&select=id,name,sbl_channel_name&order=sort_order', { headers: getAuthHeaders() }),
     ]);
 
-    var sbl  = {};
-    (sblR.ok ? await sblR.json() : []).forEach(function(r) {
+    var sblRows  = sblR.ok  ? await sblR.json()  : [];
+    var ablRows  = ablR.ok  ? await ablR.json()  : [];
+    var channels = chanR.ok ? await chanR.json() : [];
+
+    // Index site_budget_lines: sbl[site_id][sbl_channel_name][month] = {planned, actual}
+    var sbl = {};
+    sblRows.forEach(function(r) {
       if (!sbl[r.site_id]) sbl[r.site_id] = {};
       if (!sbl[r.site_id][r.channel]) sbl[r.site_id][r.channel] = {};
-      sbl[r.site_id][r.channel][r.month] = { planned: r.planned||0, actual: r.actual||0 };
+      sbl[r.site_id][r.channel][r.month] = { planned: r.planned || 0, actual: r.actual || 0 };
     });
 
+    // Index activity_budget_lines: abl[site_id][channel_id][month] = {planned, actual, id}
     var abl = {};
-    (ablR.ok ? await ablR.json() : []).forEach(function(r) {
+    ablRows.forEach(function(r) {
       if (!abl[r.site_id]) abl[r.site_id] = {};
       if (!abl[r.site_id][r.channel_id]) abl[r.site_id][r.channel_id] = {};
-      abl[r.site_id][r.channel_id][r.month] = { planned: r.planned||0, id: r.id };
+      abl[r.site_id][r.channel_id][r.month] = { planned: r.planned || 0, actual: r.actual || 0, id: r.id };
     });
 
-    var chans = chanR.ok ? await chanR.json() : [];
-    var brandSites = PL.sites.filter(function(s) { return s.brand_id === PL.brand; });
+    // Only show channels that have an sbl mapping (the 10 standard ones)
+    var mappedChans = channels.filter(function(c) { return c.sbl_channel_name; });
 
-    var thS = 'padding:6px 8px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-faint);text-align:right;white-space:nowrap;background:var(--surface)';
-    var th1S = thS + ';text-align:left;min-width:110px';
+    // Build table
+    var thS  = 'padding:5px 8px;font-family:var(--font-m);font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-faint);text-align:right;white-space:nowrap;background:var(--surface);border-bottom:1px solid var(--border)';
+    var th1S = thS + ';text-align:left';
 
-    var hdr = '<tr><th style="' + th1S + '">Site</th><th style="' + th1S + '">Channel</th>';
+    var hdr = '<tr><th style="' + th1S + ';min-width:120px">Site</th><th style="' + th1S + ';min-width:160px">Channel</th>';
     months.forEach(function(m) {
-      hdr += '<th style="' + thS + '">' + PL_MONTHS[m-1] + '<br><span style="font-weight:400;font-size:8px">avail</span></th>'
-           + '<th style="' + thS + '">' + PL_MONTHS[m-1] + '<br><span style="font-weight:400;font-size:8px">alloc</span></th>';
+      hdr += '<th style="' + thS + '">' + mNames[m-1] + '<br><span style="font-weight:400;opacity:0.7">avail</span></th>'
+           + '<th style="' + thS + '">' + mNames[m-1] + '<br><span style="font-weight:400;opacity:0.7">alloc</span></th>';
     });
-    hdr += '<th style="' + thS + '">Total</th></tr>';
+    hdr += '<th style="' + thS + '">Total<br><span style="font-weight:400;opacity:0.7">alloc</span></th>'
+         + '<th style="' + thS + '">Actual</th></tr>';
 
     var rows = '';
+    var grandTotalAlloc = 0;
+    var grandTotalActual = 0;
+
     brandSites.forEach(function(site) {
       var sid = site.site_id;
-      chans.forEach(function(ch, ci) {
-        var siteSbl = (sbl[sid]||{});
-        var chanSbl = (siteSbl[ch.name]||{});
-        var chanAbl = ((abl[sid]||{})[ch.id]||{});
-        var totalAlloc = 0;
+      var siteTotalAlloc = 0;
+
+      mappedChans.forEach(function(ch, ci) {
+        var sblChan  = (sbl[sid] || {})[ch.sbl_channel_name] || {};
+        var ablChan  = ((abl[sid] || {})[ch.id]) || {};
+        var rowAlloc = 0;
+        var rowActual = 0;
 
         var tds = '';
         months.forEach(function(m) {
-          var avail    = chanSbl[m] ? chanSbl[m].planned : 0;
-          var allocVal = chanAbl[m] ? chanAbl[m].planned : 0;
-          totalAlloc  += allocVal;
-          var inId     = 'abl_' + sid + '_' + ch.id + '_' + m;
-          tds += '<td style="padding:4px 6px;text-align:right;font-family:var(--font-m);font-size:10px;color:var(--ink-faint)">'
-               + (avail ? '£' + avail.toLocaleString('en-GB') : '—') + '</td>'
-               + '<td style="padding:3px 5px;text-align:right">'
-               + (PL.isAdmin
-                 ? '<input type="number" id="' + inId + '" value="' + allocVal + '" min="0" style="width:64px;padding:2px 5px;border:1.5px solid var(--border-med);border-radius:3px;font-family:var(--font-m);font-size:10px;text-align:right" data-site="' + sid + '" data-channel="' + ch.id + '" data-month="' + m + '">'
-                 : '<span style="font-family:var(--font-m);font-size:10px">' + (allocVal ? '£' + allocVal.toLocaleString('en-GB') : '—') + '</span>')
+          var avail    = sblChan[m] ? sblChan[m].planned : 0;
+          var allocVal = ablChan[m] ? ablChan[m].planned : 0;
+          var actVal   = ablChan[m] ? ablChan[m].actual  : 0;
+          rowAlloc  += allocVal;
+          rowActual += actVal;
+
+          var inputId = 'abl_' + sid + '_' + ch.id + '_' + m;
+          var availTxt = avail ? '£' + avail.toLocaleString('en-GB') : '—';
+          var overAllocated = allocVal > avail && avail > 0;
+
+          tds += '<td style="padding:3px 6px;text-align:right;font-family:var(--font-m);font-size:10px;color:var(--ink-faint)">' + availTxt + '</td>'
+               + '<td style="padding:2px 4px;text-align:right">'
+               + '<input type="number" id="' + inputId + '" value="' + allocVal + '" min="0" '
+               + 'style="width:68px;padding:3px 6px;border:1.5px solid ' + (overAllocated ? '#FECACA' : 'var(--border-med)') + ';border-radius:3px;font-family:var(--font-m);font-size:10px;text-align:right;background:' + (overAllocated ? '#FEF2F2' : 'var(--white)') + '" '
+               + 'data-site="' + sid + '" data-channel="' + ch.id + '" data-month="' + m + '" data-avail="' + avail + '" '
+               + 'oninput="plCheckAlloc(this)">'
                + '</td>';
         });
 
-        rows += '<tr style="border-bottom:1px solid var(--border)' + (ci===0 ? ';border-top:2px solid var(--border-med)' : '') + '">'
-          + (ci===0 ? '<td rowspan="' + chans.length + '" style="padding:8px;font-family:var(--font-b);font-size:11px;font-weight:700;vertical-align:top;border-right:1px solid var(--border)">' + plE(site.site_name) + '</td>' : '')
-          + '<td style="padding:6px 8px;font-family:var(--font-b);font-size:11px;color:var(--ink-soft)">' + plE(ch.name) + '</td>'
+        siteTotalAlloc += rowAlloc;
+        grandTotalAlloc += rowAlloc;
+        grandTotalActual += rowActual;
+
+        var isFirstRow = ci === 0;
+        rows += '<tr style="border-bottom:1px solid var(--border)' + (isFirstRow ? ';border-top:2px solid var(--swansway)' : '') + '">'
+          + (isFirstRow ? '<td rowspan="' + mappedChans.length + '" style="padding:8px;font-family:var(--font-b);font-size:11px;font-weight:700;color:var(--ink);vertical-align:top;border-right:1px solid var(--border);white-space:nowrap">' + plE(site.site_name) + '</td>' : '')
+          + '<td style="padding:5px 8px;font-family:var(--font-b);font-size:11px;color:var(--ink-soft)">' + plE(ch.name) + '</td>'
           + tds
-          + '<td style="padding:6px 8px;font-family:var(--font-m);font-size:11px;font-weight:700;text-align:right">' + (totalAlloc ? '£' + totalAlloc.toLocaleString('en-GB') : '—') + '</td>'
+          + '<td style="padding:5px 8px;font-family:var(--font-m);font-size:11px;font-weight:700;text-align:right;color:' + (rowAlloc > 0 ? 'var(--swansway)' : 'var(--ink-faint)') + '">' + (rowAlloc ? '£' + rowAlloc.toLocaleString('en-GB') : '—') + '</td>'
+          + '<td style="padding:5px 8px;font-family:var(--font-m);font-size:11px;text-align:right;color:' + (rowActual > 0 ? '#059669' : 'var(--ink-faint)') + '">' + (rowActual ? '£' + rowActual.toLocaleString('en-GB') : '—') + '</td>'
           + '</tr>';
       });
     });
 
-    el.innerHTML = '<div style="overflow-x:auto;margin-bottom:8px"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead>' + hdr + '</thead><tbody>' + rows + '</tbody></table></div>'
-      + (PL.isAdmin ? '<button class="btn btn-primary" id="ap-save-alloc-btn" data-act-id="' + actId + '" style="margin-top:4px">Save budget allocations</button>' : '');
+    // Totals row
+    rows += '<tr style="border-top:2px solid var(--border);background:var(--surface)">'
+      + '<td colspan="' + (2 + months.length * 2) + '" style="padding:8px;font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint)">Total allocated</td>'
+      + '<td style="padding:8px;font-family:var(--font-d);font-size:14px;font-weight:700;text-align:right;color:var(--swansway)">£' + grandTotalAlloc.toLocaleString('en-GB') + '</td>'
+      + '<td style="padding:8px;font-family:var(--font-d);font-size:14px;font-weight:700;text-align:right;color:#059669">' + (grandTotalActual ? '£' + grandTotalActual.toLocaleString('en-GB') : '—') + '</td>'
+      + '</tr>';
 
-    var saveAllocBtn = document.getElementById('ap-save-alloc-btn');
-    if (saveAllocBtn) saveAllocBtn.addEventListener('click', function() { plSaveAllocations(this.getAttribute('data-act-id')); });
+    el.innerHTML = '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid var(--border);border-radius:4px">'
+      + '<table style="width:100%;border-collapse:collapse;font-size:11px">'
+      + '<thead>' + hdr + '</thead>'
+      + '<tbody>' + rows + '</tbody>'
+      + '</table></div>'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      + '<button class="btn btn-primary" id="ap-save-alloc-btn" data-act-id="' + actId + '">Save allocations</button>'
+      + '<span style="font-size:11px;color:var(--ink-faint)">Red inputs = over-allocated for that month</span>'
+      + '</div>';
+
+    var saveBtn = document.getElementById('ap-save-alloc-btn');
+    if (saveBtn) saveBtn.addEventListener('click', function() { plSaveAllocations(this.getAttribute('data-act-id')); });
 
   } catch(err) {
     el.innerHTML = '<div style="color:#DC2626;font-size:12px;padding:8px">Error loading budget: ' + plE(err.message) + '</div>';
+    console.error('Budget detail error:', err);
   }
 }
 
+function plCheckAlloc(input) {
+  var avail = parseFloat(input.getAttribute('data-avail')) || 0;
+  var val   = parseFloat(input.value) || 0;
+  var over  = avail > 0 && val > avail;
+  input.style.borderColor = over ? '#FECACA' : 'var(--border-med)';
+  input.style.background  = over ? '#FEF2F2' : 'var(--white)';
+}
 /* ══ Save allocations ══ */
 async function plSaveAllocations(actId) {
   var btn = document.getElementById('ap-save-alloc-btn');
