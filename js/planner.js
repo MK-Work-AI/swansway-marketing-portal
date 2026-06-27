@@ -399,75 +399,310 @@ function plToggleActBrand(bid) {
 }
 
 /* ── Category modal — shows all sites for a brand+category ── */
-function plOpenActCategoryModal(bid, catEncoded) {
-  var catName  = decodeURIComponent(catEncoded);
-  var color    = BRAND_COLORS[bid] || '#666';
-  var bname    = BRAND_NAMES[bid]  || bid;
+function plOpenActCategoryModal(bid, catName) {
+  var color = BRAND_COLORS[bid] || '#666';
+  var bname = BRAND_NAMES[bid]  || bid;
 
-  // Get all activities for this brand + category
-  var acts = PL.activities.filter(function(a) {
+  // Find the single brand-level activity for this brand + category
+  var act = PL.activities.find(function(a) {
     return a.brand_id === bid && a.title === catName;
   });
+  if (!act) return;
 
-  if (!acts.length) return;
+  var assigned = plGetTeamName(act.assigned_to);
 
-  var rowsHtml = acts.map(function(a) {
-    var siteName = plGetSiteName(a.site_id);
-    var budget   = a.total_budget ? '£' + Number(a.total_budget).toLocaleString('en-GB') : '—';
-    var actual   = a.total_actual ? '£' + Number(a.total_actual).toLocaleString('en-GB') : '—';
-    var assigned = plGetTeamName(a.assigned_to);
+  // Q3 months for this quarter
+  var qMonths = plGetQuarterMonths(PL.quarter);
+  var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-    return '<tr style="border-bottom:1px solid var(--border)">'
-      + '<td style="padding:10px 12px;font-family:var(--font-b);font-size:12px;font-weight:600;color:var(--ink)">' + plEsc(siteName) + '</td>'
-      + '<td style="padding:10px 12px;text-align:center">' + plRagPill(a.rag_status) + '</td>'
-      + '<td style="padding:10px 12px;font-family:var(--font-b);font-size:12px;color:var(--ink-soft)">' + plEsc(a.stage || '—') + '</td>'
-      + '<td style="padding:10px 12px;font-family:var(--font-m);font-size:11px;color:var(--ink-soft)">' + budget + '</td>'
-      + '<td style="padding:10px 12px;font-family:var(--font-m);font-size:11px;color:var(--ink-soft)">' + actual + '</td>'
-      + '<td style="padding:10px 12px;font-family:var(--font-b);font-size:11px;color:var(--ink-soft)">' + plEsc(assigned) + '</td>'
-      + '<td style="padding:10px 12px;text-align:center">'
-      + (PL.isAdmin ? '<button class="btn pl-edit-act-btn" data-id="' + a.id + '" style="padding:3px 10px;font-size:11px">Edit</button>' : '')
-      + '</td>'
-      + '</tr>';
+  // Get sites for this brand
+  var brandSites = PL.sites.filter(function(s) { return s.brand_id === bid; });
+
+  // Build budget allocation table header
+  var thStyle = 'padding:7px 10px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-faint);text-align:right;white-space:nowrap';
+  var th1Style = 'padding:7px 10px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-faint);text-align:left;min-width:140px';
+
+  var budgetTableHdr = '<tr style="background:var(--surface);border-bottom:1px solid var(--border)">'
+    + '<th style="' + th1Style + '">Site</th>'
+    + '<th style="' + th1Style + '">Channel</th>';
+  qMonths.forEach(function(m) {
+    budgetTableHdr += '<th style="' + thStyle + '">' + monthNames[m-1] + ' avail.</th>'
+      + '<th style="' + thStyle + '">' + monthNames[m-1] + ' alloc.</th>';
+  });
+  budgetTableHdr += '<th style="' + thStyle + '">Total alloc.</th></tr>';
+
+  // Build rows: site_budget_lines available + activity_budget_lines allocated
+  // We load these async — show loading state first, populate after
+  var budgetSectionHtml = '<div id="pl-budget-alloc-wrap" style="overflow-x:auto">'
+    + '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    + '<thead>' + budgetTableHdr + '</thead>'
+    + '<tbody id="pl-budget-alloc-body">'
+    + '<tr><td colspan="' + (2 + qMonths.length * 2 + 1) + '" style="padding:20px;text-align:center;color:var(--ink-faint)">Loading budget data…</td></tr>'
+    + '</tbody></table></div>'
+    + (PL.isAdmin ? '<div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-primary" id="pl-save-alloc-btn">Save allocations</button></div>' : '');
+
+  var teamOptions = PL.team.map(function(m) {
+    return '<option value="' + m.id + '"' + (act.assigned_to === m.id ? ' selected' : '') + '>' + plEsc(m.name) + '</option>';
   }).join('');
 
-  // Notes/description preview from first act with content
-  var desc = '';
-  acts.forEach(function(a) { if (!desc && a.description) desc = a.description; });
-  var notes = '';
-  acts.forEach(function(a) { if (!notes && a.notes) notes = a.notes; });
+  var ragOptions = ['Not Started','In Progress','At Risk','On Track','Complete','TBC','Cancelled'].map(function(r) {
+    return '<option value="' + r + '"' + (act.rag_status === r ? ' selected' : '') + '>' + r + '</option>';
+  }).join('');
+
+  var stageOptions = ['Not Started','Planning','In Progress','Awaiting Input','Complete','Cancelled'].map(function(s) {
+    return '<option value="' + s + '"' + (act.stage === s ? ' selected' : '') + '>' + s + '</option>';
+  }).join('');
 
   var html = '<div class="pl-modal-overlay" onclick="if(event.target===this)plCloseModal()">'
-    + '<div class="pl-modal" style="max-width:820px">'
+    + '<div class="pl-modal" style="max-width:960px">'
     + '<div class="pl-modal-hdr" style="border-top:4px solid ' + color + '">'
     + '<div>'
     + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:4px">' + plEsc(bname) + ' · Q' + PL.quarter + ' ' + PL.year + '</div>'
     + '<div class="pl-modal-title">' + plEsc(catName) + '</div>'
-    + (desc ? '<div style="font-size:12px;color:var(--ink-soft);margin-top:4px">' + plEsc(desc) + '</div>' : '')
+    + (act.description ? '<div style="font-size:12px;color:var(--ink-soft);margin-top:4px">' + plEsc(act.description) + '</div>' : '')
     + '</div>'
     + '<button class="pl-modal-close" onclick="plCloseModal()">×</button>'
     + '</div>'
     + '<div class="pl-modal-body" style="padding:0">'
-    + (notes ? '<div style="padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);font-size:12px;color:var(--ink-soft);font-style:italic">' + plEsc(notes) + '</div>' : '')
-    + '<table style="width:100%;border-collapse:collapse">'
-    + '<thead><tr style="background:var(--surface);border-bottom:1px solid var(--border)">'
-    + '<th style="padding:8px 12px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);text-align:left">Site</th>'
-    + '<th style="padding:8px 12px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);text-align:center">RAG</th>'
-    + '<th style="padding:8px 12px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);text-align:left">Stage</th>'
-    + '<th style="padding:8px 12px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);text-align:left">Budget</th>'
-    + '<th style="padding:8px 12px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);text-align:left">Actual</th>'
-    + '<th style="padding:8px 12px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);text-align:left">Assigned</th>'
-    + '<th style="padding:8px 12px"></th>'
-    + '</tr></thead>'
-    + '<tbody>' + rowsHtml + '</tbody>'
-    + '</table>'
+
+    // Activity status row
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border)">'
+    + '<div style="background:var(--white);padding:12px 16px">'
+    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);margin-bottom:5px">Status</div>'
+    + (PL.isAdmin
+        ? '<select id="act-rag-sel" style="width:100%;padding:5px 8px;border:1.5px solid var(--border-med);border-radius:3px;font-family:var(--font-b);font-size:12px">' + ragOptions + '</select>'
+        : plRagPill(act.rag_status))
     + '</div>'
-    + '<div class="pl-modal-footer">'
+    + '<div style="background:var(--white);padding:12px 16px">'
+    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);margin-bottom:5px">Stage</div>'
+    + (PL.isAdmin
+        ? '<select id="act-stage-sel" style="width:100%;padding:5px 8px;border:1.5px solid var(--border-med);border-radius:3px;font-family:var(--font-b);font-size:12px">' + stageOptions + '</select>'
+        : '<span style="font-family:var(--font-b);font-size:12px">' + plEsc(act.stage || '—') + '</span>')
+    + '</div>'
+    + '<div style="background:var(--white);padding:12px 16px">'
+    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);margin-bottom:5px">Assigned to</div>'
+    + (PL.isAdmin
+        ? '<select id="act-assigned-sel" style="width:100%;padding:5px 8px;border:1.5px solid var(--border-med);border-radius:3px;font-family:var(--font-b);font-size:12px"><option value="">—</option>' + teamOptions + '</select>'
+        : '<span style="font-family:var(--font-b);font-size:12px">' + plEsc(assigned) + '</span>')
+    + '</div>'
+    + '</div>'
+
+    // Notes
+    + (act.notes ? '<div style="padding:10px 16px;background:var(--surface);border-top:1px solid var(--border);font-size:12px;color:var(--ink-soft);font-style:italic">' + plEsc(act.notes) + '</div>' : '')
+
+    // Budget allocation section header
+    + '<div style="padding:10px 16px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between">'
+    + '<span style="font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink)">Budget Allocation — by site & channel</span>'
+    + '<span style="font-size:11px;color:var(--ink-faint)">Available from Site Budgets · Allocate per month below</span>'
+    + '</div>'
+    + budgetSectionHtml
+
+    + '</div>'
+    + '<div class="pl-modal-footer" id="pl-act-modal-footer">'
+    + (PL.isAdmin ? '<button class="btn btn-primary" id="pl-save-act-status-btn" data-id="' + act.id + '">Save status</button>' : '')
     + '<button class="btn" onclick="plCloseModal()">Close</button>'
     + '</div>'
     + '</div></div>';
 
   var root = document.getElementById('pl-modal-root');
-  if (root) root.innerHTML = html;
+  if (!root) return;
+  root.innerHTML = html;
+
+  // Bind save status button
+  var saveStatusBtn = document.getElementById('pl-save-act-status-btn');
+  if (saveStatusBtn) {
+    saveStatusBtn.addEventListener('click', function() {
+      plSaveActStatus(this.getAttribute('data-id'));
+    });
+  }
+
+  // Bind save allocation button
+  var saveAllocBtn = document.getElementById('pl-save-alloc-btn');
+  if (saveAllocBtn) {
+    saveAllocBtn.addEventListener('click', function() {
+      plSaveAllocations(act.id, bid, qMonths);
+    });
+  }
+
+  // Load budget data async
+  plLoadBudgetAlloc(act.id, bid, brandSites, qMonths);
+}
+
+/* ── Get months for a quarter ── */
+function plGetQuarterMonths(q) {
+  return { 1:[1,2,3], 2:[4,5,6], 3:[7,8,9], 4:[10,11,12] }[q] || [7,8,9];
+}
+
+/* ── Load budget allocation data ── */
+async function plLoadBudgetAlloc(actId, bid, sites, months) {
+  var tbody = document.getElementById('pl-budget-alloc-body');
+  if (!tbody) return;
+
+  try {
+    var year = PL.year;
+    var siteIds = sites.map(function(s) { return s.site_id; }).join(',');
+    if (!siteIds) {
+      tbody.innerHTML = '<tr><td colspan="20" style="padding:16px;text-align:center;color:var(--ink-faint)">No sites found for this brand.</td></tr>';
+      return;
+    }
+
+    // Load site_budget_lines (available) and activity_budget_lines (allocated) in parallel
+    var [sblRes, ablRes, channelsRes] = await Promise.all([
+      fetch(SUPA_PL + '/site_budget_lines?site_id=in.(' + siteIds + ')&month=in.(' + months.join(',') + ')&year=eq.' + year + '&select=site_id,channel,month,planned,actual', { headers: getAuthHeaders() }),
+      fetch(SUPA_PL + '/activity_budget_lines?activity_id=eq.' + actId + '&select=*', { headers: getAuthHeaders() }),
+      fetch(SUPA_PL + '/activity_channels?active=eq.true&order=sort_order&select=id,name', { headers: getAuthHeaders() })
+    ]);
+
+    var sblData  = sblRes.ok  ? await sblRes.json()  : [];
+    var ablData  = ablRes.ok  ? await ablRes.json()  : [];
+    var channels = channelsRes.ok ? await channelsRes.json() : [];
+
+    // Index site_budget_lines: sbl[site_id][channel][month] = planned
+    var sbl = {};
+    sblData.forEach(function(row) {
+      if (!sbl[row.site_id]) sbl[row.site_id] = {};
+      if (!sbl[row.site_id][row.channel]) sbl[row.site_id][row.channel] = {};
+      sbl[row.site_id][row.channel][row.month] = { planned: row.planned || 0, actual: row.actual || 0 };
+    });
+
+    // Index activity_budget_lines: abl[site_id][channel_id][month] = { planned, actual, id }
+    var abl = {};
+    ablData.forEach(function(row) {
+      if (!abl[row.site_id]) abl[row.site_id] = {};
+      if (!abl[row.site_id][row.channel_id]) abl[row.site_id][row.channel_id] = {};
+      abl[row.site_id][row.channel_id][row.month] = { planned: row.planned || 0, actual: row.actual || 0, id: row.id };
+    });
+
+    // Only show channels that have budget data for these sites, plus top channels
+    var topChannelIds = ['paid-search','autotrader','paid-social','display','email','social-organic','mfr-coop','events-showroom','other-local','seo-content'];
+    var relevantChannels = channels.filter(function(c) { return topChannelIds.indexOf(c.id) !== -1; });
+
+    var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var tdNum = 'padding:6px 8px;font-family:var(--font-m);font-size:11px;text-align:right;color:var(--ink-soft)';
+    var tdAvail = 'padding:6px 8px;font-family:var(--font-m);font-size:11px;text-align:right;color:var(--ink-faint)';
+    var tdSite = 'padding:8px 10px;font-family:var(--font-b);font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap';
+    var tdChan = 'padding:8px 10px;font-family:var(--font-b);font-size:11px;color:var(--ink-soft);white-space:nowrap';
+
+    var rows = '';
+    sites.forEach(function(site) {
+      var sid = site.site_id;
+      var siteSbl = sbl[sid] || {};
+      var siteAbl = abl[sid] || {};
+      var siteRowCount = 0;
+
+      relevantChannels.forEach(function(ch, ci) {
+        var chanSbl = siteSbl[ch.name] || {};
+        var chanAbl = siteAbl[ch.id]   || {};
+
+        // Calculate totals
+        var totalAvail = 0, totalAlloc = 0;
+        months.forEach(function(m) {
+          totalAvail += (chanSbl[m] ? chanSbl[m].planned : 0);
+          totalAlloc += (chanAbl[m] ? chanAbl[m].planned : 0);
+        });
+
+        rows += '<tr style="border-bottom:1px solid var(--border)' + (ci === 0 ? ';border-top:2px solid var(--border-med)' : '') + '">'
+          + (ci === 0 ? '<td rowspan="' + relevantChannels.length + '" style="' + tdSite + ';border-right:1px solid var(--border);vertical-align:top;padding-top:10px">' + plEsc(site.site_name) + '</td>' : '')
+          + '<td style="' + tdChan + '">' + plEsc(ch.name) + '</td>';
+
+        months.forEach(function(m) {
+          var avail = chanSbl[m] ? chanSbl[m].planned : 0;
+          var allocVal = chanAbl[m] ? chanAbl[m].planned : 0;
+          var inputId = 'abl_' + sid + '_' + ch.id + '_' + m;
+
+          rows += '<td style="' + tdAvail + '">' + (avail ? '£' + avail.toLocaleString('en-GB') : '—') + '</td>'
+            + '<td style="padding:4px 6px;text-align:right">'
+            + (PL.isAdmin
+                ? '<input type="number" id="' + inputId + '" value="' + allocVal + '" min="0" style="width:72px;padding:3px 6px;border:1.5px solid var(--border-med);border-radius:3px;font-family:var(--font-m);font-size:11px;text-align:right" data-site="' + sid + '" data-channel="' + ch.id + '" data-month="' + m + '">'
+                : '<span style="font-family:var(--font-m);font-size:11px">' + (allocVal ? '£' + allocVal.toLocaleString('en-GB') : '—') + '</span>')
+            + '</td>';
+        });
+
+        rows += '<td style="' + tdNum + ';font-weight:700;color:' + (totalAlloc > totalAvail ? '#DC2626' : 'var(--ink)') + '">'
+          + (totalAlloc ? '£' + totalAlloc.toLocaleString('en-GB') : '—') + '</td>'
+          + '</tr>';
+      });
+    });
+
+    tbody.innerHTML = rows || '<tr><td colspan="20" style="padding:16px;text-align:center;color:var(--ink-faint)">No budget data found. Set site budgets in Admin → Site Budgets first.</td></tr>';
+
+  } catch(e) {
+    var tbody2 = document.getElementById('pl-budget-alloc-body');
+    if (tbody2) tbody2.innerHTML = '<tr><td colspan="20" style="padding:16px;text-align:center;color:#DC2626">Error loading budget data: ' + plEsc(e.message) + '</td></tr>';
+  }
+}
+
+/* ── Save activity status (RAG/stage/assigned) ── */
+async function plSaveActStatus(id) {
+  var rag      = (document.getElementById('act-rag-sel')      || {}).value;
+  var stage    = (document.getElementById('act-stage-sel')    || {}).value;
+  var assigned = (document.getElementById('act-assigned-sel') || {}).value || null;
+  var btn      = document.getElementById('pl-save-act-status-btn');
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+  try {
+    var r = await fetch(SUPA_PL + '/activities?id=eq.' + id, {
+      method: 'PATCH',
+      headers: getAuthHeaders({ 'Content-Type':'application/json', 'Prefer':'return=minimal' }),
+      body: JSON.stringify({ rag_status: rag, stage: stage, assigned_to: assigned, updated_at: new Date().toISOString() })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    plShowToast('Status updated ✓', '#059669');
+    await plLoadData();
+    plRenderActivities();
+    plUpdateKPIs();
+  } catch(e) {
+    plShowToast('Save failed: ' + e.message, '#DC2626');
+  } finally {
+    if (btn) { btn.textContent = 'Save status'; btn.disabled = false; }
+  }
+}
+
+/* ── Save budget allocations ── */
+async function plSaveAllocations(actId, bid, months) {
+  var btn = document.getElementById('pl-save-alloc-btn');
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+
+  try {
+    // Collect all input values
+    var inputs = document.querySelectorAll('#pl-budget-alloc-body input[type="number"]');
+    var upserts = [];
+
+    inputs.forEach(function(inp) {
+      var site    = inp.getAttribute('data-site');
+      var channel = inp.getAttribute('data-channel');
+      var month   = parseInt(inp.getAttribute('data-month'));
+      var val     = parseFloat(inp.value) || 0;
+
+      upserts.push({
+        activity_id: actId,
+        site_id:     site,
+        channel_id:  channel,
+        month:       month,
+        year:        PL.year,
+        planned:     val,
+        actual:      0
+      });
+    });
+
+    if (!upserts.length) { plShowToast('Nothing to save', '#6B7280'); return; }
+
+    // Upsert all in one call
+    var r = await fetch(SUPA_PL + '/activity_budget_lines', {
+      method: 'POST',
+      headers: getAuthHeaders({
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      }),
+      body: JSON.stringify(upserts)
+    });
+
+    if (!r.ok) throw new Error(await r.text());
+    plShowToast('Budget allocations saved ✓', '#059669');
+  } catch(e) {
+    plShowToast('Save failed: ' + e.message, '#DC2626');
+  } finally {
+    if (btn) { btn.textContent = 'Save allocations'; btn.disabled = false; }
+  }
 }
 
 /* ── Section toggle ── */
