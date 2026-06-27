@@ -438,11 +438,11 @@ async function plOpenActPanel(id) {
     + '</div>'
     + '<div id="ap-deliverables"><div class="pl-loading-sm">Loading…</div></div>'
 
-    + '<div class="pl-panel-section-hdr" style="display:flex;align-items:center;justify-content:space-between">'
-    + '<span>Budget Breakdown</span>'
-    + '<button class="btn" style="padding:2px 10px;font-size:11px" id="ap-budget-toggle-btn">Show ▾</button>'
+    + '<div class="pl-panel-section-hdr">Budget Allocation</div>'
+    + '<div style="margin-bottom:12px">'
+    + '<button class="btn btn-primary" id="ap-budget-modal-btn" data-id="' + a.id + '" style="width:100%">💷 Allocate budget by site & channel</button>'
+    + (a.total_budget ? '<div style="font-size:11px;color:var(--ink-faint);margin-top:5px;text-align:center">Total budget set: £' + Number(a.total_budget).toLocaleString('en-GB') + '</div>' : '<div style="font-size:11px;color:var(--ink-faint);margin-top:5px;text-align:center">Set a total budget above, then allocate by site & channel</div>')
     + '</div>'
-    + '<div id="ap-budget-detail" style="display:none"></div>'
 
     + '<div class="pl-panel-section-hdr">Brief for Oceros</div>'
     + '<div style="margin-bottom:8px">'
@@ -470,8 +470,8 @@ async function plOpenActPanel(id) {
   var addDelBtn = document.getElementById('ap-add-del-btn');
   if (addDelBtn) addDelBtn.addEventListener('click', function() { plAddDeliverable(a.id); });
 
-  var budgetToggle = document.getElementById('ap-budget-toggle-btn');
-  if (budgetToggle) budgetToggle.addEventListener('click', function() { plToggleBudgetDetail(a.id); });
+  var budgetModalBtn = document.getElementById('ap-budget-modal-btn');
+  if (budgetModalBtn) budgetModalBtn.addEventListener('click', function() { plOpenBudgetModal(this.getAttribute('data-id')); });
 
   // Load deliverables async
   await plLoadDeliverables(a.id);
@@ -573,34 +573,64 @@ async function plRemoveDeliverable(delId, actId) {
   } catch(e) { plShowToast('Error: ' + e.message, '#DC2626'); }
 }
 
-/* ══ Budget detail toggle ══ */
-async function plToggleBudgetDetail(actId) {
-  var el  = document.getElementById('ap-budget-detail');
-  var btn = document.getElementById('ap-budget-toggle-btn');
-  if (!el) return;
+/* ══ Budget allocation modal (full width) ══ */
+async function plOpenBudgetModal(actId) {
+  var a = PL.activities.find(function(ac) { return ac.id === actId; });
+  if (!a) return;
 
-  if (el.style.display !== 'none') {
-    el.style.display = 'none';
-    if (btn) btn.textContent = 'Show ▾';
-    return;
-  }
+  var type  = PL.actTypes.find(function(t) { return t.id === a.type_id; });
+  var tname = type ? type.name : '';
+  var tcolor = type ? type.colour_hex : '#6B7280';
+  var bname  = BRAND_NAMES[a.brand_id] || a.brand_id;
+  var months = PL_Q_MONTHS[PL.quarter];
 
-  el.style.display = 'block';
-  if (btn) btn.textContent = 'Hide ▴';
-  el.innerHTML = '<div class="pl-loading-sm">Loading budget data…</div>';
+  // Build modal shell immediately, load data async
+  var root = document.getElementById('pl-modal-root');
+  if (!root) return;
+
+  root.innerHTML = '<div class="pl-modal-overlay" id="pl-budget-modal-overlay">'
+    + '<div style="background:var(--white);border-radius:8px;width:96vw;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.25)">'
+    + '<div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">'
+    + '<div>'
+    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+    + '<span class="pl-type-badge" style="background:' + tcolor + '">' + plE(tname) + '</span>'
+    + '<span style="font-family:var(--font-d);font-size:18px;font-weight:800;color:var(--ink)">' + plE(a.title||'') + '</span>'
+    + '</div>'
+    + '<div style="font-size:12px;color:var(--ink-soft)">' + plE(bname) + ' · Q' + PL.quarter + ' ' + PL.year + ' · Budget allocation by site & channel</div>'
+    + '</div>'
+    + '<button onclick="plCloseBudgetModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--ink-soft);line-height:1">×</button>'
+    + '</div>'
+    + '<div style="flex:1;overflow:auto;padding:20px 24px" id="pl-budget-modal-body">'
+    + '<div class="pl-loading-sm" style="text-align:center;padding:40px">Loading budget data…</div>'
+    + '</div>'
+    + '<div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;background:var(--surface);border-radius:0 0 8px 8px;flex-shrink:0">'
+    + '<button class="btn btn-primary" id="pl-budget-save-btn" data-act-id="' + actId + '">Save allocations</button>'
+    + '<button class="btn" onclick="plCloseBudgetModal()">Cancel</button>'
+    + '<span style="margin-left:auto;font-size:11px;color:var(--ink-faint)">Red = over-allocated vs available budget</span>'
+    + '</div>'
+    + '</div></div>';
+
+  document.getElementById('pl-budget-save-btn').addEventListener('click', function() {
+    plSaveAllocations(this.getAttribute('data-act-id'));
+  });
+
+  // Load data
+  await plLoadBudgetModalData(actId, months);
+}
+
+async function plLoadBudgetModalData(actId, months) {
+  var body = document.getElementById('pl-budget-modal-body');
+  if (!body) return;
 
   try {
-    var months    = PL_Q_MONTHS[PL.quarter];
-    var mNames    = PL_MONTHS;
     var brandSites = PL.sites.filter(function(s) { return s.brand_id === PL.brand; });
-    var siteIds   = brandSites.map(function(s) { return s.site_id; });
+    var siteIds    = brandSites.map(function(s) { return s.site_id; });
 
     if (!siteIds.length) {
-      el.innerHTML = '<div style="font-size:12px;color:var(--ink-faint);padding:8px">No sites found for this brand.</div>';
+      body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-faint)">No sites found for this brand.</div>';
       return;
     }
 
-    // Load: site_budget_lines, existing allocations, and channels with mapping
     var [sblR, ablR, chanR] = await Promise.all([
       fetch(SUPA_PL + '/site_budget_lines?site_id=in.(' + siteIds.join(',') + ')&month=in.(' + months.join(',') + ')&year=eq.' + PL.year + '&select=site_id,channel,month,planned,actual&limit=5000', { headers: getAuthHeaders() }),
       fetch(SUPA_PL + '/activity_budget_lines?activity_id=eq.' + actId + '&select=id,site_id,channel_id,month,year,planned,actual', { headers: getAuthHeaders() }),
@@ -611,50 +641,59 @@ async function plToggleBudgetDetail(actId) {
     var ablRows  = ablR.ok  ? await ablR.json()  : [];
     var channels = chanR.ok ? await chanR.json() : [];
 
-    // Index site_budget_lines: sbl[site_id][sbl_channel_name][month] = {planned, actual}
+    // Index sbl[site_id][channel_name][month]
     var sbl = {};
     sblRows.forEach(function(r) {
       if (!sbl[r.site_id]) sbl[r.site_id] = {};
       if (!sbl[r.site_id][r.channel]) sbl[r.site_id][r.channel] = {};
-      sbl[r.site_id][r.channel][r.month] = { planned: r.planned || 0, actual: r.actual || 0 };
+      sbl[r.site_id][r.channel][r.month] = { planned: r.planned||0, actual: r.actual||0 };
     });
 
-    // Index activity_budget_lines: abl[site_id][channel_id][month] = {planned, actual, id}
+    // Index abl[site_id][channel_id][month]
     var abl = {};
     ablRows.forEach(function(r) {
       if (!abl[r.site_id]) abl[r.site_id] = {};
       if (!abl[r.site_id][r.channel_id]) abl[r.site_id][r.channel_id] = {};
-      abl[r.site_id][r.channel_id][r.month] = { planned: r.planned || 0, actual: r.actual || 0, id: r.id };
+      abl[r.site_id][r.channel_id][r.month] = { planned: r.planned||0, actual: r.actual||0 };
     });
 
-    // Only show channels that have an sbl mapping (the 10 standard ones)
+    // Only mapped channels
     var mappedChans = channels.filter(function(c) { return c.sbl_channel_name; });
 
-    // Build table
-    var thS  = 'padding:5px 8px;font-family:var(--font-m);font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-faint);text-align:right;white-space:nowrap;background:var(--surface);border-bottom:1px solid var(--border)';
-    var th1S = thS + ';text-align:left';
+    var mNames = PL_MONTHS;
+    var thS  = 'padding:7px 10px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-faint);text-align:right;white-space:nowrap;background:var(--surface);border-bottom:2px solid var(--border);position:sticky;top:0;z-index:1';
+    var th1S = thS + ';text-align:left;min-width:140px';
+    var th2S = thS + ';text-align:left;min-width:180px';
 
-    var hdr = '<tr><th style="' + th1S + ';min-width:120px">Site</th><th style="' + th1S + ';min-width:160px">Channel</th>';
+    var hdr = '<tr>'
+      + '<th style="' + th1S + '">Site</th>'
+      + '<th style="' + th2S + '">Channel</th>';
     months.forEach(function(m) {
-      hdr += '<th style="' + thS + '">' + mNames[m-1] + '<br><span style="font-weight:400;opacity:0.7">avail</span></th>'
-           + '<th style="' + thS + '">' + mNames[m-1] + '<br><span style="font-weight:400;opacity:0.7">alloc</span></th>';
+      hdr += '<th style="' + thS + '" colspan="2">' + mNames[m-1] + '</th>';
     });
-    hdr += '<th style="' + thS + '">Total<br><span style="font-weight:400;opacity:0.7">alloc</span></th>'
-         + '<th style="' + thS + '">Actual</th></tr>';
+    hdr += '<th style="' + thS + '">Total<br>Allocated</th>'
+         + '<th style="' + thS + '">Total<br>Actual</th>'
+         + '</tr>'
+    // Sub-header
+     + '<tr style="background:var(--surface)">'
+      + '<th style="' + thS + ';top:35px"></th><th style="' + thS + ';top:35px"></th>';
+    months.forEach(function(m) {
+      hdr += '<th style="' + thS + ';top:35px;color:var(--ink-faint);font-weight:400">Available</th>'
+           + '<th style="' + thS + ';top:35px;color:var(--swansway)">Allocate</th>';
+    });
+    hdr += '<th style="' + thS + ';top:35px"></th><th style="' + thS + ';top:35px"></th></tr>';
 
     var rows = '';
-    var grandTotalAlloc = 0;
-    var grandTotalActual = 0;
+    var grandAlloc = 0;
+    var grandActual = 0;
 
     brandSites.forEach(function(site) {
       var sid = site.site_id;
-      var siteTotalAlloc = 0;
 
       mappedChans.forEach(function(ch, ci) {
-        var sblChan  = (sbl[sid] || {})[ch.sbl_channel_name] || {};
-        var ablChan  = ((abl[sid] || {})[ch.id]) || {};
-        var rowAlloc = 0;
-        var rowActual = 0;
+        var sblChan = ((sbl[sid]||{})[ch.sbl_channel_name])||{};
+        var ablChan = ((abl[sid]||{})[ch.id])||{};
+        var rowAlloc = 0, rowActual = 0;
 
         var tds = '';
         months.forEach(function(m) {
@@ -663,59 +702,62 @@ async function plToggleBudgetDetail(actId) {
           var actVal   = ablChan[m] ? ablChan[m].actual  : 0;
           rowAlloc  += allocVal;
           rowActual += actVal;
+          var over  = allocVal > avail && avail > 0;
+          var inId  = 'abl_' + sid + '_' + ch.id + '_' + m;
 
-          var inputId = 'abl_' + sid + '_' + ch.id + '_' + m;
-          var availTxt = avail ? '£' + avail.toLocaleString('en-GB') : '—';
-          var overAllocated = allocVal > avail && avail > 0;
-
-          tds += '<td style="padding:3px 6px;text-align:right;font-family:var(--font-m);font-size:10px;color:var(--ink-faint)">' + availTxt + '</td>'
-               + '<td style="padding:2px 4px;text-align:right">'
-               + '<input type="number" id="' + inputId + '" value="' + allocVal + '" min="0" '
-               + 'style="width:68px;padding:3px 6px;border:1.5px solid ' + (overAllocated ? '#FECACA' : 'var(--border-med)') + ';border-radius:3px;font-family:var(--font-m);font-size:10px;text-align:right;background:' + (overAllocated ? '#FEF2F2' : 'var(--white)') + '" '
+          tds += '<td style="padding:5px 8px;font-family:var(--font-m);font-size:11px;text-align:right;color:var(--ink-faint);white-space:nowrap">'
+               + (avail ? '£' + avail.toLocaleString('en-GB') : '—') + '</td>'
+               + '<td style="padding:3px 6px;text-align:right">'
+               + '<input type="number" id="' + inId + '" value="' + allocVal + '" min="0" '
+               + 'style="width:80px;padding:4px 8px;border:1.5px solid ' + (over ? '#FECACA' : 'var(--border-med)') + ';border-radius:3px;font-family:var(--font-m);font-size:11px;text-align:right;background:' + (over ? '#FEF2F2' : 'var(--white)') + '" '
                + 'data-site="' + sid + '" data-channel="' + ch.id + '" data-month="' + m + '" data-avail="' + avail + '" '
                + 'oninput="plCheckAlloc(this)">'
                + '</td>';
         });
 
-        siteTotalAlloc += rowAlloc;
-        grandTotalAlloc += rowAlloc;
-        grandTotalActual += rowActual;
+        grandAlloc  += rowAlloc;
+        grandActual += rowActual;
 
-        var isFirstRow = ci === 0;
-        rows += '<tr style="border-bottom:1px solid var(--border)' + (isFirstRow ? ';border-top:2px solid var(--swansway)' : '') + '">'
-          + (isFirstRow ? '<td rowspan="' + mappedChans.length + '" style="padding:8px;font-family:var(--font-b);font-size:11px;font-weight:700;color:var(--ink);vertical-align:top;border-right:1px solid var(--border);white-space:nowrap">' + plE(site.site_name) + '</td>' : '')
-          + '<td style="padding:5px 8px;font-family:var(--font-b);font-size:11px;color:var(--ink-soft)">' + plE(ch.name) + '</td>'
+        var isFirst = ci === 0;
+        var borderTop = isFirst ? 'border-top:2px solid var(--border-med)' : '';
+        var siteCell = isFirst
+          ? '<td rowspan="' + mappedChans.length + '" style="padding:10px;font-family:var(--font-b);font-size:12px;font-weight:700;color:var(--ink);vertical-align:top;border-right:1px solid var(--border);white-space:nowrap;border-top:2px solid var(--border-med)">' + plE(site.site_name) + '</td>'
+          : '';
+
+        rows += '<tr style="border-bottom:1px solid var(--border);' + borderTop + '">'
+          + siteCell
+          + '<td style="padding:6px 10px;font-family:var(--font-b);font-size:11px;color:var(--ink-soft)">' + plE(ch.name) + '</td>'
           + tds
-          + '<td style="padding:5px 8px;font-family:var(--font-m);font-size:11px;font-weight:700;text-align:right;color:' + (rowAlloc > 0 ? 'var(--swansway)' : 'var(--ink-faint)') + '">' + (rowAlloc ? '£' + rowAlloc.toLocaleString('en-GB') : '—') + '</td>'
-          + '<td style="padding:5px 8px;font-family:var(--font-m);font-size:11px;text-align:right;color:' + (rowActual > 0 ? '#059669' : 'var(--ink-faint)') + '">' + (rowActual ? '£' + rowActual.toLocaleString('en-GB') : '—') + '</td>'
+          + '<td style="padding:6px 10px;font-family:var(--font-m);font-size:12px;font-weight:700;text-align:right;color:' + (rowAlloc > 0 ? 'var(--swansway)' : 'var(--ink-faint)') + ';white-space:nowrap">'
+          + (rowAlloc ? '£' + rowAlloc.toLocaleString('en-GB') : '—') + '</td>'
+          + '<td style="padding:6px 10px;font-family:var(--font-m);font-size:12px;text-align:right;color:' + (rowActual ? '#059669' : 'var(--ink-faint)') + ';white-space:nowrap">'
+          + (rowActual ? '£' + rowActual.toLocaleString('en-GB') : '—') + '</td>'
           + '</tr>';
       });
     });
 
-    // Totals row
-    rows += '<tr style="border-top:2px solid var(--border);background:var(--surface)">'
-      + '<td colspan="' + (2 + months.length * 2) + '" style="padding:8px;font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint)">Total allocated</td>'
-      + '<td style="padding:8px;font-family:var(--font-d);font-size:14px;font-weight:700;text-align:right;color:var(--swansway)">£' + grandTotalAlloc.toLocaleString('en-GB') + '</td>'
-      + '<td style="padding:8px;font-family:var(--font-d);font-size:14px;font-weight:700;text-align:right;color:#059669">' + (grandTotalActual ? '£' + grandTotalActual.toLocaleString('en-GB') : '—') + '</td>'
+    // Grand total row
+    rows += '<tr style="border-top:3px solid var(--swansway);background:var(--surface)">'
+      + '<td colspan="' + (2 + months.length * 2) + '" style="padding:12px 10px;font-family:var(--font-m);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-faint)">Total allocated this activity</td>'
+      + '<td style="padding:12px 10px;font-family:var(--font-d);font-size:18px;font-weight:800;text-align:right;color:var(--swansway)">£' + grandAlloc.toLocaleString('en-GB') + '</td>'
+      + '<td style="padding:12px 10px;font-family:var(--font-d);font-size:18px;font-weight:800;text-align:right;color:#059669">' + (grandActual ? '£' + grandActual.toLocaleString('en-GB') : '—') + '</td>'
       + '</tr>';
 
-    el.innerHTML = '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid var(--border);border-radius:4px">'
-      + '<table style="width:100%;border-collapse:collapse;font-size:11px">'
+    body.innerHTML = '<div style="overflow-x:auto">'
+      + '<table style="width:100%;border-collapse:collapse;font-size:12px">'
       + '<thead>' + hdr + '</thead>'
       + '<tbody>' + rows + '</tbody>'
-      + '</table></div>'
-      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-      + '<button class="btn btn-primary" id="ap-save-alloc-btn" data-act-id="' + actId + '">Save allocations</button>'
-      + '<span style="font-size:11px;color:var(--ink-faint)">Red inputs = over-allocated for that month</span>'
-      + '</div>';
-
-    var saveBtn = document.getElementById('ap-save-alloc-btn');
-    if (saveBtn) saveBtn.addEventListener('click', function() { plSaveAllocations(this.getAttribute('data-act-id')); });
+      + '</table></div>';
 
   } catch(err) {
-    el.innerHTML = '<div style="color:#DC2626;font-size:12px;padding:8px">Error loading budget: ' + plE(err.message) + '</div>';
-    console.error('Budget detail error:', err);
+    body.innerHTML = '<div style="color:#DC2626;padding:20px;text-align:center">Error loading budget data: ' + plE(err.message) + '</div>';
+    console.error('Budget modal error:', err);
   }
+}
+
+function plCloseBudgetModal() {
+  var root = document.getElementById('pl-modal-root');
+  if (root) root.innerHTML = '';
 }
 
 function plCheckAlloc(input) {
