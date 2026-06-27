@@ -19,7 +19,7 @@ var PL = {
   filters:    { type:'', rag:'', assigned:'', search:'' },
   sectionsOpen: { events: true, activities: true },
   isAdmin:    false,
-  openActSite: null  // currently expanded activity site
+  openActBrand: null  // currently expanded brand in activities
 };
 
 /* ── Init ── */
@@ -286,7 +286,7 @@ function plEventCard(e) {
 
 /* ── Render activities ── */
 function plRenderActivities() {
-  var body = document.getElementById('pl-acts-body');
+  var body    = document.getElementById('pl-acts-body');
   var countEl = document.getElementById('pl-acts-count');
   if (!body) return;
 
@@ -301,78 +301,178 @@ function plRenderActivities() {
     return;
   }
 
-  // Group by brand → site
-  var byBrandSite = {};
+  // Group by brand only
+  var byBrand = {};
   acts.forEach(function(a) {
-    var key = a.brand_id;
-    if (!byBrandSite[key]) byBrandSite[key] = {};
-    if (!byBrandSite[key][a.site_id]) byBrandSite[key][a.site_id] = [];
-    byBrandSite[key][a.site_id].push(a);
+    if (!byBrand[a.brand_id]) byBrand[a.brand_id] = [];
+    byBrand[a.brand_id].push(a);
   });
 
   var html = '';
-  Object.keys(byBrandSite).sort().forEach(function(bid) {
-    var color = BRAND_COLORS[bid] || '#666';
-    var bname = BRAND_NAMES[bid] || bid;
-    var siteMap = byBrandSite[bid];
-    var totalActs = 0;
-    Object.keys(siteMap).forEach(function(sid) { totalActs += siteMap[sid].length; });
+  Object.keys(byBrand).sort().forEach(function(bid) {
+    var color  = BRAND_COLORS[bid] || '#666';
+    var bname  = BRAND_NAMES[bid]  || bid;
+    var bActs  = byBrand[bid];
+    var isOpen = PL.openActBrand === bid;
 
-    html += '<div class="pl-act-brand-block">'
-      + '<div class="pl-act-brand-hdr" style="background:' + color + '">'
-      + '<span class="pl-act-brand-name">' + plEsc(bname) + '</span>'
-      + '<span class="pl-act-brand-site">' + Object.keys(siteMap).length + ' sites · ' + totalActs + ' activities</span>'
-      + '</div>';
+    // RAG summary counts across all activities for this brand
+    var ragCounts = {};
+    bActs.forEach(function(a) { ragCounts[a.rag_status] = (ragCounts[a.rag_status] || 0) + 1; });
 
-    Object.keys(siteMap).sort().forEach(function(sid) {
-      var siteName = plGetSiteName(sid) || sid;
-      var siteActs = siteMap[sid];
-      var siteKey  = bid + '___' + sid;
-      var isOpen   = PL.openActSite === siteKey;
-
-      // Count RAG
-      var ragCounts = {};
-      siteActs.forEach(function(a) { ragCounts[a.rag_status] = (ragCounts[a.rag_status]||0)+1; });
-      var ragSummary = Object.keys(ragCounts).map(function(r) {
-        return '<span class="rag rag-' + plRagClass(r) + '" style="margin-right:3px">' + r + ' ' + ragCounts[r] + '</span>';
-      }).join('');
-
-      html += '<div class="pl-act-site-block">'
-        + '<div class="pl-act-site-hdr" onclick="plToggleActSite(\'' + siteKey + '\')">'
-        + '<span class="pl-act-site-name">📍 ' + plEsc(siteName) + '</span>'
-        + '<span style="display:flex;align-items:center;gap:6px">' + ragSummary + '<span class="pl-act-site-toggle">' + (isOpen ? '▲' : '▼') + '</span></span>'
-        + '</div>';
-
-      if (isOpen) {
-        html += '<div class="pl-act-cats">';
-        siteActs.forEach(function(a) {
-          html += '<div class="pl-act-cat" onclick="plOpenActDetail(\'' + a.id + '\')">'
-            + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">'
-            + '<span class="pl-act-cat-name">' + plEsc(a.title || '') + '</span>'
-            + plRagPill(a.rag_status)
-            + '</div>'
-            + '<div class="pl-act-cat-budget">'
-            + (a.total_budget ? '£' + Number(a.total_budget).toLocaleString('en-GB') + ' budgeted' : 'Budget TBC')
-            + (a.assigned_to ? ' · ' + plEsc(plGetTeamName(a.assigned_to)) : '')
-            + '</div>'
-            + '</div>';
-        });
-        html += '</div>';
+    // Category summary — deduplicate categories, show worst RAG per category
+    var byCategory = {};
+    bActs.forEach(function(a) {
+      if (!byCategory[a.title]) {
+        byCategory[a.title] = { title: a.title, acts: [], worstRag: 'Complete' };
       }
-
-      html += '</div>'; // /.pl-act-site-block
+      byCategory[a.title].acts.push(a);
+    });
+    // Determine worst RAG per category (Not Started > At Risk > In Progress > On Track > Complete)
+    var ragOrder = ['Not Started','At Risk','In Progress','TBC','On Track','Complete','Cancelled'];
+    Object.keys(byCategory).forEach(function(cat) {
+      var worst = 'Complete';
+      byCategory[cat].acts.forEach(function(a) {
+        var ri = ragOrder.indexOf(a.rag_status);
+        if (ri < ragOrder.indexOf(worst) || worst === 'Complete') worst = a.rag_status;
+      });
+      byCategory[cat].worstRag = worst;
     });
 
-    html += '</div>'; // /.pl-act-brand-block
+    // Header RAG pills
+    var ragSummary = '';
+    var ragDisplay = [
+      { key:'At Risk',     label:'At Risk' },
+      { key:'Not Started', label:'Not Started' },
+      { key:'In Progress', label:'In Progress' },
+      { key:'On Track',    label:'On Track' },
+      { key:'Complete',    label:'Complete' },
+    ];
+    ragDisplay.forEach(function(r) {
+      if (ragCounts[r.key]) {
+        ragSummary += '<span class="rag rag-' + plRagClass(r.key) + '" style="margin-right:3px">'
+          + r.label + ' ' + ragCounts[r.key] + '</span>';
+      }
+    });
+
+    html += '<div style="margin-bottom:8px;border:1px solid var(--border);border-radius:4px;overflow:hidden">'
+      // Brand header row — clickable to expand/collapse
+      + '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:' + color + ';cursor:pointer" onclick="plToggleActBrand('' + bid + '')">'
+      + '<div style="display:flex;align-items:center;gap:10px">'
+      + '<span style="font-family:var(--font-d);font-size:14px;font-weight:700;color:#fff">' + plEsc(bname) + '</span>'
+      + '<span style="font-size:11px;color:rgba(255,255,255,0.65)">' + bActs.length + ' activities · ' + Object.keys(byCategory).length + ' categories</span>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:6px">'
+      + ragSummary
+      + '<span style="font-size:11px;color:rgba(255,255,255,0.7);margin-left:4px">' + (isOpen ? '▲' : '▼') + '</span>'
+      + '</div>'
+      + '</div>';
+
+    if (isOpen) {
+      // Category grid — one cell per unique category, showing RAG and site count
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1px;background:var(--border)">';
+      Object.keys(byCategory).sort().forEach(function(catName) {
+        var cat      = byCategory[catName];
+        var siteCount = cat.acts.length;
+        var rag       = cat.worstRag;
+        // Find any with notes/description to preview
+        var preview  = '';
+        cat.acts.forEach(function(a) { if (!preview && a.description) preview = a.description; });
+
+        html += '<div class="pl-act-cat" onclick="plOpenActCategoryModal('' + bid + '','' + encodeURIComponent(catName) + '')">'
+          + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">'
+          + '<span class="pl-act-cat-name">' + plEsc(catName) + '</span>'
+          + plRagPill(rag)
+          + '</div>'
+          + '<div class="pl-act-cat-budget">' + siteCount + ' site' + (siteCount !== 1 ? 's' : '')
+          + (preview ? ' · ' + plEsc(preview.substring(0, 50)) + (preview.length > 50 ? '…' : '') : '')
+          + '</div>'
+          + '</div>';
+      });
+      html += '</div>'; // /.category grid
+    }
+
+    html += '</div>'; // /.brand block
   });
 
   body.innerHTML = html;
 }
 
-/* ── Toggle activity site ── */
-function plToggleActSite(key) {
-  PL.openActSite = PL.openActSite === key ? null : key;
+/* ── Toggle activity brand ── */
+function plToggleActBrand(bid) {
+  PL.openActBrand = PL.openActBrand === bid ? null : bid;
   plRenderActivities();
+}
+
+/* ── Category modal — shows all sites for a brand+category ── */
+function plOpenActCategoryModal(bid, catEncoded) {
+  var catName  = decodeURIComponent(catEncoded);
+  var color    = BRAND_COLORS[bid] || '#666';
+  var bname    = BRAND_NAMES[bid]  || bid;
+
+  // Get all activities for this brand + category
+  var acts = PL.activities.filter(function(a) {
+    return a.brand_id === bid && a.title === catName;
+  });
+
+  if (!acts.length) return;
+
+  var rowsHtml = acts.map(function(a) {
+    var siteName = plGetSiteName(a.site_id);
+    var budget   = a.total_budget ? '£' + Number(a.total_budget).toLocaleString('en-GB') : '—';
+    var actual   = a.total_actual ? '£' + Number(a.total_actual).toLocaleString('en-GB') : '—';
+    var assigned = plGetTeamName(a.assigned_to);
+
+    return '<tr style="border-bottom:1px solid var(--border)">'
+      + '<td style="padding:10px 12px;font-family:var(--font-b);font-size:12px;font-weight:600;color:var(--ink)">' + plEsc(siteName) + '</td>'
+      + '<td style="padding:10px 12px;text-align:center">' + plRagPill(a.rag_status) + '</td>'
+      + '<td style="padding:10px 12px;font-family:var(--font-b);font-size:12px;color:var(--ink-soft)">' + plEsc(a.stage || '—') + '</td>'
+      + '<td style="padding:10px 12px;font-family:var(--font-m);font-size:11px;color:var(--ink-soft)">' + budget + '</td>'
+      + '<td style="padding:10px 12px;font-family:var(--font-m);font-size:11px;color:var(--ink-soft)">' + actual + '</td>'
+      + '<td style="padding:10px 12px;font-family:var(--font-b);font-size:11px;color:var(--ink-soft)">' + plEsc(assigned) + '</td>'
+      + '<td style="padding:10px 12px;text-align:center">'
+      + (PL.isAdmin ? '<button class="btn" style="padding:3px 10px;font-size:11px" onclick="plCloseModal();plOpenActEditModal('' + a.id + '')">Edit</button>' : '')
+      + '</td>'
+      + '</tr>';
+  }).join('');
+
+  // Notes/description preview from first act with content
+  var desc = '';
+  acts.forEach(function(a) { if (!desc && a.description) desc = a.description; });
+  var notes = '';
+  acts.forEach(function(a) { if (!notes && a.notes) notes = a.notes; });
+
+  var html = '<div class="pl-modal-overlay" onclick="if(event.target===this)plCloseModal()">'
+    + '<div class="pl-modal" style="max-width:820px">'
+    + '<div class="pl-modal-hdr" style="border-top:4px solid ' + color + '">'
+    + '<div>'
+    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:4px">' + plEsc(bname) + ' · Q' + PL.quarter + ' ' + PL.year + '</div>'
+    + '<div class="pl-modal-title">' + plEsc(catName) + '</div>'
+    + (desc ? '<div style="font-size:12px;color:var(--ink-soft);margin-top:4px">' + plEsc(desc) + '</div>' : '')
+    + '</div>'
+    + '<button class="pl-modal-close" onclick="plCloseModal()">×</button>'
+    + '</div>'
+    + '<div class="pl-modal-body" style="padding:0">'
+    + (notes ? '<div style="padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);font-size:12px;color:var(--ink-soft);font-style:italic">' + plEsc(notes) + '</div>' : '')
+    + '<table style="width:100%;border-collapse:collapse">'
+    + '<thead><tr style="background:var(--surface);border-bottom:1px solid var(--border)">'
+    + '<th style="padding:8px 12px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);text-align:left">Site</th>'
+    + '<th style="padding:8px 12px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);text-align:center">RAG</th>'
+    + '<th style="padding:8px 12px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);text-align:left">Stage</th>'
+    + '<th style="padding:8px 12px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);text-align:left">Budget</th>'
+    + '<th style="padding:8px 12px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);text-align:left">Actual</th>'
+    + '<th style="padding:8px 12px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);text-align:left">Assigned</th>'
+    + '<th style="padding:8px 12px"></th>'
+    + '</tr></thead>'
+    + '<tbody>' + rowsHtml + '</tbody>'
+    + '</table>'
+    + '</div>'
+    + '<div class="pl-modal-footer">'
+    + '<button class="btn" onclick="plCloseModal()">Close</button>'
+    + '</div>'
+    + '</div></div>';
+
+  var root = document.getElementById('pl-modal-root');
+  if (root) root.innerHTML = html;
 }
 
 /* ── Section toggle ── */
@@ -406,7 +506,7 @@ function plClearFilters() {
 /* ── Brand selector ── */
 function plSetBrand(brand, btn) {
   PL.brand = brand;
-  PL.openActSite = null;
+  PL.openActBrand = null;
   document.querySelectorAll('.pl-brand-btn').forEach(function(b) { b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
   plRenderEvents();
@@ -418,7 +518,7 @@ function plSetBrand(brand, btn) {
 /* ── Quarter selector ── */
 async function plSetQuarter(q, btn) {
   PL.quarter = q;
-  PL.openActSite = null;
+  PL.openActBrand = null;
   document.querySelectorAll('.pl-q-btn').forEach(function(b) { b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
   // Show loading
