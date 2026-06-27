@@ -301,7 +301,7 @@ function plRenderActivities() {
     return;
   }
 
-  // Group by brand only
+  // Group by brand
   var byBrand = {};
   acts.forEach(function(a) {
     if (!byBrand[a.brand_id]) byBrand[a.brand_id] = [];
@@ -315,48 +315,33 @@ function plRenderActivities() {
     var bActs  = byBrand[bid];
     var isOpen = PL.openActBrand === bid;
 
-    // RAG summary counts across all activities for this brand
+    // RAG summary
     var ragCounts = {};
     bActs.forEach(function(a) { ragCounts[a.rag_status] = (ragCounts[a.rag_status] || 0) + 1; });
 
-    // Category summary — deduplicate categories, show worst RAG per category
+    // Category summary — worst RAG per category
     var byCategory = {};
+    var ragOrder   = ['Not Started','At Risk','In Progress','TBC','On Track','Complete','Cancelled'];
     bActs.forEach(function(a) {
-      if (!byCategory[a.title]) {
-        byCategory[a.title] = { title: a.title, acts: [], worstRag: 'Complete' };
-      }
+      if (!byCategory[a.title]) byCategory[a.title] = { acts:[], worstRag:'Complete' };
       byCategory[a.title].acts.push(a);
     });
-    // Determine worst RAG per category (Not Started > At Risk > In Progress > On Track > Complete)
-    var ragOrder = ['Not Started','At Risk','In Progress','TBC','On Track','Complete','Cancelled'];
     Object.keys(byCategory).forEach(function(cat) {
       var worst = 'Complete';
       byCategory[cat].acts.forEach(function(a) {
-        var ri = ragOrder.indexOf(a.rag_status);
-        if (ri < ragOrder.indexOf(worst) || worst === 'Complete') worst = a.rag_status;
+        if (ragOrder.indexOf(a.rag_status) < ragOrder.indexOf(worst)) worst = a.rag_status;
       });
       byCategory[cat].worstRag = worst;
     });
 
-    // Header RAG pills
+    // RAG pills for header
     var ragSummary = '';
-    var ragDisplay = [
-      { key:'At Risk',     label:'At Risk' },
-      { key:'Not Started', label:'Not Started' },
-      { key:'In Progress', label:'In Progress' },
-      { key:'On Track',    label:'On Track' },
-      { key:'Complete',    label:'Complete' },
-    ];
-    ragDisplay.forEach(function(r) {
-      if (ragCounts[r.key]) {
-        ragSummary += '<span class="rag rag-' + plRagClass(r.key) + '" style="margin-right:3px">'
-          + r.label + ' ' + ragCounts[r.key] + '</span>';
-      }
+    ['At Risk','Not Started','In Progress','On Track','Complete'].forEach(function(r) {
+      if (ragCounts[r]) ragSummary += '<span class="rag rag-' + plRagClass(r) + '" style="margin-right:3px">' + r + ' ' + ragCounts[r] + '</span>';
     });
 
     html += '<div style="margin-bottom:8px;border:1px solid var(--border);border-radius:4px;overflow:hidden">'
-      // Brand header row — clickable to expand/collapse
-      + '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:' + color + ';cursor:pointer" onclick="plToggleActBrand('' + bid + '')">'
+      + '<div class="pl-act-brand-hdr" data-bid="' + plEsc(bid) + '" style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:' + color + ';cursor:pointer">'
       + '<div style="display:flex;align-items:center;gap:10px">'
       + '<span style="font-family:var(--font-d);font-size:14px;font-weight:700;color:#fff">' + plEsc(bname) + '</span>'
       + '<span style="font-size:11px;color:rgba(255,255,255,0.65)">' + bActs.length + ' activities · ' + Object.keys(byCategory).length + ' categories</span>'
@@ -368,17 +353,15 @@ function plRenderActivities() {
       + '</div>';
 
     if (isOpen) {
-      // Category grid — one cell per unique category, showing RAG and site count
       html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1px;background:var(--border)">';
       Object.keys(byCategory).sort().forEach(function(catName) {
-        var cat      = byCategory[catName];
+        var cat       = byCategory[catName];
         var siteCount = cat.acts.length;
         var rag       = cat.worstRag;
-        // Find any with notes/description to preview
-        var preview  = '';
+        var preview   = '';
         cat.acts.forEach(function(a) { if (!preview && a.description) preview = a.description; });
 
-        html += '<div class="pl-act-cat" onclick="plOpenActCategoryModal('' + bid + '','' + encodeURIComponent(catName) + '')">'
+        html += '<div class="pl-act-cat pl-act-cat-clickable" data-bid="' + plEsc(bid) + '" data-cat="' + plEsc(catName) + '">'
           + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">'
           + '<span class="pl-act-cat-name">' + plEsc(catName) + '</span>'
           + plRagPill(rag)
@@ -388,13 +371,25 @@ function plRenderActivities() {
           + '</div>'
           + '</div>';
       });
-      html += '</div>'; // /.category grid
+      html += '</div>';
     }
 
-    html += '</div>'; // /.brand block
+    html += '</div>';
   });
 
   body.innerHTML = html;
+
+  // Bind click events using data attributes — avoids all escaping issues
+  body.querySelectorAll('.pl-act-brand-hdr').forEach(function(el) {
+    el.addEventListener('click', function() {
+      plToggleActBrand(this.getAttribute('data-bid'));
+    });
+  });
+  body.querySelectorAll('.pl-act-cat-clickable').forEach(function(el) {
+    el.addEventListener('click', function() {
+      plOpenActCategoryModal(this.getAttribute('data-bid'), this.getAttribute('data-cat'));
+    });
+  });
 }
 
 /* ── Toggle activity brand ── */
@@ -430,7 +425,7 @@ function plOpenActCategoryModal(bid, catEncoded) {
       + '<td style="padding:10px 12px;font-family:var(--font-m);font-size:11px;color:var(--ink-soft)">' + actual + '</td>'
       + '<td style="padding:10px 12px;font-family:var(--font-b);font-size:11px;color:var(--ink-soft)">' + plEsc(assigned) + '</td>'
       + '<td style="padding:10px 12px;text-align:center">'
-      + (PL.isAdmin ? '<button class="btn" style="padding:3px 10px;font-size:11px" onclick="plCloseModal();plOpenActEditModal('' + a.id + '')">Edit</button>' : '')
+      + (PL.isAdmin ? '<button class="btn pl-edit-act-btn" data-id="' + a.id + '" style="padding:3px 10px;font-size:11px">Edit</button>' : '')
       + '</td>'
       + '</tr>';
   }).join('');
@@ -660,7 +655,16 @@ function plOpenActDetail(id) {
     + '</div></div>';
 
   var root = document.getElementById('pl-modal-root');
-  if (root) root.innerHTML = html;
+  if (root) {
+    root.innerHTML = html;
+    // Bind edit buttons
+    root.querySelectorAll('.pl-edit-act-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        plCloseModal();
+        plOpenActEditModal(this.getAttribute('data-id'));
+      });
+    });
+  }
 }
 
 /* ── Edit/Add event modal ── */
