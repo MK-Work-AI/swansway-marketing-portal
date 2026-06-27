@@ -62,9 +62,11 @@ async function plLoadData() {
   try {
     var evUrl  = SUPA_PL + '/events?brand_id=eq.' + PL.brand + '&is_archived=eq.false&order=start_date';
     var actUrl = SUPA_PL + '/activities?brand_id=eq.' + PL.brand + '&quarter=eq.' + PL.quarter + '&year=eq.' + PL.year + '&is_archived=eq.false&order=type_id,title';
-    var [evR, actR] = await Promise.all([
+    var delUrl = SUPA_PL + '/activity_deliverables?select=activity_id,completed';
+    var [evR, actR, delR] = await Promise.all([
       fetch(evUrl,  { headers: getAuthHeaders() }),
       fetch(actUrl, { headers: getAuthHeaders() }),
+      fetch(delUrl, { headers: getAuthHeaders() }),
     ]);
     if (evR.ok) {
       var all = await evR.json();
@@ -72,7 +74,24 @@ async function plLoadData() {
         return e.quarter_tags && e.quarter_tags.indexOf(qtag) !== -1;
       });
     }
-    if (actR.ok) PL.activities = await actR.json();
+    if (actR.ok) {
+      PL.activities = await actR.json();
+      // Attach deliverable counts
+      if (delR.ok) {
+        var allDels = await delR.json();
+        var delMap = {};
+        allDels.forEach(function(d) {
+          if (!delMap[d.activity_id]) delMap[d.activity_id] = { total:0, done:0 };
+          delMap[d.activity_id].total++;
+          if (d.completed) delMap[d.activity_id].done++;
+        });
+        PL.activities.forEach(function(a) {
+          var m = delMap[a.id] || { total:0, done:0 };
+          a._del_total = m.total;
+          a._del_done  = m.done;
+        });
+      }
+    }
   } catch(e) { console.warn('plLoadData:', e); }
 }
 
