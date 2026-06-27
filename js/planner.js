@@ -1,1144 +1,832 @@
-// planner.js v101 — Events & Activity Planner
-// Swansway Marketing Portal
+// planner.js v200 — Complete rebuild
+// Swansway Marketing Portal — Events & Activity Planner
 
-/* ── Constants ── */
+/* ══ Constants ══ */
 var SUPA_PL = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
+var PL_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var PL_Q_MONTHS = { 1:[1,2,3], 2:[4,5,6], 3:[7,8,9], 4:[10,11,12] };
 
-
-/* ── State ── */
+/* ══ State ══ */
 var PL = {
-  brand:      'all',
-  quarter:    3,
-  year:       2026,
-  events:     [],
-  activities: [],
-  eventTypes: [],
-  team:       [],
-  sites:      [],
-  brands:     [],
-  filters:    { type:'', rag:'', assigned:'', search:'' },
-  sectionsOpen: { events: true, activities: true },
-  isAdmin:    false,
-  openActBrand: null  // currently expanded brand in activities
+  brand:        'audi',
+  quarter:      3,
+  year:         2026,
+  events:       [],
+  activities:   [],
+  actTypes:     [],
+  team:         [],
+  sites:        [],
+  eventTypes:   [],
+  isAdmin:      false,
+  panel:        null,   // currently open side panel: { type:'activity'|'event', id }
+  calView:      false,  // calendar vs list for events
 };
 
-/* ── Init ── */
+/* ══ Init ══ */
 async function plInit() {
   await swEnsureUser();
-  // Check role
   try {
     var sess = await SB.auth.getSession();
     if (sess.data.session) {
       var uid = sess.data.session.user.id;
-      var tr = await fetch(SUPA_PL + '/campaign_team?auth_user_id=eq.' + uid + '&select=portal_role', { headers: getAuthHeaders() });
-      if (tr.ok) {
-        var rows = await tr.json();
-        if (rows && rows.length && ['admin','super_admin'].includes(rows[0].portal_role)) {
-          PL.isAdmin = true;
-          var addBtn = document.getElementById('pl-add-btn');
-          if (addBtn) addBtn.style.display = 'inline-flex';
-        }
+      var r = await fetch(SUPA_PL + '/campaign_team?auth_user_id=eq.' + uid + '&select=portal_role', { headers: getAuthHeaders() });
+      if (r.ok) {
+        var rows = await r.json();
+        if (rows && rows.length && ['admin','super_admin'].includes(rows[0].portal_role)) PL.isAdmin = true;
       }
     }
   } catch(e) {}
 
-  await Promise.all([plLoadMeta(), plLoadData()]);
-  plBuildSidebar();
-  plBuildFilterDropdowns();
-  plRender();
+  await plLoadMeta();
+  plRenderBrandBar();
+  plSetBrand('audi');
 }
 
-/* ── Load metadata ── */
 async function plLoadMeta() {
   try {
-    var [typesRes, teamRes, sitesRes] = await Promise.all([
-      fetch(SUPA_PL + '/event_types?select=*&order=sort_order', { headers: getAuthHeaders() }),
-      fetch(SUPA_PL + '/campaign_team?select=id,name&active=eq.true&order=name', { headers: getAuthHeaders() }),
+    var [typesR, teamR, sitesR, evTypesR] = await Promise.all([
+      fetch(SUPA_PL + '/activity_types?select=*&active=eq.true&order=sort_order', { headers: getAuthHeaders() }),
+      fetch(SUPA_PL + '/campaign_team?select=id,name&active=eq.true&order=name',  { headers: getAuthHeaders() }),
       fetch(SUPA_PL + '/hub_sites?select=site_id,site_name,brand_id&order=sort_order', { headers: getAuthHeaders() }),
+      fetch(SUPA_PL + '/event_types?select=*&active=eq.true&order=sort_order',    { headers: getAuthHeaders() }),
     ]);
-    if (typesRes.ok) PL.eventTypes = await typesRes.json();
-    if (teamRes.ok)  PL.team       = await teamRes.json();
-    if (sitesRes.ok) PL.sites      = await sitesRes.json();
+    if (typesR.ok)   PL.actTypes   = await typesR.json();
+    if (teamR.ok)    PL.team       = await teamR.json();
+    if (sitesR.ok)   PL.sites      = await sitesR.json();
+    if (evTypesR.ok) PL.eventTypes = await evTypesR.json();
   } catch(e) { console.warn('plLoadMeta:', e); }
 }
 
-/* ── Load events + activities ── */
 async function plLoadData() {
-  var q = PL.quarter, y = PL.year;
-  var qtag = 'Q' + q + '-' + y;
-
+  var qtag = 'Q' + PL.quarter + '-' + PL.year;
   try {
-    // Events: filter by quarter_tags contains current quarter
-    var evUrl = SUPA_PL + '/events?select=*&is_archived=eq.false&order=start_date';
-    if (PL.brand !== 'all') evUrl += '&brand_id=eq.' + PL.brand;
-
-    // Activities for this quarter
-    var actUrl = SUPA_PL + '/activities?select=*&quarter=eq.' + q + '&year=eq.' + y + '&is_archived=eq.false&order=site_id,category_id';
-    if (PL.brand !== 'all') actUrl += '&brand_id=eq.' + PL.brand;
-
-    var [evRes, actRes] = await Promise.all([
-      fetch(evUrl, { headers: getAuthHeaders() }),
+    var evUrl  = SUPA_PL + '/events?brand_id=eq.' + PL.brand + '&is_archived=eq.false&order=start_date';
+    var actUrl = SUPA_PL + '/activities?brand_id=eq.' + PL.brand + '&quarter=eq.' + PL.quarter + '&year=eq.' + PL.year + '&is_archived=eq.false&order=type_id,title';
+    var [evR, actR] = await Promise.all([
+      fetch(evUrl,  { headers: getAuthHeaders() }),
       fetch(actUrl, { headers: getAuthHeaders() }),
     ]);
-
-    if (evRes.ok) {
-      var allEvents = await evRes.json();
-      // Filter to events that include this quarter tag
-      PL.events = allEvents.filter(function(e) {
-        if (!e.quarter_tags || !e.quarter_tags.length) return false;
-        return e.quarter_tags.indexOf(qtag) !== -1;
+    if (evR.ok) {
+      var all = await evR.json();
+      PL.events = all.filter(function(e) {
+        return e.quarter_tags && e.quarter_tags.indexOf(qtag) !== -1;
       });
     }
-    if (actRes.ok) PL.activities = await actRes.json();
+    if (actR.ok) PL.activities = await actR.json();
   } catch(e) { console.warn('plLoadData:', e); }
 }
 
-/* ── Build sidebar ── */
-function plBuildSidebar() {
-  var container = document.getElementById('pl-brand-list');
-  if (!container) return;
-
-  // Count events per brand
-  var brandCounts = {};
-  PL.events.forEach(function(e) {
-    brandCounts[e.brand_id] = (brandCounts[e.brand_id] || 0) + 1;
-  });
-
-  var total = PL.events.length;
-  var totalEl = document.getElementById('cnt-all');
-  if (totalEl) totalEl.textContent = total || '';
-
+/* ══ Brand bar ══ */
+function plRenderBrandBar() {
+  var bar = document.getElementById('pl-brand-bar');
+  if (!bar) return;
+  var brands = Object.keys(BRAND_NAMES);
   var html = '';
-  Object.keys(BRAND_NAMES).forEach(function(bid) {
-    var color  = BRAND_COLORS[bid] || '#666';
-    var name   = BRAND_NAMES[bid];
-    var count  = brandCounts[bid] || '';
-    var active = PL.brand === bid ? ' active' : '';
-    html += '<button class="pl-brand-btn' + active + '" data-brand="' + bid + '" onclick="plSetBrand(\'' + bid + '\',this)">'
-      + '<span class="pl-brand-dot" style="background:' + color + '"></span>'
-      + plEsc(name)
-      + '<span class="pl-brand-count">' + (count || '') + '</span>'
+  brands.forEach(function(bid) {
+    var color = BRAND_COLORS[bid] || '#666';
+    html += '<button class="pl-brand-pill" data-bid="' + bid + '" style="--bc:' + color + '">'
+      + '<span class="pl-brand-pill-dot" style="background:' + color + '"></span>'
+      + plE(BRAND_NAMES[bid])
       + '</button>';
   });
-  container.innerHTML = html;
-
-  // Restore active state on All brands button
-  var allBtn = document.querySelector('.pl-brand-btn[data-brand="all"]');
-  if (allBtn) {
-    if (PL.brand === 'all') allBtn.classList.add('active');
-    else allBtn.classList.remove('active');
-  }
+  bar.innerHTML = html;
+  bar.querySelectorAll('.pl-brand-pill').forEach(function(btn) {
+    btn.addEventListener('click', function() { plSetBrand(this.getAttribute('data-bid')); });
+  });
 }
 
-/* ── Build filter dropdowns ── */
-function plBuildFilterDropdowns() {
-  // Event types
-  var typeEl = document.getElementById('pl-f-type');
-  if (typeEl && PL.eventTypes.length) {
-    PL.eventTypes.forEach(function(t) {
-      var opt = document.createElement('option');
-      opt.value = t.name;
-      opt.textContent = t.name;
-      typeEl.appendChild(opt);
-    });
-  }
-
-  // Assigned to
-  var assignEl = document.getElementById('pl-f-assigned');
-  if (assignEl && PL.team.length) {
-    PL.team.forEach(function(m) {
-      var opt = document.createElement('option');
-      opt.value = m.id;
-      opt.textContent = m.name;
-      assignEl.appendChild(opt);
-    });
-  }
+async function plSetBrand(bid) {
+  PL.brand = bid;
+  PL.panel = null;
+  // Update active pill
+  document.querySelectorAll('.pl-brand-pill').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-bid') === bid);
+  });
+  // Also sync dropdown if on mobile
+  var sel = document.getElementById('pl-brand-sel');
+  if (sel) sel.value = bid;
+  // Show loading
+  plSetLoading(true);
+  await plLoadData();
+  plSetLoading(false);
+  plRenderAll();
 }
 
-/* ── Render everything ── */
-function plRender() {
-  plUpdateSubtitle();
-  plUpdateKPIs();
+/* ══ Quarter ══ */
+async function plSetQuarter(q, btn) {
+  PL.quarter = q;
+  PL.panel = null;
+  document.querySelectorAll('.pl-q-btn').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  plSetLoading(true);
+  await plLoadData();
+  plSetLoading(false);
+  plRenderAll();
+}
+
+function plSetLoading(on) {
+  var el = document.getElementById('pl-loading');
+  if (el) el.style.display = on ? 'flex' : 'none';
+  var main = document.getElementById('pl-content');
+  if (main) main.style.opacity = on ? '0.4' : '1';
+}
+
+/* ══ Render all ══ */
+function plRenderAll() {
+  plRenderSubtitle();
+  plRenderBudgetStrip();
   plRenderEvents();
   plRenderActivities();
+  plClosePanel();
 }
 
-function plUpdateSubtitle() {
+function plRenderSubtitle() {
   var el = document.getElementById('pl-subtitle');
+  if (el) el.textContent = (BRAND_NAMES[PL.brand] || PL.brand) + ' · Q' + PL.quarter + ' ' + PL.year;
+}
+
+/* ══ Budget strip ══ */
+async function plRenderBudgetStrip() {
+  var el = document.getElementById('pl-budget-strip');
   if (!el) return;
-  var brandLabel = PL.brand === 'all' ? 'All brands' : (BRAND_NAMES[PL.brand] || PL.brand);
-  el.textContent = brandLabel + ' · Q' + PL.quarter + ' ' + PL.year;
+  el.innerHTML = '<span style="color:var(--ink-faint);font-size:11px">Loading budget…</span>';
+
+  try {
+    var months = PL_Q_MONTHS[PL.quarter];
+    var siteIds = PL.sites.filter(function(s) { return s.brand_id === PL.brand; }).map(function(s) { return s.site_id; });
+    if (!siteIds.length) { el.innerHTML = ''; return; }
+
+    var [sblR, evR, actR] = await Promise.all([
+      fetch(SUPA_PL + '/site_budget_lines?site_id=in.(' + siteIds.join(',') + ')&month=in.(' + months.join(',') + ')&year=eq.' + PL.year + '&select=planned,actual', { headers: getAuthHeaders() }),
+      fetch(SUPA_PL + '/events?brand_id=eq.' + PL.brand + '&is_archived=eq.false&select=planned_budget,quarter_tags', { headers: getAuthHeaders() }),
+      fetch(SUPA_PL + '/activities?brand_id=eq.' + PL.brand + '&quarter=eq.' + PL.quarter + '&year=eq.' + PL.year + '&select=total_budget', { headers: getAuthHeaders() }),
+    ]);
+
+    var sblData  = sblR.ok  ? await sblR.json()  : [];
+    var evData   = evR.ok   ? await evR.json()   : [];
+    var actData  = actR.ok  ? await actR.json()  : [];
+
+    var siteBudget = sblData.reduce(function(s,r) { return s + (r.planned||0); }, 0);
+    var siteActual = sblData.reduce(function(s,r) { return s + (r.actual||0);  }, 0);
+    var qtag = 'Q' + PL.quarter + '-' + PL.year;
+    var evCost = evData.filter(function(e) { return e.quarter_tags && e.quarter_tags.indexOf(qtag) !== -1; })
+                       .reduce(function(s,e) { return s + (e.planned_budget||0); }, 0);
+    var actCost = actData.reduce(function(s,a) { return s + (a.total_budget||0); }, 0);
+    var remaining = siteBudget - evCost - actCost;
+    var usedPct   = siteBudget > 0 ? Math.round((evCost + actCost) / siteBudget * 100) : 0;
+
+    el.innerHTML = '<div class="pl-budget-items">'
+      + plBudgetItem('Site budget', siteBudget, '#1A2E4A')
+      + plBudgetItem('Events', evCost, '#BB0A21')
+      + plBudgetItem('Activities', actCost, '#2563EB')
+      + plBudgetItem('Actual spend', siteActual, '#059669')
+      + '<div class="pl-budget-item">'
+      + '<span class="pl-budget-label">Remaining</span>'
+      + '<span class="pl-budget-val" style="color:' + (remaining < 0 ? '#DC2626' : '#059669') + '">'
+      + (remaining < 0 ? '-' : '') + '£' + Math.abs(Math.round(remaining)).toLocaleString('en-GB') + '</span>'
+      + '</div>'
+      + '<div class="pl-budget-bar-wrap"><div class="pl-budget-bar" style="width:' + Math.min(usedPct,100) + '%;background:' + (usedPct > 90 ? '#DC2626' : usedPct > 70 ? '#F59E0B' : '#059669') + '"></div></div>'
+      + '<span style="font-family:var(--font-m);font-size:10px;color:var(--ink-soft)">' + usedPct + '% committed</span>'
+      + '</div>';
+  } catch(e) { el.innerHTML = ''; }
 }
 
-/* ── KPIs ── */
-function plUpdateKPIs() {
-  var filtered = plFilteredEvents();
-  var total = filtered.length;
-  var completed = filtered.filter(function(e) { return e.rag_status === 'Complete'; }).length;
-  var spend = filtered.reduce(function(s, e) { return s + (parseFloat(e.planned_budget) || 0); }, 0);
-
-  var actFiltered = plFilteredActivities();
-  var inProg = actFiltered.filter(function(a) { return a.rag_status === 'In Progress'; }).length;
-  var atRisk = actFiltered.filter(function(a) { return a.rag_status === 'At Risk' || a.rag_status === 'Not Started'; }).length;
-
-  var setKpi = function(id, val, sub) {
-    var el = document.getElementById(id); if (el) el.textContent = val;
-    var subEl = document.getElementById(id + '-sub'); if (subEl && sub) subEl.textContent = sub;
-  };
-  setKpi('kpi-events', total, completed + ' complete');
-  setKpi('kpi-spend', spend ? '£' + Math.round(spend).toLocaleString('en-GB') : '£0', 'planned budget');
-  setKpi('kpi-acts', inProg, 'of ' + actFiltered.length + ' activities');
-  setKpi('kpi-risk', atRisk, 'across ' + actFiltered.length + ' activities');
-}
-
-/* ── Filter helpers ── */
-function plFilteredEvents() {
-  var f = PL.filters;
-  return PL.events.filter(function(e) {
-    if (PL.brand !== 'all' && e.brand_id !== PL.brand) return false;
-    if (f.type && e.event_type_name !== f.type) return false;
-    if (f.rag  && e.rag_status !== f.rag) return false;
-    if (f.assigned && e.assigned_to !== f.assigned) return false;
-    if (f.search) {
-      var s = f.search.toLowerCase();
-      if ((e.title || '').toLowerCase().indexOf(s) === -1 &&
-          (e.notes || '').toLowerCase().indexOf(s) === -1) return false;
-    }
-    return true;
-  });
-}
-
-function plFilteredActivities() {
-  var f = PL.filters;
-  return PL.activities.filter(function(a) {
-    if (PL.brand !== 'all' && a.brand_id !== PL.brand) return false;
-    if (f.rag && a.rag_status !== f.rag) return false;
-    if (f.assigned && a.assigned_to !== f.assigned) return false;
-    if (f.search) {
-      var s = f.search.toLowerCase();
-      if ((a.title || '').toLowerCase().indexOf(s) === -1 &&
-          (a.notes || '').toLowerCase().indexOf(s) === -1 &&
-          (a.description || '').toLowerCase().indexOf(s) === -1) return false;
-    }
-    return true;
-  });
-}
-
-/* ── Render events ── */
-function plRenderEvents() {
-  var body = document.getElementById('pl-events-body');
-  var countEl = document.getElementById('pl-events-count');
-  if (!body) return;
-
-  if (!PL.sectionsOpen.events) { body.style.display = 'none'; return; }
-  body.style.display = '';
-
-  var events = plFilteredEvents();
-  if (countEl) countEl.textContent = events.length ? '(' + events.length + ')' : '';
-
-  if (!events.length) {
-    body.innerHTML = '<div class="pl-empty"><div class="pl-empty-icon">📅</div><div class="pl-empty-title">No events found</div><div class="pl-empty-sub">Try adjusting the filters or add a new event.</div></div>';
-    return;
-  }
-
-  // Group by brand
-  var byBrand = {};
-  events.forEach(function(e) {
-    if (!byBrand[e.brand_id]) byBrand[e.brand_id] = [];
-    byBrand[e.brand_id].push(e);
-  });
-
-  var html = '<div class="pl-events-grid">';
-  events.forEach(function(e) {
-    html += plEventCard(e);
-  });
-  html += '</div>';
-
-  body.innerHTML = html;
-}
-
-function plEventCard(e) {
-  var color = BRAND_COLORS[e.brand_id] || '#666';
-  var rag = plRagPill(e.rag_status);
-  var dates = plFormatDates(e.start_date, e.end_date);
-  var budget = e.planned_budget ? '£' + Number(e.planned_budget).toLocaleString('en-GB') : '';
-  var typeName = plGetTypeName(e.event_type_id);
-  var siteName = plGetSiteName(e.site_id);
-  var brandName = BRAND_NAMES[e.brand_id] || e.brand_id;
-
-  return '<div class="pl-event-card" style="border-left-color:' + color + '" onclick="plOpenEventDetail(\'' + e.id + '\')">'
-    + '<div class="pl-event-card-top">'
-    + '<div>'
-    + (typeName ? '<span class="ev-type-badge" style="background:' + (plGetTypeColor(e.event_type_id)||color) + ';margin-bottom:6px;display:inline-flex">' + plEsc(typeName) + '</span>' : '')
-    + '<div class="pl-event-card-title">' + plEsc(e.title || '') + '</div>'
-    + '</div>'
-    + rag
-    + '</div>'
-    + '<div class="pl-event-card-meta">'
-    + (dates ? '<span class="pl-event-card-meta-item">📅 ' + dates + '</span>' : '')
-    + (siteName ? '<span class="pl-event-card-meta-item">📍 ' + plEsc(siteName) + '</span>' : '')
-    + (budget ? '<span class="pl-event-card-meta-item">💷 ' + budget + '</span>' : '')
-    + (e.assigned_to ? '<span class="pl-event-card-meta-item">👤 ' + plEsc(plGetTeamName(e.assigned_to)) + '</span>' : '')
-    + '</div>'
-    + (e.notes ? '<div style="font-size:11px;color:var(--ink-soft);margin-top:8px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + plEsc(e.notes) + '</div>' : '')
+function plBudgetItem(label, val, color) {
+  return '<div class="pl-budget-item">'
+    + '<span class="pl-budget-label">' + label + '</span>'
+    + '<span class="pl-budget-val" style="color:' + color + '">£' + Math.round(val).toLocaleString('en-GB') + '</span>'
     + '</div>';
 }
 
-/* ── Render activities ── */
+/* ══ Events section ══ */
+function plRenderEvents() {
+  var body   = document.getElementById('pl-events-body');
+  var countEl = document.getElementById('pl-events-count');
+  if (!body) return;
+  if (countEl) countEl.textContent = PL.events.length ? '(' + PL.events.length + ')' : '';
+
+  if (!PL.events.length) {
+    body.innerHTML = '<div class="pl-empty"><div class="pl-empty-icon">📅</div>'
+      + '<div class="pl-empty-title">No events this quarter</div>'
+      + '<div class="pl-empty-sub">Add an event to get started.</div></div>';
+    return;
+  }
+
+  var html = '<div class="pl-card-grid">';
+  PL.events.forEach(function(e) {
+    var color    = BRAND_COLORS[e.brand_id] || '#666';
+    var typeName = plGetEvTypeName(e.event_type_id);
+    var typeColor = plGetEvTypeColor(e.event_type_id) || color;
+    var siteName = plGetSiteName(e.site_id);
+    var dates    = plFmtDates(e.start_date, e.end_date);
+    var budget   = e.planned_budget ? '£' + Number(e.planned_budget).toLocaleString('en-GB') : '';
+
+    html += '<div class="pl-card pl-event-card" data-id="' + e.id + '" style="border-left-color:' + color + '">'
+      + '<div class="pl-card-top">'
+      + (typeName ? '<span class="pl-type-badge" style="background:' + typeColor + '">' + plE(typeName) + '</span>' : '')
+      + plRagPill(e.rag_status)
+      + '</div>'
+      + '<div class="pl-card-title">' + plE(e.title||'') + '</div>'
+      + '<div class="pl-card-meta">'
+      + (dates    ? '<span class="pl-meta-item">📅 ' + dates + '</span>' : '')
+      + (siteName ? '<span class="pl-meta-item">📍 ' + plE(siteName) + '</span>' : '')
+      + (budget   ? '<span class="pl-meta-item">💷 ' + budget + '</span>' : '')
+      + (e.assigned_to ? '<span class="pl-meta-item">👤 ' + plE(plGetTeamName(e.assigned_to)) + '</span>' : '')
+      + '</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  body.innerHTML = html;
+
+  body.querySelectorAll('.pl-event-card').forEach(function(card) {
+    card.addEventListener('click', function() { plOpenEventPanel(this.getAttribute('data-id')); });
+  });
+}
+
+/* ══ Activities section ══ */
 function plRenderActivities() {
   var body    = document.getElementById('pl-acts-body');
   var countEl = document.getElementById('pl-acts-count');
   if (!body) return;
+  if (countEl) countEl.textContent = PL.activities.length ? '(' + PL.activities.length + ')' : '';
 
-  if (!PL.sectionsOpen.activities) { body.style.display = 'none'; return; }
-  body.style.display = '';
-
-  var acts = plFilteredActivities();
-  if (countEl) countEl.textContent = acts.length ? '(' + acts.length + ')' : '';
-
-  if (!acts.length) {
-    body.innerHTML = '<div class="pl-empty"><div class="pl-empty-icon">📋</div><div class="pl-empty-title">No activities found</div><div class="pl-empty-sub">Activities for Q' + PL.quarter + ' ' + PL.year + ' will appear here.</div></div>';
+  if (!PL.activities.length) {
+    body.innerHTML = '<div class="pl-empty"><div class="pl-empty-icon">📋</div>'
+      + '<div class="pl-empty-title">No activities this quarter</div>'
+      + '<div class="pl-empty-sub">Add an activity to start planning.</div></div>';
     return;
   }
 
-  // Group by brand
-  var byBrand = {};
-  acts.forEach(function(a) {
-    if (!byBrand[a.brand_id]) byBrand[a.brand_id] = [];
-    byBrand[a.brand_id].push(a);
+  // Group by type
+  var byType = {};
+  PL.activities.forEach(function(a) {
+    var tid = a.type_id || 'other';
+    if (!byType[tid]) byType[tid] = [];
+    byType[tid].push(a);
   });
 
   var html = '';
-  Object.keys(byBrand).sort().forEach(function(bid) {
-    var color  = BRAND_COLORS[bid] || '#666';
-    var bname  = BRAND_NAMES[bid]  || bid;
-    var bActs  = byBrand[bid];
-    var isOpen = PL.openActBrand === bid;
+  Object.keys(byType).forEach(function(tid) {
+    var type  = PL.actTypes.find(function(t) { return t.id === tid; });
+    var tname = type ? type.name : tid;
+    var tcolor = type ? type.colour_hex : '#6B7280';
+    var acts  = byType[tid];
 
-    // RAG summary
-    var ragCounts = {};
-    bActs.forEach(function(a) { ragCounts[a.rag_status] = (ragCounts[a.rag_status] || 0) + 1; });
-
-    // Category summary — worst RAG per category
-    var byCategory = {};
-    var ragOrder   = ['Not Started','At Risk','In Progress','TBC','On Track','Complete','Cancelled'];
-    bActs.forEach(function(a) {
-      if (!byCategory[a.title]) byCategory[a.title] = { acts:[], worstRag:'Complete' };
-      byCategory[a.title].acts.push(a);
-    });
-    Object.keys(byCategory).forEach(function(cat) {
-      var worst = 'Complete';
-      byCategory[cat].acts.forEach(function(a) {
-        if (ragOrder.indexOf(a.rag_status) < ragOrder.indexOf(worst)) worst = a.rag_status;
-      });
-      byCategory[cat].worstRag = worst;
-    });
-
-    // RAG pills for header
-    var ragSummary = '';
-    ['At Risk','Not Started','In Progress','On Track','Complete'].forEach(function(r) {
-      if (ragCounts[r]) ragSummary += '<span class="rag rag-' + plRagClass(r) + '" style="margin-right:3px">' + r + ' ' + ragCounts[r] + '</span>';
-    });
-
-    html += '<div style="margin-bottom:8px;border:1px solid var(--border);border-radius:4px;overflow:hidden">'
-      + '<div class="pl-act-brand-hdr" data-bid="' + plEsc(bid) + '" style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:' + color + ';cursor:pointer">'
-      + '<div style="display:flex;align-items:center;gap:10px">'
-      + '<span style="font-family:var(--font-d);font-size:14px;font-weight:700;color:#fff">' + plEsc(bname) + '</span>'
-      + '<span style="font-size:11px;color:rgba(255,255,255,0.65)">' + bActs.length + ' activities · ' + Object.keys(byCategory).length + ' categories</span>'
+    html += '<div class="pl-type-group">'
+      + '<div class="pl-type-group-hdr">'
+      + '<span class="pl-type-badge" style="background:' + tcolor + '">' + plE(tname) + '</span>'
+      + '<span class="pl-type-group-count">' + acts.length + '</span>'
       + '</div>'
-      + '<div style="display:flex;align-items:center;gap:6px">'
-      + ragSummary
-      + '<span style="font-size:11px;color:rgba(255,255,255,0.7);margin-left:4px">' + (isOpen ? '▲' : '▼') + '</span>'
-      + '</div>'
-      + '</div>';
+      + '<div class="pl-card-grid">';
 
-    if (isOpen) {
-      html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1px;background:var(--border)">';
-      Object.keys(byCategory).sort().forEach(function(catName) {
-        var cat       = byCategory[catName];
-        var siteCount = cat.acts.length;
-        var rag       = cat.worstRag;
-        var preview   = '';
-        cat.acts.forEach(function(a) { if (!preview && a.description) preview = a.description; });
+    acts.forEach(function(a) {
+      var progress = plGetProgress(a);
+      var budget   = a.total_budget ? '£' + Number(a.total_budget).toLocaleString('en-GB') : 'Budget TBC';
+      var assigned = plGetTeamName(a.assigned_to);
 
-        html += '<div class="pl-act-cat pl-act-cat-clickable" data-bid="' + plEsc(bid) + '" data-cat="' + plEsc(catName) + '">'
-          + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">'
-          + '<span class="pl-act-cat-name">' + plEsc(catName) + '</span>'
-          + plRagPill(rag)
-          + '</div>'
-          + '<div class="pl-act-cat-budget">' + siteCount + ' site' + (siteCount !== 1 ? 's' : '')
-          + (preview ? ' · ' + plEsc(preview.substring(0, 50)) + (preview.length > 50 ? '…' : '') : '')
-          + '</div>'
-          + '</div>';
-      });
-      html += '</div>';
-    }
+      html += '<div class="pl-card pl-act-card" data-id="' + a.id + '">'
+        + '<div class="pl-card-top">'
+        + plRagPill(a.rag_status)
+        + '<span class="pl-budget-chip">' + plE(budget) + '</span>'
+        + '</div>'
+        + '<div class="pl-card-title">' + plE(a.title||'') + '</div>'
+        + '<div class="pl-card-meta">'
+        + (assigned ? '<span class="pl-meta-item">👤 ' + plE(assigned) + '</span>' : '')
+        + '<span class="pl-meta-item">📋 ' + progress.done + '/' + progress.total + ' deliverables</span>'
+        + '</div>'
+        + (progress.total > 0 ? '<div class="pl-progress-bar"><div class="pl-progress-fill" style="width:' + progress.pct + '%;background:' + (progress.pct === 100 ? '#059669' : progress.pct > 50 ? '#F59E0B' : '#94A3B8') + '"></div></div>' : '')
+        + '</div>';
+    });
 
-    html += '</div>';
+    html += '</div></div>';
   });
 
   body.innerHTML = html;
 
-  // Bind click events using data attributes — avoids all escaping issues
-  body.querySelectorAll('.pl-act-brand-hdr').forEach(function(el) {
-    el.addEventListener('click', function() {
-      plToggleActBrand(this.getAttribute('data-bid'));
-    });
-  });
-  body.querySelectorAll('.pl-act-cat-clickable').forEach(function(el) {
-    el.addEventListener('click', function() {
-      plOpenActCategoryModal(this.getAttribute('data-bid'), this.getAttribute('data-cat'));
-    });
+  body.querySelectorAll('.pl-act-card').forEach(function(card) {
+    card.addEventListener('click', function() { plOpenActPanel(this.getAttribute('data-id')); });
   });
 }
 
-/* ── Toggle activity brand ── */
-function plToggleActBrand(bid) {
-  PL.openActBrand = PL.openActBrand === bid ? null : bid;
-  plRenderActivities();
+function plGetProgress(a) {
+  // Count deliverables from loaded data — we'll load them when panel opens
+  // For card preview use total_budget as proxy; deliverables loaded on demand
+  var done = a._del_done || 0;
+  var total = a._del_total || 0;
+  var pct = total > 0 ? Math.round(done/total*100) : 0;
+  return { done:done, total:total, pct:pct };
 }
 
-/* ── Category modal — shows all sites for a brand+category ── */
-function plOpenActCategoryModal(bid, catName) {
-  var color = BRAND_COLORS[bid] || '#666';
-  var bname = BRAND_NAMES[bid]  || bid;
+/* ══ Event side panel ══ */
+function plOpenEventPanel(id) {
+  var e = PL.events.find(function(ev) { return ev.id === id; });
+  if (!e) return;
+  PL.panel = { type:'event', id:id };
 
-  // Find the single brand-level activity for this brand + category
-  var act = PL.activities.find(function(a) {
-    return a.brand_id === bid && a.title === catName;
-  });
-  if (!act) return;
+  var color     = BRAND_COLORS[e.brand_id] || '#666';
+  var typeName  = plGetEvTypeName(e.event_type_id);
+  var typeColor = plGetEvTypeColor(e.event_type_id) || color;
+  var siteName  = plGetSiteName(e.site_id);
+  var brandName = BRAND_NAMES[e.brand_id] || e.brand_id;
 
-  var assigned = plGetTeamName(act.assigned_to);
-
-  // Q3 months for this quarter
-  var qMonths = plGetQuarterMonths(PL.quarter);
-  var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-  // Get sites for this brand
-  var brandSites = PL.sites.filter(function(s) { return s.brand_id === bid; });
-
-  // Build budget allocation table header
-  var thStyle = 'padding:7px 10px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-faint);text-align:right;white-space:nowrap';
-  var th1Style = 'padding:7px 10px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-faint);text-align:left;min-width:140px';
-
-  var budgetTableHdr = '<tr style="background:var(--surface);border-bottom:1px solid var(--border)">'
-    + '<th style="' + th1Style + '">Site</th>'
-    + '<th style="' + th1Style + '">Channel</th>';
-  qMonths.forEach(function(m) {
-    budgetTableHdr += '<th style="' + thStyle + '">' + monthNames[m-1] + ' avail.</th>'
-      + '<th style="' + thStyle + '">' + monthNames[m-1] + ' alloc.</th>';
-  });
-  budgetTableHdr += '<th style="' + thStyle + '">Total alloc.</th></tr>';
-
-  // Build rows: site_budget_lines available + activity_budget_lines allocated
-  // We load these async — show loading state first, populate after
-  var budgetSectionHtml = '<div id="pl-budget-alloc-wrap" style="overflow-x:auto">'
-    + '<table style="width:100%;border-collapse:collapse;font-size:12px">'
-    + '<thead>' + budgetTableHdr + '</thead>'
-    + '<tbody id="pl-budget-alloc-body">'
-    + '<tr><td colspan="' + (2 + qMonths.length * 2 + 1) + '" style="padding:20px;text-align:center;color:var(--ink-faint)">Loading budget data…</td></tr>'
-    + '</tbody></table></div>'
-    + (PL.isAdmin ? '<div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-primary" id="pl-save-alloc-btn">Save allocations</button></div>' : '');
-
-  var teamOptions = PL.team.map(function(m) {
-    return '<option value="' + m.id + '"' + (act.assigned_to === m.id ? ' selected' : '') + '>' + plEsc(m.name) + '</option>';
+  var ragOpts   = plSelectOpts(['Not Started','In Progress','At Risk','On Track','Complete','TBC','Cancelled'], e.rag_status);
+  var stageOpts = plSelectOpts(['Not Started','Planning','Briefing','In Progress','Awaiting Input','Complete','Cancelled'], e.stage);
+  var teamOpts  = '<option value="">Unassigned</option>' + PL.team.map(function(m) {
+    return '<option value="' + m.id + '"' + (e.assigned_to===m.id?' selected':'') + '>' + plE(m.name) + '</option>';
   }).join('');
 
-  var ragOptions = ['Not Started','In Progress','At Risk','On Track','Complete','TBC','Cancelled'].map(function(r) {
-    return '<option value="' + r + '"' + (act.rag_status === r ? ' selected' : '') + '>' + r + '</option>';
-  }).join('');
+  var infoRows = [
+    ['Type',     typeName],
+    ['Site',     siteName],
+    ['Dates',    plFmtDates(e.start_date, e.end_date)],
+    ['Footfall', e.expected_footfall ? Number(e.expected_footfall).toLocaleString('en-GB') + ' expected' : null],
+    ['Budget',   e.planned_budget ? '£' + Number(e.planned_budget).toLocaleString('en-GB') + ' planned' : null],
+    ['Actual',   e.actual_spend   ? '£' + Number(e.actual_spend).toLocaleString('en-GB') + ' spent' : null],
+    ['Brand support', e.coop_funded && e.coop_amount ? '£' + Number(e.coop_amount).toLocaleString('en-GB') : null],
+    ['Quarter',  (e.quarter_tags||[]).join(', ')],
+  ].filter(function(r) { return r[1]; });
 
-  var stageOptions = ['Not Started','Planning','In Progress','Awaiting Input','Complete','Cancelled'].map(function(s) {
-    return '<option value="' + s + '"' + (act.stage === s ? ' selected' : '') + '>' + s + '</option>';
-  }).join('');
+  var content = '<div class="pl-panel-badge-row">'
+    + (typeName ? '<span class="pl-type-badge" style="background:' + typeColor + '">' + plE(typeName) + '</span>' : '')
+    + plRagPill(e.rag_status)
+    + '</div>'
+    + '<div class="pl-panel-title">' + plE(e.title||'') + '</div>'
+    + '<div class="pl-panel-sub">' + plE(brandName) + (siteName ? ' · ' + plE(siteName) : '') + '</div>'
 
-  var html = '<div class="pl-modal-overlay" onclick="if(event.target===this)plCloseModal()">'
-    + '<div class="pl-modal" style="max-width:960px">'
-    + '<div class="pl-modal-hdr" style="border-top:4px solid ' + color + '">'
-    + '<div>'
-    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:4px">' + plEsc(bname) + ' · Q' + PL.quarter + ' ' + PL.year + '</div>'
-    + '<div class="pl-modal-title">' + plEsc(catName) + '</div>'
-    + (act.description ? '<div style="font-size:12px;color:var(--ink-soft);margin-top:4px">' + plEsc(act.description) + '</div>' : '')
-    + '</div>'
-    + '<button class="pl-modal-close" onclick="plCloseModal()">×</button>'
-    + '</div>'
-    + '<div class="pl-modal-body" style="padding:0">'
-
-    // Activity status row
-    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border)">'
-    + '<div style="background:var(--white);padding:12px 16px">'
-    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);margin-bottom:5px">Status</div>'
-    + (PL.isAdmin
-        ? '<select id="act-rag-sel" style="width:100%;padding:5px 8px;border:1.5px solid var(--border-med);border-radius:3px;font-family:var(--font-b);font-size:12px">' + ragOptions + '</select>'
-        : plRagPill(act.rag_status))
-    + '</div>'
-    + '<div style="background:var(--white);padding:12px 16px">'
-    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);margin-bottom:5px">Stage</div>'
-    + (PL.isAdmin
-        ? '<select id="act-stage-sel" style="width:100%;padding:5px 8px;border:1.5px solid var(--border-med);border-radius:3px;font-family:var(--font-b);font-size:12px">' + stageOptions + '</select>'
-        : '<span style="font-family:var(--font-b);font-size:12px">' + plEsc(act.stage || '—') + '</span>')
-    + '</div>'
-    + '<div style="background:var(--white);padding:12px 16px">'
-    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);margin-bottom:5px">Assigned to</div>'
-    + (PL.isAdmin
-        ? '<select id="act-assigned-sel" style="width:100%;padding:5px 8px;border:1.5px solid var(--border-med);border-radius:3px;font-family:var(--font-b);font-size:12px"><option value="">—</option>' + teamOptions + '</select>'
-        : '<span style="font-family:var(--font-b);font-size:12px">' + plEsc(assigned) + '</span>')
-    + '</div>'
+    + '<div class="pl-panel-section-hdr">Details</div>'
+    + '<div class="pl-info-grid">'
+    + infoRows.map(function(r) {
+        return '<div class="pl-info-row"><span class="pl-info-label">' + r[0] + '</span><span class="pl-info-val">' + plE(String(r[1])) + '</span></div>';
+      }).join('')
     + '</div>'
 
-    // Notes
-    + (act.notes ? '<div style="padding:10px 16px;background:var(--surface);border-top:1px solid var(--border);font-size:12px;color:var(--ink-soft);font-style:italic">' + plEsc(act.notes) + '</div>' : '')
+    + (e.notes ? '<div class="pl-panel-section-hdr">Notes</div><div class="pl-panel-notes">' + plE(e.notes) + '</div>' : '')
 
-    // Budget allocation section header
-    + '<div style="padding:10px 16px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between">'
-    + '<span style="font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink)">Budget Allocation — by site & channel</span>'
-    + '<span style="font-size:11px;color:var(--ink-faint)">Available from Site Budgets · Allocate per month below</span>'
-    + '</div>'
-    + budgetSectionHtml
+    + (PL.isAdmin ? '<div class="pl-panel-section-hdr">Edit</div>'
+      + '<div class="pl-form-row2">'
+      + '<div class="pl-form-field"><label>Status</label><select id="ep-rag">' + ragOpts + '</select></div>'
+      + '<div class="pl-form-field"><label>Stage</label><select id="ep-stage">' + stageOpts + '</select></div>'
+      + '</div>'
+      + '<div class="pl-form-field"><label>Assigned to</label><select id="ep-assigned">' + teamOpts + '</select></div>'
+      + '<div class="pl-form-row2">'
+      + '<div class="pl-form-field"><label>Planned budget (£)</label><input type="number" id="ep-budget" value="' + (e.planned_budget||'') + '" min="0"></div>'
+      + '<div class="pl-form-field"><label>Actual spend (£)</label><input type="number" id="ep-actual" value="' + (e.actual_spend||'') + '" min="0"></div>'
+      + '</div>'
+      + '<div class="pl-form-field"><label>Notes</label><textarea id="ep-notes" rows="3">' + plE(e.notes||'') + '</textarea></div>'
+      + '<div class="pl-panel-err" id="ep-err"></div>'
+      : '');
 
-    + '</div>'
-    + '<div class="pl-modal-footer" id="pl-act-modal-footer">'
-    + (PL.isAdmin ? '<button class="btn btn-primary" id="pl-save-act-status-btn" data-id="' + act.id + '">Save status</button>' : '')
-    + '<button class="btn" onclick="plCloseModal()">Close</button>'
-    + '</div>'
-    + '</div></div>';
+  var footer = PL.isAdmin
+    ? '<button class="btn btn-primary" id="ep-save-btn" data-id="' + e.id + '">Save changes</button>'
+      + '<button class="btn" style="color:#DC2626;border-color:#FECACA;margin-left:auto" id="ep-del-btn" data-id="' + e.id + '">Delete</button>'
+    : '';
 
-  var root = document.getElementById('pl-modal-root');
-  if (!root) return;
-  root.innerHTML = html;
+  plShowPanel(plE(brandName) + ' Event', content, footer);
 
-  // Bind save status button
-  var saveStatusBtn = document.getElementById('pl-save-act-status-btn');
-  if (saveStatusBtn) {
-    saveStatusBtn.addEventListener('click', function() {
-      plSaveActStatus(this.getAttribute('data-id'));
-    });
-  }
-
-  // Bind save allocation button
-  var saveAllocBtn = document.getElementById('pl-save-alloc-btn');
-  if (saveAllocBtn) {
-    saveAllocBtn.addEventListener('click', function() {
-      plSaveAllocations(act.id, bid, qMonths);
-    });
-  }
-
-  // Load budget data async
-  plLoadBudgetAlloc(act.id, bid, brandSites, qMonths);
+  // Bind
+  var saveBtn = document.getElementById('ep-save-btn');
+  if (saveBtn) saveBtn.addEventListener('click', function() { plSaveEvent(this.getAttribute('data-id')); });
+  var delBtn = document.getElementById('ep-del-btn');
+  if (delBtn) delBtn.addEventListener('click', function() { plDeleteEvent(this.getAttribute('data-id')); });
 }
 
-/* ── Get months for a quarter ── */
-function plGetQuarterMonths(q) {
-  return { 1:[1,2,3], 2:[4,5,6], 3:[7,8,9], 4:[10,11,12] }[q] || [7,8,9];
+/* ══ Activity side panel ══ */
+async function plOpenActPanel(id) {
+  var a = PL.activities.find(function(ac) { return ac.id === id; });
+  if (!a) return;
+  PL.panel = { type:'activity', id:id };
+
+  var type   = PL.actTypes.find(function(t) { return t.id === a.type_id; });
+  var tname  = type ? type.name : '';
+  var tcolor = type ? type.colour_hex : '#6B7280';
+  var bname  = BRAND_NAMES[a.brand_id] || a.brand_id;
+
+  var ragOpts   = plSelectOpts(['Not Started','In Progress','At Risk','On Track','Complete','TBC','Cancelled'], a.rag_status);
+  var stageOpts = plSelectOpts(['Not Started','Planning','In Progress','Awaiting Input','Complete','Cancelled'], a.stage);
+  var teamOpts  = '<option value="">Unassigned</option>' + PL.team.map(function(m) {
+    return '<option value="' + m.id + '"' + (a.assigned_to===m.id?' selected':'') + '>' + plE(m.name) + '</option>';
+  }).join('');
+
+  // Show panel immediately with loading deliverables
+  var content = '<div class="pl-panel-badge-row">'
+    + (tname ? '<span class="pl-type-badge" style="background:' + tcolor + '">' + plE(tname) + '</span>' : '')
+    + plRagPill(a.rag_status)
+    + '</div>'
+    + '<div class="pl-panel-title">' + plE(a.title||'') + '</div>'
+    + '<div class="pl-panel-sub">' + plE(bname) + ' · Q' + a.quarter + ' ' + a.year + '</div>'
+
+    + '<div class="pl-panel-section-hdr">Status</div>'
+    + '<div class="pl-form-row2">'
+    + '<div class="pl-form-field"><label>RAG</label><select id="ap-rag">' + ragOpts + '</select></div>'
+    + '<div class="pl-form-field"><label>Stage</label><select id="ap-stage">' + stageOpts + '</select></div>'
+    + '</div>'
+    + '<div class="pl-form-row2">'
+    + '<div class="pl-form-field"><label>Assigned to</label><select id="ap-assigned">' + teamOpts + '</select></div>'
+    + '<div class="pl-form-field"><label>Total budget (£)</label><input type="number" id="ap-budget" value="' + (a.total_budget||'') + '" min="0" placeholder="0"></div>'
+    + '</div>'
+
+    + '<div class="pl-panel-section-hdr">Description & Notes</div>'
+    + '<div class="pl-form-field"><textarea id="ap-desc" rows="2" placeholder="Campaign description…">' + plE(a.description||'') + '</textarea></div>'
+    + '<div class="pl-form-field"><textarea id="ap-notes" rows="2" placeholder="Notes, context, links…">' + plE(a.notes||'') + '</textarea></div>'
+
+    + '<div class="pl-panel-section-hdr" style="display:flex;align-items:center;justify-content:space-between">'
+    + '<span>Deliverables</span>'
+    + (PL.isAdmin ? '<button class="btn" style="padding:2px 10px;font-size:11px" id="ap-add-del-btn">+ Add</button>' : '')
+    + '</div>'
+    + '<div id="ap-deliverables"><div class="pl-loading-sm">Loading…</div></div>'
+
+    + '<div class="pl-panel-section-hdr" style="display:flex;align-items:center;justify-content:space-between">'
+    + '<span>Budget Breakdown</span>'
+    + '<button class="btn" style="padding:2px 10px;font-size:11px" id="ap-budget-toggle-btn">Show ▾</button>'
+    + '</div>'
+    + '<div id="ap-budget-detail" style="display:none"></div>'
+
+    + '<div class="pl-panel-section-hdr">Brief for Oceros</div>'
+    + '<div style="margin-bottom:8px">'
+    + '<button class="btn btn-primary" id="ap-brief-btn" data-id="' + a.id + '">📋 Copy brief to clipboard</button>'
+    + '<div style="font-size:11px;color:var(--ink-faint);margin-top:5px">Paste directly into a Monday task for Oceros</div>'
+    + '</div>'
+
+    + '<div class="pl-panel-err" id="ap-err"></div>';
+
+  var footer = '<button class="btn btn-primary" id="ap-save-btn" data-id="' + a.id + '">Save changes</button>'
+    + (PL.isAdmin ? '<button class="btn" style="color:#DC2626;border-color:#FECACA;margin-left:auto" id="ap-del-btn" data-id="' + a.id + '">Delete</button>' : '');
+
+  plShowPanel(plE(tname || 'Activity'), content, footer);
+
+  // Bind buttons
+  var saveBtn = document.getElementById('ap-save-btn');
+  if (saveBtn) saveBtn.addEventListener('click', function() { plSaveActivity(this.getAttribute('data-id')); });
+
+  var delBtn = document.getElementById('ap-del-btn');
+  if (delBtn) delBtn.addEventListener('click', function() { plDeleteActivity(this.getAttribute('data-id')); });
+
+  var briefBtn = document.getElementById('ap-brief-btn');
+  if (briefBtn) briefBtn.addEventListener('click', function() { plCopyBrief(this.getAttribute('data-id')); });
+
+  var addDelBtn = document.getElementById('ap-add-del-btn');
+  if (addDelBtn) addDelBtn.addEventListener('click', function() { plAddDeliverable(a.id); });
+
+  var budgetToggle = document.getElementById('ap-budget-toggle-btn');
+  if (budgetToggle) budgetToggle.addEventListener('click', function() { plToggleBudgetDetail(a.id); });
+
+  // Load deliverables async
+  await plLoadDeliverables(a.id);
 }
 
-/* ── Load budget allocation data ── */
-async function plLoadBudgetAlloc(actId, bid, sites, months) {
-  var tbody = document.getElementById('pl-budget-alloc-body');
-  if (!tbody) return;
-
+/* ══ Deliverables ══ */
+async function plLoadDeliverables(actId) {
+  var el = document.getElementById('ap-deliverables');
+  if (!el) return;
   try {
-    var year = PL.year;
-    var siteIds = sites.map(function(s) { return s.site_id; }).join(',');
-    if (!siteIds) {
-      tbody.innerHTML = '<tr><td colspan="20" style="padding:16px;text-align:center;color:var(--ink-faint)">No sites found for this brand.</td></tr>';
+    var r = await fetch(SUPA_PL + '/activity_deliverables?activity_id=eq.' + actId + '&order=sort_order,created_at', { headers: getAuthHeaders() });
+    var dels = r.ok ? await r.json() : [];
+
+    // Update progress on the card
+    var act = PL.activities.find(function(a) { return a.id === actId; });
+    if (act) {
+      act._del_done  = dels.filter(function(d) { return d.completed; }).length;
+      act._del_total = dels.length;
+    }
+
+    if (!dels.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--ink-faint);padding:8px 0">No deliverables yet.</div>';
       return;
     }
 
-    // Load site_budget_lines (available) and activity_budget_lines (allocated) in parallel
-    var [sblRes, ablRes, channelsRes] = await Promise.all([
-      fetch(SUPA_PL + '/site_budget_lines?site_id=in.(' + siteIds + ')&month=in.(' + months.join(',') + ')&year=eq.' + year + '&select=site_id,channel,month,planned,actual', { headers: getAuthHeaders() }),
+    var html = '<div class="pl-deliverables">';
+    dels.forEach(function(d) {
+      html += '<div class="pl-del-row" data-del-id="' + d.id + '">'
+        + '<label class="pl-del-check">'
+        + '<input type="checkbox" class="pl-del-cb" data-del-id="' + d.id + '" data-act-id="' + actId + '"' + (d.completed ? ' checked' : '') + '>'
+        + '<span class="pl-del-label' + (d.completed ? ' pl-del-done' : '') + '">' + plE(d.title) + '</span>'
+        + '</label>'
+        + (PL.isAdmin && d.is_custom ? '<button class="pl-del-remove" data-del-id="' + d.id + '" data-act-id="' + actId + '" title="Remove">×</button>' : '')
+        + '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+
+    // Bind checkboxes
+    el.querySelectorAll('.pl-del-cb').forEach(function(cb) {
+      cb.addEventListener('change', function() {
+        plToggleDeliverable(this.getAttribute('data-del-id'), this.getAttribute('data-act-id'), this.checked);
+      });
+    });
+    // Bind remove buttons
+    el.querySelectorAll('.pl-del-remove').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        plRemoveDeliverable(this.getAttribute('data-del-id'), this.getAttribute('data-act-id'));
+      });
+    });
+  } catch(e) {
+    var el2 = document.getElementById('ap-deliverables');
+    if (el2) el2.innerHTML = '<div style="color:#DC2626;font-size:12px">Error loading deliverables</div>';
+  }
+}
+
+async function plToggleDeliverable(delId, actId, checked) {
+  try {
+    var sess = await SB.auth.getSession();
+    var userId = sess.data.session ? sess.data.session.user.id : null;
+    // Look up campaign_team id from auth_user_id
+    var teamId = null;
+    if (userId) {
+      var tr = await fetch(SUPA_PL + '/campaign_team?auth_user_id=eq.' + userId + '&select=id', { headers: getAuthHeaders() });
+      if (tr.ok) { var rows = await tr.json(); if (rows.length) teamId = rows[0].id; }
+    }
+    await fetch(SUPA_PL + '/activity_deliverables?id=eq.' + delId, {
+      method: 'PATCH',
+      headers: getAuthHeaders({ 'Content-Type':'application/json', 'Prefer':'return=minimal' }),
+      body: JSON.stringify({
+        completed:    checked,
+        completed_by: checked ? teamId : null,
+        completed_at: checked ? new Date().toISOString() : null
+      })
+    });
+    await plLoadDeliverables(actId);
+    plRenderActivities(); // refresh progress bar on card
+  } catch(e) { plShowToast('Error: ' + e.message, '#DC2626'); }
+}
+
+async function plAddDeliverable(actId) {
+  var title = prompt('Deliverable title:');
+  if (!title || !title.trim()) return;
+  try {
+    await fetch(SUPA_PL + '/activity_deliverables', {
+      method: 'POST',
+      headers: getAuthHeaders({ 'Content-Type':'application/json', 'Prefer':'return=minimal' }),
+      body: JSON.stringify([{ activity_id: actId, title: title.trim(), is_custom: true, sort_order: 999 }])
+    });
+    await plLoadDeliverables(actId);
+  } catch(e) { plShowToast('Error: ' + e.message, '#DC2626'); }
+}
+
+async function plRemoveDeliverable(delId, actId) {
+  if (!confirm('Remove this deliverable?')) return;
+  try {
+    await fetch(SUPA_PL + '/activity_deliverables?id=eq.' + delId, { method:'DELETE', headers: getAuthHeaders() });
+    await plLoadDeliverables(actId);
+  } catch(e) { plShowToast('Error: ' + e.message, '#DC2626'); }
+}
+
+/* ══ Budget detail toggle ══ */
+async function plToggleBudgetDetail(actId) {
+  var el  = document.getElementById('ap-budget-detail');
+  var btn = document.getElementById('ap-budget-toggle-btn');
+  if (!el) return;
+
+  if (el.style.display !== 'none') {
+    el.style.display = 'none';
+    if (btn) btn.textContent = 'Show ▾';
+    return;
+  }
+
+  el.style.display = 'block';
+  if (btn) btn.textContent = 'Hide ▴';
+  el.innerHTML = '<div class="pl-loading-sm">Loading budget data…</div>';
+
+  try {
+    var months   = PL_Q_MONTHS[PL.quarter];
+    var siteIds  = PL.sites.filter(function(s) { return s.brand_id === PL.brand; }).map(function(s) { return s.site_id; });
+    var topChans = ['paid-search','autotrader','paid-social','display','email','social-organic','mfr-coop','events-showroom'];
+
+    var [sblR, ablR, chanR] = await Promise.all([
+      fetch(SUPA_PL + '/site_budget_lines?site_id=in.(' + siteIds.join(',') + ')&month=in.(' + months.join(',') + ')&year=eq.' + PL.year + '&select=site_id,channel,month,planned,actual', { headers: getAuthHeaders() }),
       fetch(SUPA_PL + '/activity_budget_lines?activity_id=eq.' + actId + '&select=*', { headers: getAuthHeaders() }),
-      fetch(SUPA_PL + '/activity_channels?active=eq.true&order=sort_order&select=id,name', { headers: getAuthHeaders() })
+      fetch(SUPA_PL + '/activity_channels?id=in.(' + topChans.join(',') + ')&select=id,name&order=sort_order', { headers: getAuthHeaders() }),
     ]);
 
-    var sblData  = sblRes.ok  ? await sblRes.json()  : [];
-    var ablData  = ablRes.ok  ? await ablRes.json()  : [];
-    var channels = channelsRes.ok ? await channelsRes.json() : [];
-
-    // Index site_budget_lines: sbl[site_id][channel][month] = planned
-    var sbl = {};
-    sblData.forEach(function(row) {
-      if (!sbl[row.site_id]) sbl[row.site_id] = {};
-      if (!sbl[row.site_id][row.channel]) sbl[row.site_id][row.channel] = {};
-      sbl[row.site_id][row.channel][row.month] = { planned: row.planned || 0, actual: row.actual || 0 };
+    var sbl  = {};
+    (sblR.ok ? await sblR.json() : []).forEach(function(r) {
+      if (!sbl[r.site_id]) sbl[r.site_id] = {};
+      if (!sbl[r.site_id][r.channel]) sbl[r.site_id][r.channel] = {};
+      sbl[r.site_id][r.channel][r.month] = { planned: r.planned||0, actual: r.actual||0 };
     });
 
-    // Index activity_budget_lines: abl[site_id][channel_id][month] = { planned, actual, id }
     var abl = {};
-    ablData.forEach(function(row) {
-      if (!abl[row.site_id]) abl[row.site_id] = {};
-      if (!abl[row.site_id][row.channel_id]) abl[row.site_id][row.channel_id] = {};
-      abl[row.site_id][row.channel_id][row.month] = { planned: row.planned || 0, actual: row.actual || 0, id: row.id };
+    (ablR.ok ? await ablR.json() : []).forEach(function(r) {
+      if (!abl[r.site_id]) abl[r.site_id] = {};
+      if (!abl[r.site_id][r.channel_id]) abl[r.site_id][r.channel_id] = {};
+      abl[r.site_id][r.channel_id][r.month] = { planned: r.planned||0, id: r.id };
     });
 
-    // Only show channels that have budget data for these sites, plus top channels
-    var topChannelIds = ['paid-search','autotrader','paid-social','display','email','social-organic','mfr-coop','events-showroom','other-local','seo-content'];
-    var relevantChannels = channels.filter(function(c) { return topChannelIds.indexOf(c.id) !== -1; });
+    var chans = chanR.ok ? await chanR.json() : [];
+    var brandSites = PL.sites.filter(function(s) { return s.brand_id === PL.brand; });
 
-    var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var tdNum = 'padding:6px 8px;font-family:var(--font-m);font-size:11px;text-align:right;color:var(--ink-soft)';
-    var tdAvail = 'padding:6px 8px;font-family:var(--font-m);font-size:11px;text-align:right;color:var(--ink-faint)';
-    var tdSite = 'padding:8px 10px;font-family:var(--font-b);font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap';
-    var tdChan = 'padding:8px 10px;font-family:var(--font-b);font-size:11px;color:var(--ink-soft);white-space:nowrap';
+    var thS = 'padding:6px 8px;font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-faint);text-align:right;white-space:nowrap;background:var(--surface)';
+    var th1S = thS + ';text-align:left;min-width:110px';
+
+    var hdr = '<tr><th style="' + th1S + '">Site</th><th style="' + th1S + '">Channel</th>';
+    months.forEach(function(m) {
+      hdr += '<th style="' + thS + '">' + PL_MONTHS[m-1] + '<br><span style="font-weight:400;font-size:8px">avail</span></th>'
+           + '<th style="' + thS + '">' + PL_MONTHS[m-1] + '<br><span style="font-weight:400;font-size:8px">alloc</span></th>';
+    });
+    hdr += '<th style="' + thS + '">Total</th></tr>';
 
     var rows = '';
-    sites.forEach(function(site) {
+    brandSites.forEach(function(site) {
       var sid = site.site_id;
-      var siteSbl = sbl[sid] || {};
-      var siteAbl = abl[sid] || {};
-      var siteRowCount = 0;
+      chans.forEach(function(ch, ci) {
+        var siteSbl = (sbl[sid]||{});
+        var chanSbl = (siteSbl[ch.name]||{});
+        var chanAbl = ((abl[sid]||{})[ch.id]||{});
+        var totalAlloc = 0;
 
-      relevantChannels.forEach(function(ch, ci) {
-        var chanSbl = siteSbl[ch.name] || {};
-        var chanAbl = siteAbl[ch.id]   || {};
-
-        // Calculate totals
-        var totalAvail = 0, totalAlloc = 0;
+        var tds = '';
         months.forEach(function(m) {
-          totalAvail += (chanSbl[m] ? chanSbl[m].planned : 0);
-          totalAlloc += (chanAbl[m] ? chanAbl[m].planned : 0);
-        });
-
-        rows += '<tr style="border-bottom:1px solid var(--border)' + (ci === 0 ? ';border-top:2px solid var(--border-med)' : '') + '">'
-          + (ci === 0 ? '<td rowspan="' + relevantChannels.length + '" style="' + tdSite + ';border-right:1px solid var(--border);vertical-align:top;padding-top:10px">' + plEsc(site.site_name) + '</td>' : '')
-          + '<td style="' + tdChan + '">' + plEsc(ch.name) + '</td>';
-
-        months.forEach(function(m) {
-          var avail = chanSbl[m] ? chanSbl[m].planned : 0;
+          var avail    = chanSbl[m] ? chanSbl[m].planned : 0;
           var allocVal = chanAbl[m] ? chanAbl[m].planned : 0;
-          var inputId = 'abl_' + sid + '_' + ch.id + '_' + m;
-
-          rows += '<td style="' + tdAvail + '">' + (avail ? '£' + avail.toLocaleString('en-GB') : '—') + '</td>'
-            + '<td style="padding:4px 6px;text-align:right">'
-            + (PL.isAdmin
-                ? '<input type="number" id="' + inputId + '" value="' + allocVal + '" min="0" style="width:72px;padding:3px 6px;border:1.5px solid var(--border-med);border-radius:3px;font-family:var(--font-m);font-size:11px;text-align:right" data-site="' + sid + '" data-channel="' + ch.id + '" data-month="' + m + '">'
-                : '<span style="font-family:var(--font-m);font-size:11px">' + (allocVal ? '£' + allocVal.toLocaleString('en-GB') : '—') + '</span>')
-            + '</td>';
+          totalAlloc  += allocVal;
+          var inId     = 'abl_' + sid + '_' + ch.id + '_' + m;
+          tds += '<td style="padding:4px 6px;text-align:right;font-family:var(--font-m);font-size:10px;color:var(--ink-faint)">'
+               + (avail ? '£' + avail.toLocaleString('en-GB') : '—') + '</td>'
+               + '<td style="padding:3px 5px;text-align:right">'
+               + (PL.isAdmin
+                 ? '<input type="number" id="' + inId + '" value="' + allocVal + '" min="0" style="width:64px;padding:2px 5px;border:1.5px solid var(--border-med);border-radius:3px;font-family:var(--font-m);font-size:10px;text-align:right" data-site="' + sid + '" data-channel="' + ch.id + '" data-month="' + m + '">'
+                 : '<span style="font-family:var(--font-m);font-size:10px">' + (allocVal ? '£' + allocVal.toLocaleString('en-GB') : '—') + '</span>')
+               + '</td>';
         });
 
-        rows += '<td style="' + tdNum + ';font-weight:700;color:' + (totalAlloc > totalAvail ? '#DC2626' : 'var(--ink)') + '">'
-          + (totalAlloc ? '£' + totalAlloc.toLocaleString('en-GB') : '—') + '</td>'
+        rows += '<tr style="border-bottom:1px solid var(--border)' + (ci===0 ? ';border-top:2px solid var(--border-med)' : '') + '">'
+          + (ci===0 ? '<td rowspan="' + chans.length + '" style="padding:8px;font-family:var(--font-b);font-size:11px;font-weight:700;vertical-align:top;border-right:1px solid var(--border)">' + plE(site.site_name) + '</td>' : '')
+          + '<td style="padding:6px 8px;font-family:var(--font-b);font-size:11px;color:var(--ink-soft)">' + plE(ch.name) + '</td>'
+          + tds
+          + '<td style="padding:6px 8px;font-family:var(--font-m);font-size:11px;font-weight:700;text-align:right">' + (totalAlloc ? '£' + totalAlloc.toLocaleString('en-GB') : '—') + '</td>'
           + '</tr>';
       });
     });
 
-    tbody.innerHTML = rows || '<tr><td colspan="20" style="padding:16px;text-align:center;color:var(--ink-faint)">No budget data found. Set site budgets in Admin → Site Budgets first.</td></tr>';
+    el.innerHTML = '<div style="overflow-x:auto;margin-bottom:8px"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead>' + hdr + '</thead><tbody>' + rows + '</tbody></table></div>'
+      + (PL.isAdmin ? '<button class="btn btn-primary" id="ap-save-alloc-btn" data-act-id="' + actId + '" style="margin-top:4px">Save budget allocations</button>' : '');
 
-  } catch(e) {
-    var tbody2 = document.getElementById('pl-budget-alloc-body');
-    if (tbody2) tbody2.innerHTML = '<tr><td colspan="20" style="padding:16px;text-align:center;color:#DC2626">Error loading budget data: ' + plEsc(e.message) + '</td></tr>';
+    var saveAllocBtn = document.getElementById('ap-save-alloc-btn');
+    if (saveAllocBtn) saveAllocBtn.addEventListener('click', function() { plSaveAllocations(this.getAttribute('data-act-id')); });
+
+  } catch(err) {
+    el.innerHTML = '<div style="color:#DC2626;font-size:12px;padding:8px">Error loading budget: ' + plE(err.message) + '</div>';
   }
 }
 
-/* ── Save activity status (RAG/stage/assigned) ── */
-async function plSaveActStatus(id) {
-  var rag      = (document.getElementById('act-rag-sel')      || {}).value;
-  var stage    = (document.getElementById('act-stage-sel')    || {}).value;
-  var assigned = (document.getElementById('act-assigned-sel') || {}).value || null;
-  var btn      = document.getElementById('pl-save-act-status-btn');
+/* ══ Save allocations ══ */
+async function plSaveAllocations(actId) {
+  var btn = document.getElementById('ap-save-alloc-btn');
   if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
   try {
-    var r = await fetch(SUPA_PL + '/activities?id=eq.' + id, {
-      method: 'PATCH',
-      headers: getAuthHeaders({ 'Content-Type':'application/json', 'Prefer':'return=minimal' }),
-      body: JSON.stringify({ rag_status: rag, stage: stage, assigned_to: assigned, updated_at: new Date().toISOString() })
-    });
-    if (!r.ok) throw new Error(await r.text());
-    plShowToast('Status updated ✓', '#059669');
-    await plLoadData();
-    plRenderActivities();
-    plUpdateKPIs();
-  } catch(e) {
-    plShowToast('Save failed: ' + e.message, '#DC2626');
-  } finally {
-    if (btn) { btn.textContent = 'Save status'; btn.disabled = false; }
-  }
-}
-
-/* ── Save budget allocations ── */
-async function plSaveAllocations(actId, bid, months) {
-  var btn = document.getElementById('pl-save-alloc-btn');
-  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
-
-  try {
-    // Collect all input values
-    var inputs = document.querySelectorAll('#pl-budget-alloc-body input[type="number"]');
-    var upserts = [];
-
+    var inputs   = document.querySelectorAll('#ap-budget-detail input[type="number"][data-site]');
+    var upserts  = [];
     inputs.forEach(function(inp) {
-      var site    = inp.getAttribute('data-site');
-      var channel = inp.getAttribute('data-channel');
-      var month   = parseInt(inp.getAttribute('data-month'));
-      var val     = parseFloat(inp.value) || 0;
-
       upserts.push({
         activity_id: actId,
-        site_id:     site,
-        channel_id:  channel,
-        month:       month,
+        site_id:     inp.getAttribute('data-site'),
+        channel_id:  inp.getAttribute('data-channel'),
+        month:       parseInt(inp.getAttribute('data-month')),
         year:        PL.year,
-        planned:     val,
+        planned:     parseFloat(inp.value) || 0,
         actual:      0
       });
     });
-
-    if (!upserts.length) { plShowToast('Nothing to save', '#6B7280'); return; }
-
-    // Upsert all in one call
+    if (!upserts.length) return;
     var r = await fetch(SUPA_PL + '/activity_budget_lines', {
       method: 'POST',
-      headers: getAuthHeaders({
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates,return=minimal'
-      }),
+      headers: getAuthHeaders({ 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates,return=minimal' }),
       body: JSON.stringify(upserts)
     });
-
     if (!r.ok) throw new Error(await r.text());
     plShowToast('Budget allocations saved ✓', '#059669');
+    plRenderBudgetStrip();
   } catch(e) {
     plShowToast('Save failed: ' + e.message, '#DC2626');
   } finally {
-    if (btn) { btn.textContent = 'Save allocations'; btn.disabled = false; }
+    if (btn) { btn.textContent = 'Save budget allocations'; btn.disabled = false; }
   }
 }
 
-/* ── Section toggle ── */
-function plToggleSection(section) {
-  PL.sectionsOpen[section] = !PL.sectionsOpen[section];
-  if (section === 'events') plRenderEvents();
-  else plRenderActivities();
-}
-
-/* ── Filters ── */
-function plApplyFilters() {
-  PL.filters.type     = (document.getElementById('pl-f-type')     || {}).value || '';
-  PL.filters.rag      = (document.getElementById('pl-f-rag')      || {}).value || '';
-  PL.filters.assigned = (document.getElementById('pl-f-assigned') || {}).value || '';
-  PL.filters.search   = (document.getElementById('pl-f-search')   || {}).value || '';
-  plUpdateKPIs();
-  plRenderEvents();
-  plRenderActivities();
-}
-
-function plClearFilters() {
-  ['pl-f-type','pl-f-rag','pl-f-assigned','pl-f-search'].forEach(function(id) {
-    var el = document.getElementById(id); if (el) el.value = '';
-  });
-  PL.filters = { type:'', rag:'', assigned:'', search:'' };
-  plUpdateKPIs();
-  plRenderEvents();
-  plRenderActivities();
-}
-
-/* ── Brand selector ── */
-function plSetBrand(brand, btn) {
-  PL.brand = brand;
-  PL.openActBrand = null;
-  document.querySelectorAll('.pl-brand-btn').forEach(function(b) { b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  plRenderEvents();
-  plRenderActivities();
-  plUpdateSubtitle();
-  plUpdateKPIs();
-}
-
-/* ── Quarter selector ── */
-async function plSetQuarter(q, btn) {
-  PL.quarter = q;
-  PL.openActBrand = null;
-  document.querySelectorAll('.pl-q-btn').forEach(function(b) { b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  // Show loading
-  var eb = document.getElementById('pl-events-body');
-  var ab = document.getElementById('pl-acts-body');
-  if (eb) eb.innerHTML = '<div class="pl-loading"><div class="pl-spinner"></div></div>';
-  if (ab) ab.innerHTML = '<div class="pl-loading"><div class="pl-spinner"></div></div>';
-  await plLoadData();
-  plRender();
-}
-
-/* ── Event detail modal ── */
-function plOpenEventDetail(id) {
-  var e = PL.events.find(function(ev) { return ev.id === id; });
-  if (!e) return;
-
-  var typeName  = plGetTypeName(e.event_type_id);
-  var siteName  = plGetSiteName(e.site_id);
-  var color     = BRAND_COLORS[e.brand_id] || '#666';
-  var brandName = BRAND_NAMES[e.brand_id] || e.brand_id;
-
-  var fields = [
-    ['Brand', brandName],
-    ['Site', siteName],
-    ['Event type', typeName],
-    ['Dates', plFormatDates(e.start_date, e.end_date)],
-    ['Status', e.status],
-    ['RAG', e.rag_status],
-    ['Stage', e.stage],
-    ['Planned budget', e.planned_budget ? '£' + Number(e.planned_budget).toLocaleString('en-GB') : '—'],
-    ['Actual spend', e.actual_spend ? '£' + Number(e.actual_spend).toLocaleString('en-GB') : '—'],
-    ['Brand support', e.coop_funded && e.coop_amount ? '£' + Number(e.coop_amount).toLocaleString('en-GB') : (e.coop_funded ? 'Yes' : '—')],
-    ['Footfall', e.expected_footfall ? Number(e.expected_footfall).toLocaleString('en-GB') + ' expected' : '—'],
-    ['Assigned to', plGetTeamName(e.assigned_to)],
-    ['Secondary owner', plGetTeamName(e.secondary_owner)],
-    ['Action plan needed', e.action_plan_needed ? '🔲 Yes — needs building' : 'No'],
-    ['Quarter tags', (e.quarter_tags || []).join(', ') || '—'],
-    ['Location', e.location || '—'],
-    ['Notes', e.notes || '—'],
-  ];
-
-  var fieldsHtml = '<div class="pl-modal-grid2">';
-  fields.forEach(function(f) {
-    if (!f[1] || f[1] === '—') return;
-    var isWide = f[0] === 'Notes' || f[0] === 'Quarter tags' || f[0] === 'Action plan needed';
-    fieldsHtml += '<div class="pl-act-detail-row' + (isWide ? ' pl-modal-field--full' : '') + '" style="' + (isWide ? 'grid-column:1/-1' : '') + '">'
-      + '<span class="pl-act-detail-label">' + plEsc(f[0]) + '</span>'
-      + '<span class="pl-act-detail-val">' + plEsc(String(f[1])) + '</span>'
-      + '</div>';
-  });
-  fieldsHtml += '</div>';
-
-  var adminBtns = PL.isAdmin
-    ? '<button class="btn btn-primary" onclick="plOpenEventModal(\'' + e.id + '\')">Edit event</button>'
-    : '';
-
-  var html = '<div class="pl-modal-overlay" onclick="if(event.target===this)plCloseModal()">'
-    + '<div class="pl-modal">'
-    + '<div class="pl-modal-hdr" style="border-top:4px solid ' + color + '">'
-    + '<div>'
-    + (typeName ? '<div style="margin-bottom:6px"><span class="ev-type-badge" style="background:' + (plGetTypeColor(e.event_type_id)||color) + '">' + plEsc(typeName) + '</span></div>' : '')
-    + '<div class="pl-modal-title">' + plEsc(e.title || '') + '</div>'
-    + '<div style="font-size:12px;color:var(--ink-soft);margin-top:4px">' + plEsc(brandName) + (siteName ? ' · ' + plEsc(siteName) : '') + '</div>'
-    + '</div>'
-    + '<div style="display:flex;align-items:flex-start;gap:8px">'
-    + plRagPill(e.rag_status)
-    + '<button class="pl-modal-close" onclick="plCloseModal()">×</button>'
-    + '</div>'
-    + '</div>'
-    + '<div class="pl-modal-body">'
-    + '<div class="pl-act-detail">' + fieldsHtml + '</div>'
-    + '</div>'
-    + '<div class="pl-modal-footer">'
-    + adminBtns
-    + '<button class="btn" onclick="plCloseModal()">Close</button>'
-    + '</div>'
-    + '</div></div>';
-
-  var root = document.getElementById('pl-modal-root');
-  if (root) root.innerHTML = html;
-}
-
-/* ── Activity detail modal ── */
-function plOpenActDetail(id) {
-  var a = PL.activities.find(function(act) { return act.id === id; });
+/* ══ Copy brief to clipboard ══ */
+async function plCopyBrief(actId) {
+  var a    = PL.activities.find(function(ac) { return ac.id === actId; });
   if (!a) return;
+  var type = PL.actTypes.find(function(t) { return t.id === a.type_id; });
+  var bname = BRAND_NAMES[a.brand_id] || a.brand_id;
+  var sites = PL.sites.filter(function(s) { return s.brand_id === a.brand_id; }).map(function(s) { return s.site_name; }).join(', ');
 
-  var siteName  = plGetSiteName(a.site_id);
-  var brandName = BRAND_NAMES[a.brand_id] || a.brand_id;
-  var color     = BRAND_COLORS[a.brand_id] || '#666';
+  // Load deliverables
+  var dels = [];
+  try {
+    var r = await fetch(SUPA_PL + '/activity_deliverables?activity_id=eq.' + actId + '&order=sort_order', { headers: getAuthHeaders() });
+    if (r.ok) dels = await r.json();
+  } catch(e) {}
 
-  var fields = [
-    ['Brand', brandName],
-    ['Site', siteName],
-    ['Category', a.title],
-    ['Quarter', 'Q' + a.quarter + ' ' + a.year],
-    ['RAG status', a.rag_status],
-    ['Stage', a.stage],
-    ['Budget', a.total_budget ? '£' + Number(a.total_budget).toLocaleString('en-GB') : 'Not set'],
-    ['Actual spend', a.total_actual ? '£' + Number(a.total_actual).toLocaleString('en-GB') : '—'],
-    ['Assigned to', plGetTeamName(a.assigned_to)],
-    ['Description', a.description || '—'],
-    ['Notes', a.notes || '—'],
-  ];
-
-  var fieldsHtml = '';
-  fields.forEach(function(f) {
-    if (!f[1] || f[1] === '—') return;
-    fieldsHtml += '<div class="pl-act-detail-row">'
-      + '<span class="pl-act-detail-label">' + plEsc(f[0]) + '</span>'
-      + '<span class="pl-act-detail-val">' + plEsc(String(f[1])) + '</span>'
-      + '</div>';
-  });
-
-  var adminBtns = PL.isAdmin
-    ? '<button class="btn btn-primary" onclick="plOpenActEditModal(\'' + a.id + '\')">Edit activity</button>'
-    : '';
-
-  var html = '<div class="pl-modal-overlay" onclick="if(event.target===this)plCloseModal()">'
-    + '<div class="pl-modal">'
-    + '<div class="pl-modal-hdr" style="border-top:4px solid ' + color + '">'
-    + '<div>'
-    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:5px">QUARTERLY ACTIVITY</div>'
-    + '<div class="pl-modal-title">' + plEsc(a.title || '') + '</div>'
-    + '<div style="font-size:12px;color:var(--ink-soft);margin-top:4px">' + plEsc(brandName) + ' · ' + plEsc(siteName) + ' · Q' + a.quarter + ' ' + a.year + '</div>'
-    + '</div>'
-    + '<div style="display:flex;align-items:flex-start;gap:8px">'
-    + plRagPill(a.rag_status)
-    + '<button class="pl-modal-close" onclick="plCloseModal()">×</button>'
-    + '</div>'
-    + '</div>'
-    + '<div class="pl-modal-body">'
-    + '<div class="pl-act-detail">' + fieldsHtml + '</div>'
-    + '</div>'
-    + '<div class="pl-modal-footer">'
-    + adminBtns
-    + '<button class="btn" onclick="plCloseModal()">Close</button>'
-    + '</div>'
-    + '</div></div>';
-
-  var root = document.getElementById('pl-modal-root');
-  if (root) {
-    root.innerHTML = html;
-    // Bind edit buttons
-    root.querySelectorAll('.pl-edit-act-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        plCloseModal();
-        plOpenActEditModal(this.getAttribute('data-id'));
-      });
-    });
-  }
-}
-
-/* ── Edit/Add event modal ── */
-function plOpenEventModal(id) {
-  var e = id ? PL.events.find(function(ev) { return ev.id === id; }) : null;
-  var isNew = !e;
-
-  var typeOptions = PL.eventTypes.map(function(t) {
-    var sel = (e && e.event_type_id === t.id) ? ' selected' : '';
-    return '<option value="' + t.id + '"' + sel + '>' + plEsc(t.name) + '</option>';
-  }).join('');
-
-  var brandOptions = Object.keys(BRAND_NAMES).map(function(bid) {
-    var sel = (e && e.brand_id === bid) ? ' selected' : '';
-    return '<option value="' + bid + '"' + sel + '>' + plEsc(BRAND_NAMES[bid]) + '</option>';
-  }).join('');
-
-  var siteOptions = PL.sites.map(function(s) {
-    var sel = (e && e.site_id === s.site_id) ? ' selected' : '';
-    return '<option value="' + s.site_id + '"' + sel + '>' + plEsc(s.site_name) + '</option>';
-  }).join('');
-
-  var teamOptions = PL.team.map(function(m) {
-    var sel = (e && e.assigned_to === m.id) ? ' selected' : '';
-    return '<option value="' + m.id + '"' + sel + '>' + plEsc(m.name) + '</option>';
-  }).join('');
-
-  var ragOptions = ['Not Started','In Progress','At Risk','On Track','Complete','TBC','Cancelled'].map(function(r) {
-    var sel = (e && e.rag_status === r) ? ' selected' : (!e && r === 'Not Started') ? ' selected' : '';
-    return '<option value="' + r + '"' + sel + '>' + r + '</option>';
-  }).join('');
-
-  var stageOptions = ['Not Started','Planning','Briefing','In Progress','Awaiting Input','Complete','Cancelled'].map(function(s) {
-    var sel = (e && e.stage === s) ? ' selected' : (!e && s === 'Not Started') ? ' selected' : '';
-    return '<option value="' + s + '"' + sel + '>' + s + '</option>';
-  }).join('');
-
-  var qtags = e && e.quarter_tags ? e.quarter_tags.join(', ') : 'Q' + PL.quarter + '-' + PL.year;
-
-  var html = '<div class="pl-modal-overlay" onclick="if(event.target===this)plCloseModal()">'
-    + '<div class="pl-modal">'
-    + '<div class="pl-modal-hdr">'
-    + '<div class="pl-modal-title">' + (isNew ? 'Add event' : 'Edit event') + '</div>'
-    + '<button class="pl-modal-close" onclick="plCloseModal()">×</button>'
-    + '</div>'
-    + '<div class="pl-modal-body">'
-    + '<div class="pl-modal-field"><label>Event title</label><input id="ef-title" type="text" value="' + plEsc(e ? e.title || '' : '') + '" placeholder="e.g. Audi VIP Event — Crewe"></div>'
-    + '<div class="pl-modal-grid2">'
-    + '<div class="pl-modal-field"><label>Brand</label><select id="ef-brand"><option value="">Select brand…</option>' + brandOptions + '</select></div>'
-    + '<div class="pl-modal-field"><label>Site</label><select id="ef-site"><option value="">Select site…</option>' + siteOptions + '</select></div>'
-    + '<div class="pl-modal-field"><label>Event type</label><select id="ef-type"><option value="">Select type…</option>' + typeOptions + '</select></div>'
-    + '<div class="pl-modal-field"><label>Assigned to</label><select id="ef-assigned"><option value="">Unassigned</option>' + teamOptions + '</select></div>'
-    + '<div class="pl-modal-field"><label>Start date</label><input id="ef-start" type="date" value="' + plEsc(e ? e.start_date || '' : '') + '"></div>'
-    + '<div class="pl-modal-field"><label>End date</label><input id="ef-end" type="date" value="' + plEsc(e ? e.end_date || '' : '') + '"></div>'
-    + '<div class="pl-modal-field"><label>RAG status</label><select id="ef-rag">' + ragOptions + '</select></div>'
-    + '<div class="pl-modal-field"><label>Stage</label><select id="ef-stage">' + stageOptions + '</select></div>'
-    + '<div class="pl-modal-field"><label>Planned budget (£)</label><input id="ef-budget" type="number" min="0" value="' + plEsc(e ? String(e.planned_budget || '') : '') + '" placeholder="0"></div>'
-    + '<div class="pl-modal-field"><label>Actual spend (£)</label><input id="ef-actual" type="number" min="0" value="' + plEsc(e ? String(e.actual_spend || '') : '') + '" placeholder="0"></div>'
-    + '<div class="pl-modal-field"><label>Brand support (£)</label><input id="ef-coop" type="number" min="0" value="' + plEsc(e ? String(e.coop_amount || '') : '') + '" placeholder="0"></div>'
-    + '<div class="pl-modal-field"><label>Expected footfall</label><input id="ef-footfall" type="number" min="0" value="' + plEsc(e ? String(e.expected_footfall || '') : '') + '" placeholder="0"></div>'
-    + '</div>'
-    + '<div class="pl-modal-field"><label>Quarter tags (comma-separated, e.g. Q3-2026)</label><input id="ef-qtags" type="text" value="' + plEsc(qtags) + '"></div>'
-    + '<div class="pl-modal-field"><label>Notes</label><textarea id="ef-notes">' + plEsc(e ? e.notes || '' : '') + '</textarea></div>'
-    + '<div id="ef-err" style="display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:4px;padding:9px 12px;font-family:var(--font-b);font-size:12px;color:#DC2626;margin-top:8px"></div>'
-    + '</div>'
-    + '<div class="pl-modal-footer">'
-    + '<button class="btn btn-primary" onclick="plSaveEvent(\'' + (id||'') + '\')" id="ef-save-btn">' + (isNew ? 'Add event' : 'Save changes') + '</button>'
-    + (id && PL.isAdmin ? '<button class="btn" style="margin-left:auto;color:#DC2626;border-color:#FECACA" onclick="plDeleteEvent(\'' + id + '\')">Delete</button>' : '')
-    + '<button class="btn" onclick="plCloseModal()">Cancel</button>'
-    + '</div>'
-    + '</div></div>';
-
-  var root = document.getElementById('pl-modal-root');
-  if (root) root.innerHTML = html;
-}
-
-/* ── Save event ── */
-async function plSaveEvent(id) {
-  var title    = (document.getElementById('ef-title')    || {}).value || '';
-  var brand    = (document.getElementById('ef-brand')    || {}).value || '';
-  var site     = (document.getElementById('ef-site')     || {}).value || '';
-  var typeId   = (document.getElementById('ef-type')     || {}).value || null;
-  var assigned = (document.getElementById('ef-assigned') || {}).value || null;
-  var start    = (document.getElementById('ef-start')    || {}).value || null;
-  var end      = (document.getElementById('ef-end')      || {}).value || null;
-  var rag      = (document.getElementById('ef-rag')      || {}).value || 'Not Started';
-  var stage    = (document.getElementById('ef-stage')    || {}).value || 'Not Started';
-  var budget   = parseFloat((document.getElementById('ef-budget')   || {}).value) || null;
-  var actual   = parseFloat((document.getElementById('ef-actual')   || {}).value) || null;
-  var coop     = parseFloat((document.getElementById('ef-coop')     || {}).value) || null;
-  var footfall = parseInt((document.getElementById('ef-footfall')   || {}).value)  || null;
-  var qtagsRaw = (document.getElementById('ef-qtags')   || {}).value || '';
-  var notes    = (document.getElementById('ef-notes')   || {}).value || null;
-  var errEl    = document.getElementById('ef-err');
-  var saveBtn  = document.getElementById('ef-save-btn');
-
-  if (errEl) errEl.style.display = 'none';
-  if (!title.trim()) { if (errEl) { errEl.textContent='Please enter an event title.'; errEl.style.display='block'; } return; }
-  if (!brand)        { if (errEl) { errEl.textContent='Please select a brand.'; errEl.style.display='block'; } return; }
-  if (!site)         { if (errEl) { errEl.textContent='Please select a site.'; errEl.style.display='block'; } return; }
-  if (!start)        { if (errEl) { errEl.textContent='Please set a start date.'; errEl.style.display='block'; } return; }
-
-  var qtags = qtagsRaw.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
-
-  var payload = {
-    title:            title.trim(),
-    brand_id:         brand,
-    site_id:          site,
-    event_type_id:    typeId || null,
-    assigned_to:      assigned || null,
-    start_date:       start,
-    end_date:         end || null,
-    rag_status:       rag,
-    stage:            stage,
-    planned_budget:   budget,
-    actual_spend:     actual,
-    coop_funded:      !!coop,
-    coop_amount:      coop,
-    expected_footfall:footfall,
-    quarter_tags:     qtags,
-    notes:            notes,
-    updated_at:       new Date().toISOString()
-  };
-
-  if (saveBtn) { saveBtn.textContent = 'Saving…'; saveBtn.disabled = true; }
+  var brief = [
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    'SWANSWAY MARKETING BRIEF',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '',
+    'Brand:        ' + bname,
+    'Campaign:     ' + (a.title||''),
+    'Type:         ' + (type ? type.name : ''),
+    'Quarter:      Q' + a.quarter + ' ' + a.year,
+    'Sites:        ' + (sites || 'All ' + bname + ' sites'),
+    'Budget:       ' + (a.total_budget ? '£' + Number(a.total_budget).toLocaleString('en-GB') : 'TBC'),
+    'Owner:        ' + plGetTeamName(a.assigned_to),
+    '',
+    'DESCRIPTION',
+    (a.description || 'See notes below'),
+    '',
+    'NOTES',
+    (a.notes || '—'),
+    '',
+    'DELIVERABLES',
+    dels.length ? dels.map(function(d) { return (d.completed ? '✓ ' : '☐ ') + d.title; }).join('\n') : '— None set',
+    '',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    'Generated: ' + new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' }),
+    'Portal: Swansway Marketing Hub',
+  ].join('\n');
 
   try {
-    var method = id ? 'PATCH' : 'POST';
-    var url    = SUPA_PL + '/events' + (id ? '?id=eq.' + id : '');
-    var r = await fetch(url, {
-      method: method,
-      headers: getAuthHeaders({ 'Content-Type':'application/json', 'Prefer':'return=minimal' }),
-      body: JSON.stringify(id ? payload : [payload])
-    });
-    if (!r.ok) throw new Error(await r.text());
-    plCloseModal();
-    plShowToast((id ? 'Event updated' : 'Event added') + ' ✓', '#059669');
-    await plLoadData();
-    plBuildSidebar();  // preserves PL.brand active state
-    plUpdateKPIs();
-    plRenderEvents();
-    plRenderActivities();
-    plUpdateSubtitle();
+    await navigator.clipboard.writeText(brief);
+    var btn = document.getElementById('ap-brief-btn');
+    if (btn) { btn.textContent = '✓ Copied to clipboard!'; setTimeout(function() { btn.textContent = '📋 Copy brief to clipboard'; }, 2500); }
   } catch(e) {
-    if (errEl) { errEl.textContent = 'Save failed: ' + e.message; errEl.style.display = 'block'; }
-    if (saveBtn) { saveBtn.textContent = 'Save changes'; saveBtn.disabled = false; }
+    // Fallback: show in textarea
+    var ta = document.createElement('textarea');
+    ta.value = brief;
+    ta.style.cssText = 'position:fixed;top:10px;left:10px;width:80%;height:80%;z-index:9999;padding:16px;font-family:monospace;font-size:12px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    setTimeout(function() { document.body.removeChild(ta); }, 3000);
+    plShowToast('Brief copied (fallback mode)', '#059669');
   }
 }
 
-/* ── Delete event ── */
+/* ══ Save event ══ */
+async function plSaveEvent(id) {
+  var btn   = document.getElementById('ep-save-btn');
+  var errEl = document.getElementById('ep-err');
+  if (errEl) errEl.textContent = '';
+  if (btn)   { btn.textContent = 'Saving…'; btn.disabled = true; }
+
+  var payload = {
+    rag_status:    (document.getElementById('ep-rag')      ||{}).value || 'Not Started',
+    stage:         (document.getElementById('ep-stage')    ||{}).value || 'Not Started',
+    assigned_to:   (document.getElementById('ep-assigned') ||{}).value || null,
+    planned_budget: parseFloat((document.getElementById('ep-budget')||{}).value) || null,
+    actual_spend:  parseFloat((document.getElementById('ep-actual') ||{}).value) || null,
+    notes:         (document.getElementById('ep-notes')    ||{}).value || null,
+    updated_at:    new Date().toISOString()
+  };
+
+  try {
+    var r = await fetch(SUPA_PL + '/events?id=eq.' + id, {
+      method: 'PATCH',
+      headers: getAuthHeaders({ 'Content-Type':'application/json', 'Prefer':'return=minimal' }),
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) throw new Error(await r.text());
+    plShowToast('Event updated ✓', '#059669');
+    await plLoadData();
+    plRenderEvents();
+    plRenderBudgetStrip();
+  } catch(e) {
+    if (errEl) errEl.textContent = 'Save failed: ' + e.message;
+  } finally {
+    if (btn) { btn.textContent = 'Save changes'; btn.disabled = false; }
+  }
+}
+
+/* ══ Delete event ══ */
 async function plDeleteEvent(id) {
-  if (!confirm('Delete this event? This cannot be undone.')) return;
+  if (!confirm('Delete this event? Cannot be undone.')) return;
   try {
     var r = await fetch(SUPA_PL + '/events?id=eq.' + id, { method:'DELETE', headers: getAuthHeaders() });
     if (!r.ok) throw new Error(await r.text());
-    plCloseModal();
-    plShowToast('Event deleted', '#DC2626');
+    plShowToast('Event deleted', '#6B7280');
+    plClosePanel();
     await plLoadData();
-    plBuildSidebar();  // preserves PL.brand active state
-    plUpdateKPIs();
     plRenderEvents();
-    plRenderActivities();
-  } catch(e) { plShowToast('Delete failed: ' + e.message, '#DC2626'); }
+    plRenderBudgetStrip();
+  } catch(e) { plShowToast('Error: ' + e.message, '#DC2626'); }
 }
 
-/* ── Activity edit modal ── */
-function plOpenActEditModal(id) {
-  var a = PL.activities.find(function(act) { return act.id === id; });
-  if (!a) return;
-
-  var teamOptions = PL.team.map(function(m) {
-    var sel = a.assigned_to === m.id ? ' selected' : '';
-    return '<option value="' + m.id + '"' + sel + '>' + plEsc(m.name) + '</option>';
-  }).join('');
-
-  var ragOptions = ['Not Started','In Progress','At Risk','On Track','Complete','TBC','Cancelled'].map(function(r) {
-    return '<option value="' + r + '"' + (a.rag_status === r ? ' selected' : '') + '>' + r + '</option>';
-  }).join('');
-
-  var stageOptions = ['Not Started','Planning','In Progress','Awaiting Input','Complete','Cancelled'].map(function(s) {
-    return '<option value="' + s + '"' + (a.stage === s ? ' selected' : '') + '>' + s + '</option>';
-  }).join('');
-
-  var html = '<div class="pl-modal-overlay" onclick="if(event.target===this)plCloseModal()">'
-    + '<div class="pl-modal">'
-    + '<div class="pl-modal-hdr">'
-    + '<div>'
-    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:4px">EDIT ACTIVITY</div>'
-    + '<div class="pl-modal-title">' + plEsc(a.title || '') + '</div>'
-    + '<div style="font-size:12px;color:var(--ink-soft);margin-top:3px">' + plEsc(plGetSiteName(a.site_id)) + ' · Q' + a.quarter + ' ' + a.year + '</div>'
-    + '</div>'
-    + '<button class="pl-modal-close" onclick="plCloseModal()">×</button>'
-    + '</div>'
-    + '<div class="pl-modal-body">'
-    + '<div class="pl-modal-grid2">'
-    + '<div class="pl-modal-field"><label>RAG status</label><select id="ae-rag">' + ragOptions + '</select></div>'
-    + '<div class="pl-modal-field"><label>Stage</label><select id="ae-stage">' + stageOptions + '</select></div>'
-    + '<div class="pl-modal-field"><label>Assigned to</label><select id="ae-assigned"><option value="">Unassigned</option>' + teamOptions + '</select></div>'
-    + '<div class="pl-modal-field"><label>Total budget (£)</label><input id="ae-budget" type="number" min="0" value="' + plEsc(String(a.total_budget||'')) + '" placeholder="0"></div>'
-    + '<div class="pl-modal-field"><label>Actual spend (£)</label><input id="ae-actual" type="number" min="0" value="' + plEsc(String(a.total_actual||'')) + '" placeholder="0"></div>'
-    + '</div>'
-    + '<div class="pl-modal-field"><label>Description</label><input id="ae-desc" type="text" value="' + plEsc(a.description||'') + '"></div>'
-    + '<div class="pl-modal-field"><label>Notes</label><textarea id="ae-notes">' + plEsc(a.notes||'') + '</textarea></div>'
-    + '<div id="ae-err" style="display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:4px;padding:9px 12px;font-family:var(--font-b);font-size:12px;color:#DC2626;margin-top:8px"></div>'
-    + '</div>'
-    + '<div class="pl-modal-footer">'
-    + '<button class="btn btn-primary" onclick="plSaveActivity(\'' + a.id + '\')" id="ae-save-btn">Save changes</button>'
-    + '<button class="btn" onclick="plCloseModal()">Cancel</button>'
-    + '</div>'
-    + '</div></div>';
-
-  var root = document.getElementById('pl-modal-root');
-  if (root) root.innerHTML = html;
-}
-
-/* ── Save activity ── */
+/* ══ Save activity ══ */
 async function plSaveActivity(id) {
-  var rag      = (document.getElementById('ae-rag')      || {}).value || 'Not Started';
-  var stage    = (document.getElementById('ae-stage')    || {}).value || 'Not Started';
-  var assigned = (document.getElementById('ae-assigned') || {}).value || null;
-  var budget   = parseFloat((document.getElementById('ae-budget') || {}).value) || null;
-  var actual   = parseFloat((document.getElementById('ae-actual') || {}).value) || null;
-  var desc     = (document.getElementById('ae-desc')    || {}).value || null;
-  var notes    = (document.getElementById('ae-notes')   || {}).value || null;
-  var errEl    = document.getElementById('ae-err');
-  var saveBtn  = document.getElementById('ae-save-btn');
+  var btn   = document.getElementById('ap-save-btn');
+  var errEl = document.getElementById('ap-err');
+  if (errEl) errEl.textContent = '';
+  if (btn)   { btn.textContent = 'Saving…'; btn.disabled = true; }
 
   var payload = {
-    rag_status:   rag,
-    stage:        stage,
-    assigned_to:  assigned,
-    total_budget: budget,
-    total_actual: actual,
-    description:  desc,
-    notes:        notes,
+    rag_status:   (document.getElementById('ap-rag')      ||{}).value || 'Not Started',
+    stage:        (document.getElementById('ap-stage')    ||{}).value || 'Not Started',
+    assigned_to:  (document.getElementById('ap-assigned') ||{}).value || null,
+    total_budget: parseFloat((document.getElementById('ap-budget')||{}).value) || null,
+    description:  (document.getElementById('ap-desc')     ||{}).value || null,
+    notes:        (document.getElementById('ap-notes')    ||{}).value || null,
     updated_at:   new Date().toISOString()
   };
 
-  if (saveBtn) { saveBtn.textContent = 'Saving…'; saveBtn.disabled = true; }
   try {
     var r = await fetch(SUPA_PL + '/activities?id=eq.' + id, {
       method: 'PATCH',
@@ -1146,64 +834,209 @@ async function plSaveActivity(id) {
       body: JSON.stringify(payload)
     });
     if (!r.ok) throw new Error(await r.text());
-    plCloseModal();
     plShowToast('Activity updated ✓', '#059669');
     await plLoadData();
     plRenderActivities();
-    plUpdateKPIs();
+    plRenderBudgetStrip();
   } catch(e) {
-    if (errEl) { errEl.textContent = 'Save failed: ' + e.message; errEl.style.display = 'block'; }
-    if (saveBtn) { saveBtn.textContent = 'Save changes'; saveBtn.disabled = false; }
+    if (errEl) errEl.textContent = 'Save failed: ' + e.message;
+  } finally {
+    if (btn) { btn.textContent = 'Save changes'; btn.disabled = false; }
   }
 }
 
-/* ── Close modal ── */
-function plCloseModal() {
+/* ══ Delete activity ══ */
+async function plDeleteActivity(id) {
+  if (!confirm('Delete this activity and all its deliverables? Cannot be undone.')) return;
+  try {
+    await fetch(SUPA_PL + '/activity_deliverables?activity_id=eq.' + id, { method:'DELETE', headers: getAuthHeaders() });
+    var r = await fetch(SUPA_PL + '/activities?id=eq.' + id, { method:'DELETE', headers: getAuthHeaders() });
+    if (!r.ok) throw new Error(await r.text());
+    plShowToast('Activity deleted', '#6B7280');
+    plClosePanel();
+    await plLoadData();
+    plRenderActivities();
+    plRenderBudgetStrip();
+  } catch(e) { plShowToast('Error: ' + e.message, '#DC2626'); }
+}
+
+/* ══ Add activity modal ══ */
+function plOpenAddActivity() {
+  var typeOpts = PL.actTypes.map(function(t) {
+    return '<option value="' + t.id + '">' + plE(t.name) + '</option>';
+  }).join('');
+  var teamOpts = '<option value="">Unassigned</option>' + PL.team.map(function(m) {
+    return '<option value="' + m.id + '">' + plE(m.name) + '</option>';
+  }).join('');
+
+  var html = '<div class="pl-modal-overlay" onclick="if(event.target===this)plCloseAddModal()">'
+    + '<div class="pl-modal">'
+    + '<div class="pl-modal-hdr"><div class="pl-modal-title">Add activity</div>'
+    + '<button class="pl-modal-close" onclick="plCloseAddModal()">×</button></div>'
+    + '<div class="pl-modal-body">'
+    + '<div class="pl-form-field"><label>Activity type</label><select id="na-type">' + typeOpts + '</select></div>'
+    + '<div class="pl-form-field"><label>Title</label><input type="text" id="na-title" placeholder="e.g. Sep Plate Change Campaign"></div>'
+    + '<div class="pl-form-row2">'
+    + '<div class="pl-form-field"><label>Assigned to</label><select id="na-assigned">' + teamOpts + '</select></div>'
+    + '<div class="pl-form-field"><label>Budget (£)</label><input type="number" id="na-budget" min="0" placeholder="0"></div>'
+    + '</div>'
+    + '<div class="pl-form-field"><label>Description</label><textarea id="na-desc" rows="2" placeholder="Campaign objective and details…"></textarea></div>'
+    + '<div id="na-err" style="color:#DC2626;font-size:12px;margin-top:8px"></div>'
+    + '</div>'
+    + '<div class="pl-modal-footer">'
+    + '<button class="btn btn-primary" id="na-save-btn">Add activity</button>'
+    + '<button class="btn" onclick="plCloseAddModal()">Cancel</button>'
+    + '</div>'
+    + '</div></div>';
+
+  var root = document.getElementById('pl-modal-root');
+  if (root) {
+    root.innerHTML = html;
+    var saveBtn = root.querySelector('#na-save-btn');
+    if (saveBtn) saveBtn.addEventListener('click', plSaveNewActivity);
+  }
+}
+
+async function plSaveNewActivity() {
+  var typeId  = (document.getElementById('na-type')     ||{}).value;
+  var title   = ((document.getElementById('na-title')   ||{}).value||'').trim();
+  var assigned= (document.getElementById('na-assigned') ||{}).value || null;
+  var budget  = parseFloat((document.getElementById('na-budget')||{}).value) || null;
+  var desc    = (document.getElementById('na-desc')     ||{}).value || null;
+  var errEl   = document.getElementById('na-err');
+  var btn     = document.getElementById('na-save-btn');
+
+  if (errEl) errEl.textContent = '';
+  if (!typeId) { if (errEl) errEl.textContent = 'Please select a type.'; return; }
+  if (!title)  { if (errEl) errEl.textContent = 'Please enter a title.'; return; }
+
+  if (btn) { btn.textContent = 'Adding…'; btn.disabled = true; }
+
+  var id = 'act-' + PL.brand + '-' + typeId + '-' + Date.now();
+
+  try {
+    var r = await fetch(SUPA_PL + '/activities', {
+      method: 'POST',
+      headers: getAuthHeaders({ 'Content-Type':'application/json', 'Prefer':'return=representation' }),
+      body: JSON.stringify([{
+        id:           id,
+        title:        title,
+        type_id:      typeId,
+        category_id:  typeId,
+        brand_id:     PL.brand,
+        site_id:      null,
+        quarter:      PL.quarter,
+        year:         PL.year,
+        rag_status:   'Not Started',
+        stage:        'Not Started',
+        assigned_to:  assigned,
+        total_budget: budget,
+        description:  desc
+      }])
+    });
+    if (!r.ok) throw new Error(await r.text());
+    var newActs = await r.json();
+    var newId   = newActs[0].id;
+
+    // Seed default deliverables from type
+    var type = PL.actTypes.find(function(t) { return t.id === typeId; });
+    if (type && type.default_deliverables && type.default_deliverables.length) {
+      var dels = type.default_deliverables.map(function(d, i) {
+        return { activity_id: newId, title: d.title, sort_order: i, is_custom: false };
+      });
+      await fetch(SUPA_PL + '/activity_deliverables', {
+        method: 'POST',
+        headers: getAuthHeaders({ 'Content-Type':'application/json', 'Prefer':'return=minimal' }),
+        body: JSON.stringify(dels)
+      });
+    }
+
+    plCloseAddModal();
+    plShowToast('Activity added ✓', '#059669');
+    await plLoadData();
+    plRenderActivities();
+    plRenderBudgetStrip();
+    // Open the new activity's panel
+    setTimeout(function() { plOpenActPanel(newId); }, 100);
+  } catch(e) {
+    if (errEl) errEl.textContent = 'Error: ' + e.message;
+    if (btn)   { btn.textContent = 'Add activity'; btn.disabled = false; }
+  }
+}
+
+function plCloseAddModal() {
   var root = document.getElementById('pl-modal-root');
   if (root) root.innerHTML = '';
 }
 
-/* ── Helpers ── */
+/* ══ Add event — opens existing evOpenForm ══ */
+function plOpenAddEvent() {
+  if (typeof evOpenForm === 'function') evOpenForm(null);
+}
+
+/* ══ Side panel ══ */
+function plShowPanel(title, content, footer) {
+  var panel = document.getElementById('pl-side-panel');
+  var titleEl = document.getElementById('pl-panel-title');
+  var contentEl = document.getElementById('pl-panel-content');
+  var footerEl = document.getElementById('pl-panel-footer');
+
+  if (!panel) return;
+  if (titleEl)   titleEl.textContent  = title;
+  if (contentEl) contentEl.innerHTML  = content;
+  if (footerEl)  footerEl.innerHTML   = footer || '';
+
+  panel.classList.add('open');
+  document.getElementById('pl-panel-overlay').style.display = 'block';
+}
+
+function plClosePanel() {
+  var panel = document.getElementById('pl-side-panel');
+  if (panel) panel.classList.remove('open');
+  var overlay = document.getElementById('pl-panel-overlay');
+  if (overlay) overlay.style.display = 'none';
+  PL.panel = null;
+}
+
+/* ══ Helpers ══ */
 function plRagPill(rag) {
-  var cls = plRagClass(rag);
-  return '<span class="rag rag-' + cls + '">' + plEsc(rag || '—') + '</span>';
-}
-
-function plRagClass(rag) {
   var map = {
-    'Complete':'complete', 'On Track':'on-track', 'In Progress':'in-progress',
-    'At Risk':'at-risk', 'Not Started':'not-started', 'TBC':'tbc', 'Cancelled':'cancelled'
+    'Complete':'complete','On Track':'on-track','In Progress':'in-progress',
+    'At Risk':'at-risk','Not Started':'not-started','TBC':'tbc','Cancelled':'cancelled'
   };
-  return map[rag] || 'not-started';
+  return '<span class="rag rag-' + (map[rag]||'not-started') + '">' + plE(rag||'—') + '</span>';
 }
 
-function plFormatDates(start, end) {
+function plSelectOpts(opts, selected) {
+  return opts.map(function(o) {
+    return '<option value="' + o + '"' + (o===selected?' selected':'') + '>' + o + '</option>';
+  }).join('');
+}
+
+function plFmtDates(start, end) {
   if (!start) return '';
-  var s = new Date(start);
-  var opts = { day:'numeric', month:'short', year:'numeric' };
-  var sStr = s.toLocaleDateString('en-GB', opts);
-  if (!end || end === start) return sStr;
-  var e = new Date(end);
-  var eStr = e.toLocaleDateString('en-GB', opts);
-  return sStr + ' – ' + eStr;
+  var s = new Date(start).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+  if (!end || end === start) return s;
+  var e = new Date(end).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+  return s + ' – ' + e;
 }
 
-function plGetTypeName(typeId) {
-  if (!typeId) return '';
-  var t = PL.eventTypes.find(function(et) { return et.id === typeId; });
+function plGetEvTypeName(id) {
+  if (!id) return '';
+  var t = PL.eventTypes.find(function(et) { return et.id === id; });
   return t ? t.name : '';
 }
 
-function plGetTypeColor(typeId) {
-  if (!typeId) return '';
-  var t = PL.eventTypes.find(function(et) { return et.id === typeId; });
+function plGetEvTypeColor(id) {
+  if (!id) return '';
+  var t = PL.eventTypes.find(function(et) { return et.id === id; });
   return t ? t.color : '';
 }
 
-function plGetSiteName(siteId) {
-  if (!siteId) return '';
-  var s = PL.sites.find(function(st) { return st.site_id === siteId; });
-  return s ? s.site_name : siteId;
+function plGetSiteName(id) {
+  if (!id) return '';
+  var s = PL.sites.find(function(st) { return st.site_id === id; });
+  return s ? s.site_name : id;
 }
 
 function plGetTeamName(id) {
@@ -1212,8 +1045,8 @@ function plGetTeamName(id) {
   return m ? m.name : id;
 }
 
-function plEsc(str) {
-  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+function plE(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 function plShowToast(msg, bg) {
@@ -1221,6 +1054,6 @@ function plShowToast(msg, bg) {
   if (!t) return;
   t.textContent = msg;
   t.style.background = bg || '#059669';
-  t.style.display = 'block';
-  setTimeout(function() { t.style.display = 'none'; }, 3500);
+  t.style.display = 'block'; t.style.opacity = '1';
+  setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.style.display='none'; t.style.opacity='1'; }, 300); }, 3000);
 }
