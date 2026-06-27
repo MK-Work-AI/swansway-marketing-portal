@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+function navBrand(id) { navCloseAll(); window.location = 'brand.html?brand=' + id; }
+function navToggle(id, e) {
+  if (e) e.stopPropagation();
+  var el = document.getElementById(id);
+  if (!el) return;
+  var isOpen = el.classList.contains('open');
+  navCloseAll();
+  if (!isOpen) el.classList.add('open');
+}
+function navCloseAll() {
+  document.querySelectorAll('.nav-dd-wrap').forEach(function(el){ el.classList.remove('open'); });
+}
+document.addEventListener('click', navCloseAll);
+</script>
+  <title>Planner — Swansway Marketing Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter+Tight:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter+Tight:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="shared.css?v=2">
+  <style>
+    /* ── Layout ── */
+    .pl-wrap { display:grid; grid-template-columns:220px 1fr; min-height:calc(100vh - 104px); }
+    .pl-sidebar { background:var(--white); border-right:1px solid var(--border); padding:16px 0; position:sticky; top:104px; height:calc(100vh - 104px); overflow-y:auto; }
+    .pl-main { padding:1.5rem 2rem; min-width:0; }
+
+    /* ── Sidebar ── */
+    .pl-sidebar-section { padding:8px 16px 4px; font-family:var(--font-m); font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-faint); }
+    .pl-brand-btn { display:flex; align-items:center; gap:9px; width:100%; padding:8px 16px; border:none; background:none; cursor:pointer; font-family:var(--font-b); font-size:13px; color:var(--ink-soft); text-align:left; transition:background .12s; border-left:3px solid transparent; }
+    .pl-brand-btn:hover { background:var(--surface); color:var(--ink); }
+    .pl-brand-btn.active { background:rgba(26,46,74,0.06); color:var(--swansway); font-weight:700; border-left-color:var(--swansway); }
+    .pl-brand-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+    .pl-brand-count { margin-left:auto; font-family:var(--font-m); font-size:10px; color:var(--ink-faint); }
+
+    /* ── Quarter strip ── */
+    .pl-quarter-strip { display:flex; align-items:center; gap:8px; margin-bottom:1.5rem; flex-wrap:wrap; }
+    .pl-q-btn { padding:5px 14px; font-family:var(--font-m); font-size:11px; font-weight:700; border:1.5px solid var(--border-med); border-radius:2px; background:var(--white); cursor:pointer; color:var(--ink-soft); transition:all .15s; }
+    .pl-q-btn:hover { border-color:var(--swansway); color:var(--swansway); }
+    .pl-q-btn.active { background:var(--swansway); border-color:var(--swansway); color:#fff; }
+    .pl-q-label { font-family:var(--font-m); font-size:10px; color:var(--ink-faint); margin-right:4px; }
+
+    /* ── Section headers ── */
+    .pl-section-hdr { display:flex; align-items:center; justify-content:space-between; margin:1.75rem 0 1rem; padding-bottom:10px; border-bottom:2px solid var(--border); }
+    .pl-section-title { font-family:var(--font-d); font-size:18px; font-weight:700; color:var(--ink); display:flex; align-items:center; gap:10px; }
+    .pl-section-count { font-family:var(--font-m); font-size:11px; color:var(--ink-faint); font-weight:400; }
+    .pl-section-actions { display:flex; gap:8px; }
+
+    /* ── KPI strip ── */
+    .pl-kpi-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:1.5rem; }
+    .pl-kpi { background:var(--white); border:1px solid var(--border); border-radius:4px; padding:14px 16px; }
+    .pl-kpi-label { font-family:var(--font-m); font-size:9px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:4px; }
+    .pl-kpi-val { font-family:var(--font-d); font-size:22px; font-weight:700; color:var(--ink); line-height:1; }
+    .pl-kpi-sub { font-size:11px; color:var(--ink-soft); margin-top:3px; }
+
+    /* ── Events grid ── */
+    .pl-events-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:12px; margin-bottom:1.5rem; }
+    .pl-event-card { background:var(--white); border:1px solid var(--border); border-radius:6px; padding:16px; cursor:pointer; transition:box-shadow .15s, border-color .15s; border-left:4px solid var(--swansway); }
+    .pl-event-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.09); border-color:#C5BFB8; }
+    .pl-event-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:10px; }
+    .pl-event-card-title { font-family:var(--font-d); font-size:15px; font-weight:700; color:var(--ink); line-height:1.3; }
+    .pl-event-card-meta { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .pl-event-card-meta-item { font-family:var(--font-b); font-size:11px; color:var(--ink-soft); display:flex; align-items:center; gap:4px; }
+
+    /* ── Activities grid ── */
+    .pl-act-brand-block { margin-bottom:1.5rem; }
+    .pl-act-brand-hdr { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:4px 4px 0 0; margin-bottom:0; }
+    .pl-act-brand-name { font-family:var(--font-d); font-size:14px; font-weight:700; color:#fff; }
+    .pl-act-brand-site { font-size:11px; color:rgba(255,255,255,0.7); margin-left:4px; }
+    .pl-act-site-block { border:1px solid var(--border); border-top:none; margin-bottom:2px; }
+    .pl-act-site-block:last-child { border-radius:0 0 4px 4px; }
+    .pl-act-site-hdr { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:var(--surface); border-bottom:1px solid var(--border); cursor:pointer; user-select:none; }
+    .pl-act-site-name { font-family:var(--font-b); font-size:12px; font-weight:700; color:var(--ink); }
+    .pl-act-site-toggle { font-size:10px; color:var(--ink-faint); }
+    .pl-act-cats { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1px; background:var(--border); }
+    .pl-act-cat { background:var(--white); padding:10px 14px; cursor:pointer; transition:background .12s; }
+    .pl-act-cat:hover { background:var(--surface); }
+    .pl-act-cat-name { font-family:var(--font-b); font-size:11px; font-weight:600; color:var(--ink); margin-bottom:4px; }
+    .pl-act-cat-budget { font-family:var(--font-m); font-size:10px; color:var(--ink-faint); }
+
+    /* ── RAG pills ── */
+    .rag { display:inline-flex; align-items:center; padding:2px 8px; border-radius:2px; font-family:var(--font-m); font-size:10px; font-weight:700; letter-spacing:0.04em; white-space:nowrap; }
+    .rag-complete   { background:#D1FAE5; color:#065F46; }
+    .rag-on-track   { background:#DCFCE7; color:#14532D; }
+    .rag-in-progress{ background:#FEF3C7; color:#92400E; }
+    .rag-at-risk    { background:#FEE2E2; color:#991B1B; }
+    .rag-not-started{ background:#F1F5F9; color:#475569; }
+    .rag-tbc        { background:#DBEAFE; color:#1E3A8A; }
+    .rag-cancelled  { background:#F3F4F6; color:#6B7280; }
+
+    /* ── Type badge ── */
+    .ev-type-badge { display:inline-flex; padding:2px 7px; border-radius:2px; font-family:var(--font-m); font-size:9px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:#fff; }
+
+    /* ── Filter bar ── */
+    .pl-filter-bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:1.25rem; padding:12px 14px; background:var(--white); border:1px solid var(--border); border-radius:4px; }
+    .pl-filter-bar select, .pl-filter-bar input { padding:5px 9px; border:1.5px solid var(--border); border-radius:3px; font-family:var(--font-b); font-size:12px; color:var(--ink); background:var(--white); cursor:pointer; outline:none; }
+    .pl-filter-bar select:focus, .pl-filter-bar input:focus { border-color:var(--swansway); }
+    .pl-filter-sep { flex:1; }
+
+    /* ── Modal ── */
+    .pl-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:800; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .pl-modal { background:var(--white); border-radius:8px; width:100%; max-width:700px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+    .pl-modal-hdr { padding:20px 24px 16px; border-bottom:1px solid var(--border); display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+    .pl-modal-title { font-family:var(--font-d); font-size:20px; font-weight:800; color:var(--ink); }
+    .pl-modal-close { background:none; border:none; font-size:24px; cursor:pointer; color:var(--ink-soft); line-height:1; padding:0 4px; }
+    .pl-modal-body { flex:1; overflow-y:auto; padding:20px 24px; }
+    .pl-modal-footer { padding:14px 24px; border-top:1px solid var(--border); display:flex; gap:8px; flex-wrap:wrap; background:var(--surface); border-radius:0 0 8px 8px; }
+    .pl-modal-field { margin-bottom:16px; }
+    .pl-modal-field label { display:block; font-family:var(--font-m); font-size:9px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:5px; }
+    .pl-modal-field input, .pl-modal-field select, .pl-modal-field textarea { width:100%; padding:9px 11px; border:1.5px solid var(--border-med); border-radius:3px; font-family:var(--font-b); font-size:13px; color:var(--ink); background:var(--white); outline:none; transition:border-color .15s; }
+    .pl-modal-field input:focus, .pl-modal-field select:focus, .pl-modal-field textarea:focus { border-color:var(--swansway); }
+    .pl-modal-field textarea { min-height:80px; resize:vertical; }
+    .pl-modal-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .pl-modal-grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+
+    /* ── Empty state ── */
+    .pl-empty { text-align:center; padding:48px 24px; color:var(--ink-soft); }
+    .pl-empty-icon { font-size:36px; margin-bottom:12px; }
+    .pl-empty-title { font-family:var(--font-d); font-size:16px; font-weight:700; color:var(--ink); margin-bottom:6px; }
+    .pl-empty-sub { font-size:13px; }
+
+    /* ── Loading ── */
+    .pl-loading { display:flex; align-items:center; justify-content:center; padding:48px; }
+    .pl-spinner { width:32px; height:32px; border:3px solid var(--border); border-top-color:var(--swansway); border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ── Toast ── */
+    #pl-toast { position:fixed; bottom:24px; right:24px; padding:11px 18px; border-radius:4px; font-family:var(--font-b); font-size:13px; font-weight:600; color:#fff; z-index:9999; display:none; box-shadow:0 4px 20px rgba(0,0,0,0.2); }
+
+    /* ── Activity detail panel ── */
+    .pl-act-detail { padding:14px; border:1px solid var(--border); border-radius:4px; background:var(--surface); margin-top:1px; }
+    .pl-act-detail-row { display:flex; gap:8px; margin-bottom:8px; }
+    .pl-act-detail-label { font-family:var(--font-m); font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-faint); min-width:80px; padding-top:1px; }
+    .pl-act-detail-val { font-family:var(--font-b); font-size:12px; color:var(--ink); flex:1; }
+
+    /* ── Responsive ── */
+    @media (max-width:900px) {
+      .pl-wrap { grid-template-columns:1fr; }
+      .pl-sidebar { position:static; height:auto; border-right:none; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; padding:8px; gap:4px; }
+      .pl-brand-btn { width:auto; border-left:none; border-radius:3px; border:1.5px solid var(--border); padding:5px 10px; font-size:11px; }
+      .pl-brand-btn.active { background:var(--swansway); color:#fff; border-color:var(--swansway); }
+      .pl-kpi-strip { grid-template-columns:repeat(2,1fr); }
+      .pl-events-grid { grid-template-columns:1fr; }
+      .pl-main { padding:1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo-wrap" style="display:flex;align-items:center;gap:14px">
+      <img src="https://npfalcon.b-cdn.net/tenant_d9013b5a-4990-4f3e-beec-4e1fc85990eb/media/uploads/main-logo.svg" alt="Swansway Motor Group" style="height:46px;width:auto;object-fit:contain;filter:brightness(0) invert(1)">
+      <div style="border-left:1px solid rgba(255,255,255,0.2);padding-left:14px">
+        <div style="font-family:var(--font-d);font-size:15px;font-weight:700;color:#fff;line-height:1.2;letter-spacing:-0.01em">Group Marketing Planner</div>
+      </div>
+    </div>
+    <div class="topbar-meta">
+      <span class="topbar-pill">Q3 2026</span>
+      <button class="user-pill" id="user-pill" onclick="handleUserPillClick()" style="display:none">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="user-name">Loading…</span>
+      </button>
+      <div style="position:relative;display:inline-flex;align-items:center">
+        <button id="mt-btn" onclick="mtToggle(event)" style="font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 14px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:2px;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px">
+          MY TASKS
+          <span id="mt-badge" style="display:none;background:#C8102E;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:1">0</span>
+        </button>
+        <div id="mt-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:340px;background:var(--white);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:500;overflow:hidden">
+          <div id="mt-header" style="padding:14px 18px;border-bottom:1px solid var(--border);font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--ink)">Your tasks</div>
+          <div id="mt-list" style="max-height:360px;overflow-y:auto"></div>
+          <div id="mt-footer" style="padding:10px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--ink-faint);text-align:center;display:flex;justify-content:space-between;align-items:center"><span></span><a href="tasks.html" style="font-family:var(--font-m);font-size:11px;font-weight:700;color:var(--swansway);text-decoration:none">View all →</a></div>
+        </div>
+      <button onclick="openAuth()" id="signin-btn" style="display:none;font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 16px;background:#fff;border:none;border-radius:2px;color:var(--swansway);cursor:pointer">Sign in</button>
+      <button id="briefs-btn" onclick="openBriefsPanel()" style="display:none;font-family:var(--font-b);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 16px;background:#fff;border:none;border-radius:2px;color:var(--swansway);cursor:pointer">📋 My Campaigns</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="brand-nav" id="brand-nav">
+  <div class="brand-nav-inner">
+    <div class="nav-dd-wrap" id="nav-intel">
+      <button class="nav-dd-btn" onclick="navToggle('nav-intel',event)">Intel <span class="nav-dd-chevron">▾</span></button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item" onclick="window.location='index.html'">Overview</button>
+        <button class="nav-dd-item" onclick="window.location='channels.html'">Channels</button>
+        <button class="nav-dd-item" onclick="window.location='kpis.html'">KPIs</button>
+        <button class="nav-dd-item" onclick="window.location='priorities.html'">Priorities</button>
+        <button class="nav-dd-item" onclick="window.location='competitor.html'">Competitors</button>
+        <button class="nav-dd-item" onclick="window.location='news.html'">News</button>
+        <div class="nav-dd-sep"></div>
+        <div class="nav-dd-section-label">Brand plans</div>
+        <button class="dd-brand-btn" onclick="navBrand('audi')"><span class="nav-dot" style="background:#BB0A21"></span>Audi</button>
+        <button class="dd-brand-btn" onclick="navBrand('vw')"><span class="nav-dot" style="background:#001E50"></span>Volkswagen</button>
+        <button class="dd-brand-btn" onclick="navBrand('vwcv')"><span class="nav-dot" style="background:#1B4F72"></span>VW Commercial</button>
+        <button class="dd-brand-btn" onclick="navBrand('seat')"><span class="nav-dot" style="background:#E2231A"></span>SEAT</button>
+        <button class="dd-brand-btn" onclick="navBrand('cupra')"><span class="nav-dot" style="background:#C8920A"></span>CUPRA</button>
+        <button class="dd-brand-btn" onclick="navBrand('landrover')"><span class="nav-dot" style="background:#1D4E1D"></span>Land Rover</button>
+        <button class="dd-brand-btn" onclick="navBrand('jaguar')"><span class="nav-dot" style="background:#1B2631"></span>Jaguar</button>
+        <button class="dd-brand-btn" onclick="navBrand('honda')"><span class="nav-dot" style="background:#CC0000"></span>Honda</button>
+        <button class="dd-brand-btn" onclick="navBrand('peugeot')"><span class="nav-dot" style="background:#1B3A6B"></span>Peugeot</button>
+        <button class="dd-brand-btn" onclick="navBrand('byd')"><span class="nav-dot" style="background:#0066CC"></span>BYD</button>
+        <button class="dd-brand-btn" onclick="navBrand('omoda')"><span class="nav-dot" style="background:#6B21A8"></span>OMODA / JAECOO</button>
+        <button class="dd-brand-btn" onclick="navBrand('motormatch')"><span class="nav-dot" style="background:#374151"></span>Motor Match</button>
+      </div>
+    </div>
+    <div class="nav-dd-wrap" id="nav-planning">
+      <button class="nav-dd-btn active" onclick="navToggle('nav-planning',event)">Planning <span class="nav-dd-chevron">▾</span></button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item" onclick="window.location='calendar.html'">Campaign Calendar</button>
+        <button class="nav-dd-item nav-item-cta" onclick="window.location='brief.html'">Campaign Builder</button>
+        <button class="nav-dd-item active" onclick="window.location='planner.html'">📅 Events &amp; Activity Planner</button>
+        <button class="nav-dd-item" onclick="window.location='events.html'">Events &amp; Placements</button>
+        <button class="nav-dd-item" onclick="window.location='social.html'">Social Hub</button>
+      </div>
+    </div>
+    <div class="nav-dd-wrap" id="nav-review">
+      <button class="nav-dd-btn" onclick="navToggle('nav-review',event)">Review <span class="nav-dd-chevron">▾</span></button>
+      <div class="nav-dd-panel">
+        <button class="nav-dd-item" onclick="window.location='budget.html'">Budget</button>
+        <button class="nav-dd-item" onclick="window.location='autopsy.html'">Autopsy</button>
+      </div>
+    </div>
+    <button class="nav-dd-btn" style="color:var(--swansway);font-weight:700" onclick="window.location='admin.html'">⚙ Admin</button>
+  </div>
+</nav>
+
+<!-- Auth overlay — email/password login -->
+<div class="auth-overlay" id="auth-overlay" onclick="if(event.target===this)closeAuth()">
+  <div class="auth-box" style="max-width:380px">
+    <div class="auth-header">
+      <div class="auth-header-title">Swansway Marketing Hub</div>
+      <div class="auth-header-sub">Sign in to access your team workspace</div>
+    </div>
+    <div style="padding:28px 24px">
+      <div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:var(--ink);margin-bottom:4px;text-align:center">Welcome back</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:24px;text-align:center">Sign in with your Swansway account</div>
+      <div id="auth-form-in">
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:5px">Email</label>
+          <input id="auth-email" type="email" placeholder="your.name@swanswaygroup.co.uk" autocomplete="email" style="width:100%;padding:10px 12px;border:1.5px solid var(--border-med);border-radius:4px;font-family:var(--font-b);font-size:13px;color:var(--ink);background:var(--white);outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--swansway)'" onblur="this.style.borderColor='var(--border-med)'" onkeydown="if(event.key==='Enter')document.getElementById('auth-password').focus()">
+        </div>
+        <div style="margin-bottom:6px">
+          <label style="display:block;font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:5px">Password</label>
+          <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" style="width:100%;padding:10px 12px;border:1.5px solid var(--border-med);border-radius:4px;font-family:var(--font-b);font-size:13px;color:var(--ink);background:var(--white);outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--swansway)'" onblur="this.style.borderColor='var(--border-med)'" onkeydown="if(event.key==='Enter')authEmail()">
+        </div>
+        <div style="text-align:right;margin-bottom:20px">
+          <button onclick="authShowForgot()" style="background:none;border:none;cursor:pointer;font-family:var(--font-b);font-size:12px;color:var(--swansway);padding:0">Forgot password?</button>
+        </div>
+        <div id="auth-err-in" style="display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:4px;padding:9px 12px;font-family:var(--font-b);font-size:12px;color:#DC2626;margin-bottom:14px"></div>
+        <button onclick="authEmail()" id="auth-signin-btn" style="width:100%;padding:11px 16px;background:var(--swansway);border:none;border-radius:4px;font-family:var(--font-b);font-size:14px;font-weight:700;color:#fff;cursor:pointer;transition:background .15s;letter-spacing:0.02em" onmouseover="this.style.background='var(--swansway-light)'" onmouseout="this.style.background='var(--swansway)'">Sign in</button>
+      </div>
+      <div id="auth-form-forgot" style="display:none">
+        <div style="font-size:13px;color:var(--ink-soft);margin-bottom:16px">Enter your email and we'll send you a password reset link.</div>
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:5px">Email</label>
+          <input id="auth-reset-email" type="email" placeholder="your.name@swanswaygroup.co.uk" style="width:100%;padding:10px 12px;border:1.5px solid var(--border-med);border-radius:4px;font-family:var(--font-b);font-size:13px;color:var(--ink);background:var(--white);outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--swansway)'" onblur="this.style.borderColor='var(--border-med)'" onkeydown="if(event.key==='Enter')authForgotPassword()">
+        </div>
+        <div id="auth-err-forgot" style="display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:4px;padding:9px 12px;font-family:var(--font-b);font-size:12px;color:#DC2626;margin-bottom:14px"></div>
+        <div id="auth-ok-forgot" style="display:none;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:4px;padding:9px 12px;font-family:var(--font-b);font-size:12px;color:#15803D;margin-bottom:14px"></div>
+        <button onclick="authForgotPassword()" style="width:100%;padding:11px 16px;background:var(--swansway);border:none;border-radius:4px;font-family:var(--font-b);font-size:14px;font-weight:700;color:#fff;cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--swansway-light)'" onmouseout="this.style.background='var(--swansway)'">Send reset link</button>
+        <button onclick="authShowSignIn()" style="width:100%;margin-top:10px;padding:9px;background:none;border:1.5px solid var(--border-med);border-radius:4px;font-family:var(--font-b);font-size:13px;color:var(--ink-soft);cursor:pointer">← Back to sign in</button>
+      </div>
+      <div style="font-size:11px;color:var(--ink-faint);margin-top:18px;text-align:center">Access is restricted to authorised Swansway team members</div>
+    </div>
+  </div>
+</div>
+
+<!-- Briefs panel -->
+<div class="briefs-panel" id="briefs-panel">
+  <div class="briefs-panel-header">
+    <div class="briefs-panel-title">📋 My Campaigns</div>
+    <div style="display:flex;gap:8px;align-items:center"><button onclick="window.location='brief.html'" style="font-family:var(--font-b);font-size:11px;font-weight:700;padding:5px 12px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer">+ New campaign</button><button class="briefs-panel-close" onclick="closeBriefsPanel()">×</button></div>
+  </div>
+  <div class="briefs-panel-body">
+    <div class="brief-filters" id="brief-filters"><div class="brief-filter active" data-brand="all" onclick="filterBriefs('all',this)">All brands</div></div>
+    <div id="briefs-list"><div style="text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:13px">Loading your campaigns…</div></div>
+  </div>
+  <div class="briefs-panel-footer">
+    <button class="btn btn-accent" style="width:100%" onclick="window.location='brief.html'">✏ New Campaign</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<main>
+<div class="pl-wrap">
+
+  <!-- Sidebar: brand filter -->
+  <aside class="pl-sidebar" id="pl-sidebar">
+    <div class="pl-sidebar-section">Brands</div>
+    <button class="pl-brand-btn active" data-brand="all" onclick="plSetBrand('all',this)">
+      <span class="pl-brand-dot" style="background:var(--swansway)"></span>
+      All brands
+      <span class="pl-brand-count" id="cnt-all"></span>
+    </button>
+    <!-- populated by JS -->
+    <div id="pl-brand-list"></div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="pl-main">
+
+    <!-- Page header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:1.25rem">
+      <div>
+        <div style="font-family:var(--font-d);font-size:26px;font-weight:800;color:var(--ink);line-height:1.2">Events &amp; Activity Planner</div>
+        <div style="font-size:13px;color:var(--ink-soft);margin-top:3px" id="pl-subtitle">All brands · Q3 2026</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="pl-quarter-strip">
+          <span class="pl-q-label">Quarter</span>
+          <button class="pl-q-btn" data-q="1" onclick="plSetQuarter(1,this)">Q1</button>
+          <button class="pl-q-btn" data-q="2" onclick="plSetQuarter(2,this)">Q2</button>
+          <button class="pl-q-btn active" data-q="3" onclick="plSetQuarter(3,this)">Q3</button>
+          <button class="pl-q-btn" data-q="4" onclick="plSetQuarter(4,this)">Q4</button>
+        </div>
+        <button class="btn btn-accent" onclick="plOpenEventModal(null)" id="pl-add-btn" style="display:none">+ Add event</button>
+      </div>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="pl-kpi-strip" id="pl-kpi-strip">
+      <div class="pl-kpi"><div class="pl-kpi-label">Events this quarter</div><div class="pl-kpi-val" id="kpi-events">—</div><div class="pl-kpi-sub" id="kpi-events-sub">loading…</div></div>
+      <div class="pl-kpi"><div class="pl-kpi-label">Total planned spend</div><div class="pl-kpi-val" id="kpi-spend">—</div><div class="pl-kpi-sub" id="kpi-spend-sub">across selected brands</div></div>
+      <div class="pl-kpi"><div class="pl-kpi-label">Activities in progress</div><div class="pl-kpi-val" id="kpi-acts">—</div><div class="pl-kpi-sub" id="kpi-acts-sub">loading…</div></div>
+      <div class="pl-kpi"><div class="pl-kpi-label">At risk / not started</div><div class="pl-kpi-val" id="kpi-risk">—</div><div class="pl-kpi-sub" id="kpi-risk-sub">needs attention</div></div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="pl-filter-bar" id="pl-filter-bar">
+      <select id="pl-f-type" onchange="plApplyFilters()"><option value="">All event types</option></select>
+      <select id="pl-f-rag" onchange="plApplyFilters()">
+        <option value="">All statuses</option>
+        <option value="Not Started">Not Started</option>
+        <option value="In Progress">In Progress</option>
+        <option value="At Risk">At Risk</option>
+        <option value="On Track">On Track</option>
+        <option value="Complete">Complete</option>
+        <option value="TBC">TBC</option>
+      </select>
+      <select id="pl-f-assigned" onchange="plApplyFilters()"><option value="">All assigned</option></select>
+      <input id="pl-f-search" type="search" placeholder="Search events & activities…" oninput="plApplyFilters()" style="min-width:200px">
+      <div class="pl-filter-sep"></div>
+      <button class="btn" onclick="plClearFilters()">Clear filters</button>
+    </div>
+
+    <!-- EVENTS SECTION -->
+    <div class="pl-section-hdr">
+      <div class="pl-section-title">
+        📅 Events
+        <span class="pl-section-count" id="pl-events-count"></span>
+      </div>
+      <div class="pl-section-actions">
+        <button class="btn" onclick="plToggleSection('events')">Toggle ▾</button>
+      </div>
+    </div>
+    <div id="pl-events-body">
+      <div class="pl-loading"><div class="pl-spinner"></div></div>
+    </div>
+
+    <!-- ACTIVITIES SECTION -->
+    <div class="pl-section-hdr" style="margin-top:2rem">
+      <div class="pl-section-title">
+        📋 Quarterly Activities
+        <span class="pl-section-count" id="pl-acts-count"></span>
+      </div>
+      <div class="pl-section-actions">
+        <button class="btn" onclick="plToggleSection('activities')">Toggle ▾</button>
+      </div>
+    </div>
+    <div id="pl-acts-body">
+      <div class="pl-loading"><div class="pl-spinner"></div></div>
+    </div>
+
+  </div><!-- /.pl-main -->
+</div><!-- /.pl-wrap -->
+</main>
+
+<!-- Event detail / edit modal -->
+<div id="pl-modal-root"></div>
+
+<!-- Activity detail panel (rendered inline) -->
+<div id="pl-act-panel-root"></div>
+
+<!-- Toast -->
+<div id="pl-toast"></div>
+
+<script src="config.js?v=2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="bundle-core.js?v=105"></script>
+<script src="js/group.js?v=110" defer></script>
+<script src="js/admin2.js?v=110" defer></script>
+<script src="js/planner.js?v=101" defer></script>
+
+<script>
+window.addEventListener('load', function() {
+  if (typeof plInit === 'function') plInit();
+});
+</script>
+
+</body>
+</html>
