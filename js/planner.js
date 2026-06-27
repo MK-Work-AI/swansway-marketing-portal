@@ -4,16 +4,6 @@
 /* ── Constants ── */
 var SUPA_PL = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
 
-var BRAND_COLORS = {
-  audi:'#BB0A21', vw:'#001E50', vwcv:'#1B4F72', seat:'#E2231A',
-  cupra:'#C8920A', landrover:'#1D4E1D', jaguar:'#1B2631', honda:'#CC0000',
-  peugeot:'#1B3A6B', byd:'#0066CC', omoda:'#6B21A8', motormatch:'#374151'
-};
-var BRAND_NAMES = {
-  audi:'Audi', vw:'Volkswagen', vwcv:'VW Commercial', seat:'SEAT',
-  cupra:'CUPRA', landrover:'Land Rover', jaguar:'Jaguar', honda:'Honda',
-  peugeot:'Peugeot', byd:'BYD', omoda:'OMODA / JAECOO', motormatch:'Motor Match'
-};
 
 /* ── State ── */
 var PL = {
