@@ -7,6 +7,12 @@ var DB = {
 };
 
 async function dbInit() {
+  // Wait for BRAND_NAMES to be available (loaded by bundle-core.js)
+  if (typeof BRAND_NAMES === 'undefined' || typeof getAuthHeaders === 'undefined') {
+    setTimeout(dbInit, 400);
+    return;
+  }
+
   var SUPA = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
   var Q = 3; var YEAR = 2026;
   var qtag = 'Q' + Q + '-' + YEAR;
@@ -63,7 +69,8 @@ function dbRenderKPIs() {
   // Events this week
   var evWk = DB.eventsThisWeek || [];
   document.getElementById('db-kpi-events').textContent = evWk.length;
-  document.getElementById('db-kpi-events-sub').textContent = evWk.length ? evWk.map(function(e){ return (BRAND_NAMES||{})[e.brand_id]||e.brand_id; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).slice(0,3).join(', ') : 'No events this week';
+  var BN = typeof BRAND_NAMES !== 'undefined' ? BRAND_NAMES : {};
+  document.getElementById('db-kpi-events-sub').textContent = evWk.length ? evWk.map(function(e){ return BN[e.brand_id]||e.brand_id; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).slice(0,3).join(', ') : 'No events this week';
 
   // Budget committed — from SITE_BUDGETS (loaded by group.js)
   var budgetPct = 0;
@@ -113,7 +120,7 @@ function dbRenderUrgent() {
 
   // Events this week with no status update
   DB.eventsThisWeek.filter(function(e) { return e.rag_status === 'Not Started'; }).forEach(function(e) {
-    var bname = (BRAND_NAMES||{})[e.brand_id] || e.brand_id;
+    var bname = (typeof BRAND_NAMES !== 'undefined' ? BRAND_NAMES : {})[e.brand_id] || e.brand_id;
     var siteName = '';
     if (typeof HUB_SITES !== 'undefined') {
       var site = HUB_SITES.find(function(s){ return s.site_id === e.site_id; });
@@ -161,7 +168,7 @@ function dbRenderThisWeek() {
 
   // Events this week
   DB.eventsThisWeek.forEach(function(e) {
-    var bname = (BRAND_NAMES||{})[e.brand_id] || e.brand_id;
+    var bname = (typeof BRAND_NAMES !== 'undefined' ? BRAND_NAMES : {})[e.brand_id] || e.brand_id;
     var color = (BRAND_COLORS||{})[e.brand_id] || '#7C3AED';
     var siteName = '';
     if (typeof HUB_SITES !== 'undefined') {
