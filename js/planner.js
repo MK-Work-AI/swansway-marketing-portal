@@ -425,7 +425,6 @@ async function plOpenActPanel(id) {
     + '</div>'
     + '<div class="pl-form-row2">'
     + '<div class="pl-form-field"><label>Assigned to</label><select id="ap-assigned">' + teamOpts + '</select></div>'
-    + '<div class="pl-form-field"><label>Total budget (£)</label><input type="number" id="ap-budget" value="' + (a.total_budget||'') + '" min="0" placeholder="0"></div>'
     + '</div>'
 
     + '<div class="pl-panel-section-hdr">Description & Notes</div>'
@@ -442,7 +441,7 @@ async function plOpenActPanel(id) {
     + '<div style="margin-bottom:12px">'
     + '<div style="display:flex;gap:8px;margin-bottom:8px">'
     + '<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 12px">'
-    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-faint);margin-bottom:3px">Total budget</div>'
+    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-faint);margin-bottom:3px">Total allocated (all sites & channels)</div>'
     + '<div style="font-family:var(--font-d);font-size:16px;font-weight:700;color:var(--ink)">' + (a.total_budget ? '£' + Number(a.total_budget).toLocaleString('en-GB') : '—') + '</div>'
     + '</div>'
     + '<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 12px">'
@@ -957,7 +956,6 @@ async function plSaveActivity(id) {
     rag_status:   (document.getElementById('ap-rag')      ||{}).value || 'Not Started',
     stage:        (document.getElementById('ap-stage')    ||{}).value || 'Not Started',
     assigned_to:  (document.getElementById('ap-assigned') ||{}).value || null,
-    total_budget: parseFloat((document.getElementById('ap-budget')||{}).value) || null,
     description:  (document.getElementById('ap-desc')     ||{}).value || null,
     notes:        (document.getElementById('ap-notes')    ||{}).value || null,
     updated_at:   new Date().toISOString()
