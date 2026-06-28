@@ -1,0 +1,255 @@
+// dashboard.js v100 — Swansway Marketing Portal home dashboard
+
+var DB = {
+  activities: [],
+  events:     [],
+  loaded:     false
+};
+
+async function dbInit() {
+  var SUPA = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
+  var Q = 3; var YEAR = 2026;
+  var qtag = 'Q' + Q + '-' + YEAR;
+
+  // Greeting
+  var hour = new Date().getHours();
+  var greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  var nameEl = document.getElementById('user-name');
+  var firstName = nameEl ? nameEl.textContent.split(' ')[0] : '';
+  document.getElementById('db-greeting').textContent = greet + (firstName && firstName !== 'Loading…' ? ', ' + firstName : '');
+
+  // Date
+  var now = new Date();
+  document.getElementById('db-date').textContent = now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) + ' · Q' + Q + ' ' + YEAR;
+
+  try {
+    // Load all Q3 activities and events in parallel
+    var [actR, evR] = await Promise.all([
+      fetch(SUPA + '/activities?quarter=eq.' + Q + '&year=eq.' + YEAR + '&is_archived=eq.false&select=id,title,type_id,brand_id,rag_status,stage,assigned_to&limit=500', { headers: getAuthHeaders() }),
+      fetch(SUPA + '/events?is_archived=eq.false&select=id,title,brand_id,site_id,start_date,end_date,rag_status,planned_budget,event_type_id&order=start_date&limit=200', { headers: getAuthHeaders() }),
+    ]);
+
+    DB.activities = actR.ok ? await actR.json() : [];
+    var allEvents  = evR.ok  ? await evR.json()  : [];
+    DB.events = allEvents.filter(function(e) { return e.quarter_tags && e.quarter_tags.indexOf && e.quarter_tags.indexOf(qtag) !== -1; });
+    // Also include events happening this week regardless of quarter tag
+    var weekStart = new Date(now); weekStart.setHours(0,0,0,0);
+    var weekEnd   = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
+    DB.eventsThisWeek = allEvents.filter(function(e) {
+      if (!e.start_date) return false;
+      var d = new Date(e.start_date + 'T00:00:00');
+      return d >= weekStart && d <= weekEnd;
+    });
+    DB.loaded = true;
+  } catch(err) {
+    console.warn('dbInit load error:', err);
+    DB.activities = []; DB.events = []; DB.eventsThisWeek = [];
+  }
+
+  dbRenderKPIs();
+  dbRenderUrgent();
+  dbRenderThisWeek();
+  dbRenderBrands();
+}
+
+function dbRenderKPIs() {
+  var acts = DB.activities;
+
+  // At risk
+  var atRisk = acts.filter(function(a) { return a.rag_status === 'At Risk' || a.rag_status === 'Not Started'; });
+  document.getElementById('db-kpi-atrisk').textContent = atRisk.length;
+  document.getElementById('db-kpi-atrisk-sub').textContent = atRisk.length + ' activit' + (atRisk.length === 1 ? 'y' : 'ies') + ' need attention';
+
+  // Events this week
+  var evWk = DB.eventsThisWeek || [];
+  document.getElementById('db-kpi-events').textContent = evWk.length;
+  document.getElementById('db-kpi-events-sub').textContent = evWk.length ? evWk.map(function(e){ return (BRAND_NAMES||{})[e.brand_id]||e.brand_id; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).slice(0,3).join(', ') : 'No events this week';
+
+  // Budget committed — from SITE_BUDGETS (loaded by group.js)
+  var budgetPct = 0;
+  if (typeof SITE_BUDGETS !== 'undefined' && Object.keys(SITE_BUDGETS).length) {
+    var totalPlan = 0, totalAlloc = 0, totalEv = 0;
+    Object.values(SITE_BUDGETS).forEach(function(d) {
+      for (var i=6;i<=8;i++) totalPlan += (d['m'+i+'_planned']||0); // Q3 months 6,7,8 (0-indexed)
+    });
+    // Activity allocations Q3
+    if (window.ACTIVITY_ALLOCATIONS) {
+      Object.values(window.ACTIVITY_ALLOCATIONS).forEach(function(months) {
+        [6,7,8].forEach(function(m) { totalAlloc += months[m]||0; });
+      });
+    }
+    // Events
+    if (typeof EV_EVENTS_BUDGET !== 'undefined') {
+      EV_EVENTS_BUDGET.forEach(function(ev) {
+        if (!ev.start_date) return;
+        var m = new Date(ev.start_date+'T00:00:00').getMonth();
+        if (m>=6 && m<=8) totalEv += ev.planned_budget||0;
+      });
+    }
+    budgetPct = totalPlan > 0 ? Math.round((totalAlloc + totalEv) / totalPlan * 100) : 0;
+  }
+  document.getElementById('db-kpi-budget').textContent = budgetPct + '%';
+  document.getElementById('db-kpi-budget-sub').textContent = 'of Q3 budget allocated or committed';
+
+  // On track
+  var onTrack = acts.filter(function(a) { return a.rag_status === 'On Track' || a.rag_status === 'Complete' || a.rag_status === 'In Progress'; });
+  document.getElementById('db-kpi-complete').textContent = onTrack.length;
+  document.getElementById('db-kpi-complete-sub').textContent = acts.length ? Math.round(onTrack.length/acts.length*100) + '% of ' + acts.length + ' activities' : 'No activities yet';
+}
+
+function dbRenderUrgent() {
+  var el = document.getElementById('db-urgent-list');
+  var countEl = document.getElementById('db-urgent-count');
+  if (!el) return;
+
+  // At risk activities + events without budget
+  var urgent = [];
+
+  DB.activities.filter(function(a) { return a.rag_status === 'At Risk'; }).forEach(function(a) {
+    var bname = (BRAND_NAMES||{})[a.brand_id] || a.brand_id;
+    var color = (BRAND_COLORS||{})[a.brand_id] || '#DC2626';
+    urgent.push({ type:'activity', title: a.title, sub: bname + ' · At Risk', color:'#DC2626', dot:color, href:'planner.html', id:a.id });
+  });
+
+  // Events this week with no status update
+  DB.eventsThisWeek.filter(function(e) { return e.rag_status === 'Not Started'; }).forEach(function(e) {
+    var bname = (BRAND_NAMES||{})[e.brand_id] || e.brand_id;
+    var siteName = '';
+    if (typeof HUB_SITES !== 'undefined') {
+      var site = HUB_SITES.find(function(s){ return s.site_id === e.site_id; });
+      if (site) siteName = ' · ' + site.site_name;
+    }
+    var color = (BRAND_COLORS||{})[e.brand_id] || '#7C3AED';
+    urgent.push({ type:'event', title: e.title, sub: bname + siteName + ' · This week · Not Started', color:'#D97706', dot:color, href:'planner.html' });
+  });
+
+  // Not Started activities that should be underway (Q3 has started)
+  var notStarted = DB.activities.filter(function(a) {
+    return a.rag_status === 'Not Started' && ['plate-change','paid-search','paid-social','email-crm','autotrader-carwow'].indexOf(a.type_id) !== -1;
+  }).slice(0, 5);
+  notStarted.forEach(function(a) {
+    var bname = (BRAND_NAMES||{})[a.brand_id] || a.brand_id;
+    var color = (BRAND_COLORS||{})[a.brand_id] || '#6B7280';
+    urgent.push({ type:'activity', title: a.title, sub: bname + ' · Not started — Q3 underway', color:'#6B7280', dot:color, href:'planner.html', id:a.id });
+  });
+
+  if (countEl) countEl.textContent = urgent.length + ' item' + (urgent.length !== 1 ? 's' : '');
+
+  if (!urgent.length) {
+    el.innerHTML = '<div class="db-empty">✅ Nothing urgent right now</div>';
+    return;
+  }
+
+  el.innerHTML = urgent.slice(0, 12).map(function(item) {
+    return '<div class="db-item" onclick="window.location=\'' + item.href + '\'">'
+      + '<div class="db-item-dot" style="background:' + item.dot + '"></div>'
+      + '<div class="db-item-body">'
+      + '<div class="db-item-title">' + dbEsc(item.title) + '</div>'
+      + '<div class="db-item-sub">' + dbEsc(item.sub) + '</div>'
+      + '</div>'
+      + '<span class="db-item-badge" style="background:' + item.color + '20;color:' + item.color + '">' + item.type + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+function dbRenderThisWeek() {
+  var el = document.getElementById('db-week-list');
+  var countEl = document.getElementById('db-week-count');
+  if (!el) return;
+
+  var items = [];
+
+  // Events this week
+  DB.eventsThisWeek.forEach(function(e) {
+    var bname = (BRAND_NAMES||{})[e.brand_id] || e.brand_id;
+    var color = (BRAND_COLORS||{})[e.brand_id] || '#7C3AED';
+    var siteName = '';
+    if (typeof HUB_SITES !== 'undefined') {
+      var site = HUB_SITES.find(function(s){ return s.site_id === e.site_id; });
+      if (site) siteName = ' · ' + site.site_name;
+    }
+    var d = new Date(e.start_date + 'T00:00:00');
+    var dayStr = d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+    items.push({ title: e.title, sub: dayStr + siteName + ' · ' + bname, dot: color, badge:'event', badgeColor:'#7C3AED', href:'planner.html' });
+  });
+
+  // Activities In Progress assigned to current user
+  var userName = (document.getElementById('user-name')||{}).textContent || '';
+  DB.activities.filter(function(a) { return a.rag_status === 'In Progress'; }).slice(0, 8).forEach(function(a) {
+    var bname = (BRAND_NAMES||{})[a.brand_id] || a.brand_id;
+    var color = (BRAND_COLORS||{})[a.brand_id] || '#059669';
+    items.push({ title: a.title, sub: bname + ' · In Progress', dot: color, badge:'activity', badgeColor:'#059669', href:'planner.html' });
+  });
+
+  if (countEl) countEl.textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+
+  if (!items.length) {
+    el.innerHTML = '<div class="db-empty">No events or active activities this week</div>';
+    return;
+  }
+
+  el.innerHTML = items.slice(0, 12).map(function(item) {
+    return '<div class="db-item" onclick="window.location=\'' + item.href + '\'">'
+      + '<div class="db-item-dot" style="background:' + item.dot + '"></div>'
+      + '<div class="db-item-body">'
+      + '<div class="db-item-title">' + dbEsc(item.title) + '</div>'
+      + '<div class="db-item-sub">' + dbEsc(item.sub) + '</div>'
+      + '</div>'
+      + '<span class="db-item-badge" style="background:' + item.badgeColor + '20;color:' + item.badgeColor + '">' + item.badge + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+function dbRenderBrands() {
+  var el = document.getElementById('db-brands-grid');
+  if (!el || typeof BRAND_NAMES === 'undefined') { setTimeout(dbRenderBrands, 500); return; }
+
+  var brands = Object.keys(BRAND_NAMES);
+
+  el.innerHTML = brands.map(function(bid) {
+    var color  = (BRAND_COLORS||{})[bid] || '#6B7280';
+    var name   = BRAND_NAMES[bid] || bid;
+
+    // Count activities for this brand
+    var bActs  = DB.activities.filter(function(a){ return a.brand_id === bid; });
+    var atRisk = bActs.filter(function(a){ return a.rag_status === 'At Risk'; }).length;
+    var inProg = bActs.filter(function(a){ return a.rag_status === 'In Progress'; }).length;
+    var onTrack= bActs.filter(function(a){ return a.rag_status === 'On Track' || a.rag_status === 'Complete'; }).length;
+    var total  = bActs.length;
+    var pct    = total > 0 ? Math.round((inProg + onTrack) / total * 100) : 0;
+
+    // Budget
+    var bSites = (typeof HUB_SITES !== 'undefined') ? HUB_SITES.filter(function(s){ return s.brand_id === bid; }) : [];
+    var bBudget = bSites.reduce(function(sum, site) {
+      var d = SITE_BUDGETS && SITE_BUDGETS[site.site_id] || {};
+      return sum + (d.annual_planned || 0);
+    }, 0);
+    var budgetStr = bBudget >= 1000 ? '£' + Math.round(bBudget/1000) + 'K' : bBudget > 0 ? '£' + bBudget : '—';
+
+    var ragColor = atRisk > 0 ? '#DC2626' : pct >= 50 ? '#059669' : '#6B7280';
+    var ragLabel = atRisk > 0 ? atRisk + ' at risk' : inProg > 0 ? inProg + ' in progress' : total + ' activities';
+
+    return '<div class="db-brand-card" style="--bc:' + color + '" onclick="window.location=\'brand.html?brand=' + bid + '\'">'
+      + '<div class="db-brand-name">' + dbEsc(name) + '</div>'
+      + '<div class="db-brand-bar-wrap"><div class="db-brand-bar-fill" style="width:' + pct + '%;background:' + ragColor + '"></div></div>'
+      + '<div class="db-brand-meta" style="color:' + ragColor + '">' + ragLabel + '</div>'
+      + (budgetStr !== '—' ? '<div class="db-brand-meta" style="margin-top:2px">' + budgetStr + ' planned</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function dbScrollToEvents() {
+  var el = document.getElementById('db-week-list');
+  if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function dbEsc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Refresh brands grid once site budgets load
+var _dbBrandsRefreshed = false;
+var _dbOrigLoadSiteBudgets = null;
+window.addEventListener('swBudgetsLoaded', function() {
+  if (!_dbBrandsRefreshed) { _dbBrandsRefreshed = true; dbRenderBrands(); dbRenderKPIs(); }
+});
