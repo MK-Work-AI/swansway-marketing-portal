@@ -686,7 +686,7 @@ function renderBudgetTracker() {
   var thSumStyle = 'background:var(--swansway);color:#fff;font-family:var(--font-m);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;padding:9px 10px;text-align:right;white-space:nowrap;width:90px';
   var hdr = '<tr><th style="'+th1Style+'">Brand / Site</th>';
   CAL_MONTHS.forEach(function(m) { hdr += '<th style="'+thStyle+'">' + m + '</th>'; });
-  hdr += '<th style="'+thSumStyle+'">Planned</th><th style="'+thSumStyle+'">' + '<span style="color:#2563EB">Allocated</span>' + '</th><th style="'+thSumStyle+'">Actual</th><th style="'+thSumStyle+'">Variance</th></tr>';
+  hdr += '<th style="'+thSumStyle+'">Planned</th><th style="'+thSumStyle+';color:#2563EB">Allocated</th><th style="'+thSumStyle+';color:#BB0A21">Events</th><th style="'+thSumStyle+'">Actual</th><th style="'+thSumStyle+'">Variance</th></tr>';
   thead.innerHTML = hdr;
 
   var totalPlanned = 0, totalActual = 0;
@@ -726,39 +726,57 @@ function renderBudgetTracker() {
       mActual[i]  += brandMonthlyActual[i];
     }
 
-    var brandMonthlyCommitted = new Array(12).fill(0);
+    // Brand monthly allocations + events
+    var brandMonthlyAlloc = new Array(12).fill(0);
+    var brandMonthlyEvents = new Array(12).fill(0);
     sites.forEach(function(site) {
-      for (var mi2 = 0; mi2 < 12; mi2++) { brandMonthlyCommitted[mi2] += (BRIEF_COMMITMENTS[site.site_id] || {})[mi2] || 0; }
+      for (var mi2 = 0; mi2 < 12; mi2++) {
+        brandMonthlyAlloc[mi2]  += ((window.ACTIVITY_ALLOCATIONS || {})[site.site_id] || {})[mi2] || 0;
+      }
     });
-    var brandCommitted = brandMonthlyCommitted.reduce(function(s, v) { return s + v; }, 0);
+    var planYear2 = parseInt(PLAN_YEAR) || new Date().getFullYear();
+    (EV_EVENTS_BUDGET || []).forEach(function(ev) {
+      if (!ev.start_date || !ev.site_id) return;
+      var evDate = new Date(ev.start_date + 'T00:00:00');
+      if (evDate.getFullYear() !== planYear2) return;
+      var evSite = (typeof HUB_SITES !== 'undefined') ? HUB_SITES.find(function(s){ return s.site_id === ev.site_id; }) : null;
+      if (evSite && evSite.brand_id === b.id) {
+        brandMonthlyEvents[evDate.getMonth()] += ev.planned_budget || 0;
+      }
+    });
+    var brandAlloc  = brandMonthlyAlloc.reduce(function(s,v){ return s+v; }, 0);
+    var brandEvents = brandMonthlyEvents.reduce(function(s,v){ return s+v; }, 0);
 
-    var variance = brandActual - brandPlan;
+    var variance = brandActual > 0 ? brandActual - brandPlan : 0;
     var varStyle, varStr;
-    if (brandActual > 0) { varStyle = variance > 0 ? 'color:#DC2626' : 'color:#059669'; varStr = (variance >= 0 ? '+' : '') + '&pound;' + Math.abs(variance).toLocaleString(); }
-    else if (brandCommitted > 0) { varStyle = 'color:#D97706'; varStr = '&pound;' + (brandPlan - brandCommitted).toLocaleString() + ' left'; }
-    else { varStyle = ''; varStr = '&mdash;'; }
+    if (brandActual > 0) {
+      varStyle = variance > 0 ? 'color:#DC2626' : 'color:#059669';
+      varStr = (variance >= 0 ? '+' : '') + '&pound;' + Math.abs(variance).toLocaleString();
+    } else if (brandAlloc > 0 || brandEvents > 0) {
+      var remaining = brandPlan - brandAlloc - brandEvents;
+      varStyle = remaining < 0 ? 'color:#DC2626' : 'color:#059669';
+      varStr = '&pound;' + Math.abs(remaining).toLocaleString() + (remaining < 0 ? ' over' : ' left');
+    } else { varStyle = ''; varStr = '&mdash;'; }
 
-    // Brand row (accordion header)
     var brandRowId = 'bt-sites-' + b.id;
     var brandCells = '';
     for (var mi = 0; mi < 12; mi++) {
       var plan = brandMonthlyPlan[mi];
       var act  = brandMonthlyActual[mi];
-      var cmt  = brandMonthlyCommitted[mi];
+      var alloc = brandMonthlyAlloc[mi];
+      var evs  = brandMonthlyEvents[mi];
       var diff = act - plan;
       var cls  = act === 0 ? '' : (diff > plan * 0.1 ? ' budget-over' : diff < -plan * 0.1 ? ' budget-under' : ' budget-on');
       var inner;
       if (act > 0) {
         inner = '&pound;' + act.toLocaleString();
-        if (cmt > 0 && cmt !== act) inner += '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + cmt.toLocaleString() + ' committed</div>';
-      } else if (act === 0 && cmt > 0 && plan > 0) {
-        inner = '<em style="color:var(--ink-faint)">&pound;' + plan.toLocaleString() + '</em>'
-          + '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + cmt.toLocaleString() + ' committed</div>';
-      } else if (cmt > 0) {
-        inner = '<span style="color:#D97706;font-weight:600">&pound;' + cmt.toLocaleString() + '</span>';
+      } else if (plan > 0) {
+        inner = '<em style="color:var(--ink-faint)">&pound;' + plan.toLocaleString() + '</em>';
       } else {
-        inner = plan > 0 ? '<em style="color:var(--ink-faint)">&pound;' + plan.toLocaleString() + '</em>' : '<em style="color:var(--ink-faint)">&mdash;</em>';
+        inner = '<em style="color:var(--ink-faint)">&mdash;</em>';
       }
+      if (alloc > 0) inner += '<div style="font-size:9px;color:#2563EB;font-weight:600;line-height:1.2">&pound;' + alloc.toLocaleString() + ' alloc</div>';
+      if (evs > 0)   inner += '<div style="font-size:9px;color:#BB0A21;font-weight:600;line-height:1.2">&pound;' + evs.toLocaleString() + ' events</div>';
       brandCells += '<td class="budget-cell' + cls + '" style="line-height:1.4">' + inner + '</td>';
     }
 
@@ -775,8 +793,9 @@ function renderBudgetTracker() {
       + '</td>'
       + brandCells
       + '<td style="text-align:right;font-size:11px;color:var(--ink-soft);font-weight:700">' + (brandPlan > 0 ? '&pound;' + brandPlan.toLocaleString() : '&mdash;') + '</td>'
-      + (function() { var brandAlloc = 0; sites.forEach(function(site) { for (var ai=0;ai<12;ai++) { brandAlloc += ((window.ACTIVITY_ALLOCATIONS || {})[site.site_id] || {})[ai] || 0; } }); return '<td style="text-align:right;font-size:12px;font-weight:700;color:#2563EB">' + (brandAlloc > 0 ? '&pound;' + brandAlloc.toLocaleString() : '&mdash;') + '</td>'; })()
-      + '<td style="text-align:right;font-size:12px;font-weight:700">' + (brandActual > 0 ? '&pound;' + brandActual.toLocaleString() : brandCommitted > 0 ? '<span style="color:#D97706">&pound;' + brandCommitted.toLocaleString() + '</span>' : '&mdash;') + '</td>'
+      + '<td style="text-align:right;font-size:12px;font-weight:700;color:#2563EB">' + (brandAlloc > 0 ? '&pound;' + brandAlloc.toLocaleString() : '&mdash;') + '</td>'
+      + '<td style="text-align:right;font-size:12px;font-weight:700;color:#BB0A21">' + (brandEvents > 0 ? '&pound;' + brandEvents.toLocaleString() : '&mdash;') + '</td>'
+      + '<td style="text-align:right;font-size:12px;font-weight:700">' + (brandActual > 0 ? '&pound;' + brandActual.toLocaleString() : '&mdash;') + '</td>'
       + '<td style="text-align:right;font-size:11px;' + varStyle + '">' + varStr + '</td>'
       + '</tr>';
 
@@ -784,53 +803,55 @@ function renderBudgetTracker() {
     if (hasSiteData) {
       sites.forEach(function(site) {
         var d = SITE_BUDGETS[site.site_id] || {};
-        var sitePlan = 0, siteActual = 0, siteCommitted = 0;
+        var sitePlan = 0, siteActual = 0;
         var siteCells = '';
         // Declare siteSocialData here so it's available inside the month loop below
         var siteSocialData = typeof getSocialBudgetBySite === 'function' ? getSocialBudgetBySite(site.site_id, site.brand_id) : { months: {}, posts: [] };
         for (var mi = 0; mi < 12; mi++) {
-          var sp = d['m' + mi + '_planned'] || 0;
-          var sa = d['m' + mi + '_actual']  || 0;
-          var sc = (BRIEF_COMMITMENTS[site.site_id] || {})[mi] || 0;
-          var ssoc = (siteSocialData.months[mi] || 0);
+          var sp     = d['m' + mi + '_planned'] || 0;
+          var sa     = d['m' + mi + '_actual']  || 0;
           var salloc = ((window.ACTIVITY_ALLOCATIONS || {})[site.site_id] || {})[mi] || 0;
-          sitePlan += sp; siteActual += sa; siteCommitted += sc;
+          var sevs   = 0;
+          // Event costs for this site this month
+          var planYear3 = parseInt(PLAN_YEAR) || new Date().getFullYear();
+          (EV_EVENTS_BUDGET || []).forEach(function(ev) {
+            if (ev.site_id !== site.site_id || !ev.start_date) return;
+            var evD = new Date(ev.start_date + 'T00:00:00');
+            if (evD.getFullYear() === planYear3 && evD.getMonth() === mi) sevs += ev.planned_budget || 0;
+          });
+          sitePlan += sp; siteActual += sa;
           var scls = sa === 0 ? '' : ((sa-sp) > sp*0.1 ? ' budget-over' : (sa-sp) < -sp*0.1 ? ' budget-under' : ' budget-on');
           var sinner;
           if (sa > 0) {
-            // Actual spend — show solid, with committed sub-figure if different
             sinner = '&pound;' + sa.toLocaleString();
-            if (sc > 0 && sc !== sa) sinner += '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + sc.toLocaleString() + ' committed</div>';
-            if (ssoc > 0) sinner += '<div style="font-size:9px;color:#1877F2;font-weight:600;line-height:1.2">&pound;' + ssoc.toLocaleString() + ' social</div>';
-          } else if (sa === 0 && sc > 0 && sp > 0) {
-            // Planned + committed — show planned with committed sub-figure
-            sinner = '<em style="color:var(--ink-faint)">&pound;' + sp.toLocaleString() + '</em>'
-              + '<div style="font-size:9px;color:#D97706;font-weight:600;line-height:1.2">&pound;' + sc.toLocaleString() + ' committed</div>';
-            if (ssoc > 0) sinner += '<div style="font-size:9px;color:#1877F2;font-weight:600;line-height:1.2">&pound;' + ssoc.toLocaleString() + ' social</div>';
-          } else if (sc > 0) {
-            // Committed only (no plan set)
-            sinner = '<span style="color:#D97706;font-weight:600">&pound;' + sc.toLocaleString() + '</span>';
-            if (ssoc > 0) sinner += '<div style="font-size:9px;color:#1877F2;font-weight:600;line-height:1.2">&pound;' + ssoc.toLocaleString() + ' social</div>';
-          } else if (ssoc > 0) {
-            sinner = sp > 0 ? '<em style="color:var(--ink-faint)">&pound;' + sp.toLocaleString() + '</em>' : '';
-            sinner += '<div style="font-size:9px;color:#1877F2;font-weight:600;line-height:1.2">&pound;' + ssoc.toLocaleString() + ' social</div>';
+          } else if (sp > 0) {
+            sinner = '<em style="color:var(--ink-faint)">&pound;' + sp.toLocaleString() + '</em>';
           } else {
-            sinner = sp > 0 ? '<em style="color:var(--ink-faint)">&pound;' + sp.toLocaleString() + '</em>' : '<em style="color:var(--ink-faint)">&mdash;</em>';
+            sinner = '<em style="color:var(--ink-faint)">&mdash;</em>';
           }
-          if (salloc > 0) sinner += '<div style="font-size:9px;color:#2563EB;font-weight:600;line-height:1.2">&pound;' + salloc.toLocaleString() + ' allocated</div>';
+          if (salloc > 0) sinner += '<div style="font-size:9px;color:#2563EB;font-weight:600;line-height:1.2">&pound;' + salloc.toLocaleString() + ' alloc</div>';
+          if (sevs > 0)   sinner += '<div style="font-size:9px;color:#BB0A21;font-weight:600;line-height:1.2">&pound;' + sevs.toLocaleString() + ' events</div>';
           siteCells += '<td class="budget-cell' + scls + '" style="font-size:11px;padding:4px 8px;line-height:1.4">' + sinner + '</td>';
         }
+        // Calculate site totals for allocated and events
+        var siteTotalAlloc = 0, siteTotalEvents = 0;
+        for (var ai3=0;ai3<12;ai3++) { siteTotalAlloc += ((window.ACTIVITY_ALLOCATIONS || {})[site.site_id] || {})[ai3] || 0; }
+        var planYear4 = parseInt(PLAN_YEAR) || new Date().getFullYear();
+        (EV_EVENTS_BUDGET || []).forEach(function(ev) {
+          if (ev.site_id !== site.site_id || !ev.start_date) return;
+          if (new Date(ev.start_date + 'T00:00:00').getFullYear() === planYear4) siteTotalEvents += ev.planned_budget || 0;
+        });
         var sVarStr, sVarStyle;
         if (siteActual > 0) {
           var sVn = siteActual - sitePlan;
           sVarStyle = sVn > 0 ? 'color:#DC2626' : 'color:#059669';
           sVarStr = '&pound;' + Math.abs(sVn).toLocaleString() + (sVn > 0 ? ' over' : ' under');
-        } else if (siteCommitted > 0) {
-          sVarStyle = 'color:#D97706';
-          sVarStr = '&pound;' + (sitePlan - siteCommitted).toLocaleString() + ' left';
+        } else if (siteTotalAlloc > 0 || siteTotalEvents > 0) {
+          var sRemaining = sitePlan - siteTotalAlloc - siteTotalEvents;
+          sVarStyle = sRemaining < 0 ? 'color:#DC2626' : 'color:#059669';
+          sVarStr = '&pound;' + Math.abs(sRemaining).toLocaleString() + (sRemaining < 0 ? ' over' : ' left');
         } else { sVarStyle = ''; sVarStr = '&mdash;'; }
-        var actOrCmt = siteActual > 0 ? '&pound;' + siteActual.toLocaleString()
-          : siteCommitted > 0 ? '<span style="color:#D97706">&pound;' + siteCommitted.toLocaleString() + '</span>' : '&mdash;';
+        var actOrCmt = siteActual > 0 ? '&pound;' + siteActual.toLocaleString() : '&mdash;';
 
         // Identify campaigns + events for this site
         var planYear = parseInt(PLAN_YEAR) || new Date().getFullYear();
@@ -877,14 +898,15 @@ function renderBudgetTracker() {
           ? '<span style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="btToggle(\'' + accordId + '\')">'
             + '<span class="bt-chevron" id="chv-' + accordId + '">&#9654;</span>' + btEsc(site.site_name) + '</span>'
             + (sitePlan > 0 ? '<div style="font-size:10px;font-family:var(--font-m);color:var(--ink-faint);margin-top:2px;margin-left:16px">&pound;'
-              + identifiedTotal.toLocaleString() + ' committed of &pound;' + sitePlan.toLocaleString() + ' annual allocation</div>' : '')
+              + (siteTotalAlloc + siteTotalEvents).toLocaleString() + ' allocated of &pound;' + sitePlan.toLocaleString() + ' annual allocation</div>' : '')
           : btEsc(site.site_name);
 
         rows += '<tr id="row-' + accordId + '" data-brand-rows="bt-sites-' + b.id + '" style="background:var(--white);border-bottom:' + (hasItems ? 'none' : '1px solid var(--border)') + ';display:none">'
           + '<td style="padding:7px 10px 7px 28px;font-size:12px;color:var(--ink);border-left:4px solid ' + b.color + '">' + siteLabel + '</td>'
           + siteCells
           + '<td style="text-align:right;font-size:11px;color:var(--ink-faint);padding:4px 8px">' + (sitePlan > 0 ? '&pound;' + sitePlan.toLocaleString() : '&mdash;') + '</td>'
-          + (function() { var sAlloc = 0; for (var ai2=0;ai2<12;ai2++) { sAlloc += ((window.ACTIVITY_ALLOCATIONS || {})[site.site_id] || {})[ai2] || 0; } return '<td style="text-align:right;font-size:11px;padding:4px 8px;color:#2563EB;font-weight:700">' + (sAlloc > 0 ? '&pound;' + sAlloc.toLocaleString() : '&mdash;') + '</td>'; })()
+          + '<td style="text-align:right;font-size:11px;padding:4px 8px;color:#2563EB;font-weight:700">' + (siteTotalAlloc > 0 ? '&pound;' + siteTotalAlloc.toLocaleString() : '&mdash;') + '</td>'
+          + '<td style="text-align:right;font-size:11px;padding:4px 8px;color:#BB0A21;font-weight:700">' + (siteTotalEvents > 0 ? '&pound;' + siteTotalEvents.toLocaleString() : '&mdash;') + '</td>'
           + '<td style="text-align:right;font-size:11px;padding:4px 8px">' + actOrCmt + '</td>'
           + '<td style="text-align:right;font-size:11px;' + sVarStyle + ';padding:4px 8px">' + sVarStr + '</td>'
           + '</tr>';
@@ -893,7 +915,7 @@ function renderBudgetTracker() {
         if (hasItems) {
           var STATUS_C = { planned:'#6B7280', briefed:'#D97706', active:'#059669', completed:'#374151', approved:'#2563EB', cancelled:'#DC2626' };
           var STATUS_E = { draft:'#6B7280', confirmed:'#2563EB', completed:'#059669', cancelled:'#DC2626' };
-          var colCount = 17;
+          var colCount = 18;
           var acHtml = '<td colspan="' + colCount + '" style="padding:0;border-left:4px solid ' + b.color + ';background:var(--surface);border-bottom:1px solid var(--border)">';
           acHtml += '<div class="bt-accord" id="' + accordId + '" style="display:none"><div style="padding:14px 20px 18px">';
 
@@ -1016,13 +1038,32 @@ function renderBudgetTracker() {
               + '</div></div>';
           }
 
-          // ── Channel breakdown: planned vs committed per channel ──
+          // ── Channel breakdown: planned vs committed vs allocated per channel ──
           var siteChannelData = window.BRIEF_COMMITMENTS_BY_CHANNEL ? (window.BRIEF_COMMITMENTS_BY_CHANNEL[site.site_id] || {}) : {};
           var siteChannelPlanned = (typeof SITE_BUDGETS !== 'undefined' && SITE_BUDGETS[site.site_id])
             ? (SITE_BUDGETS[site.site_id].channels || {}) : {};
+
+          // Build activity allocations by channel for this site
+          // activity_budget_lines has channel_id — we need to map to channel name via sbl_channel_name
+          // Use ACTIVITY_ALLOCATIONS_BY_CHANNEL[site_id][channel_name] = total
+          var siteActAlloc = (window.ACTIVITY_ALLOCATIONS_BY_CHANNEL || {})[site.site_id] || {};
+
+          // Add event costs to Events & Showroom channel
+          var siteEventTotal = siteEvs.reduce(function(s, ev) { return s + (ev.planned_budget || 0); }, 0);
+          if (siteEventTotal > 0) {
+            if (!siteActAlloc['Events & Showroom']) siteActAlloc['Events & Showroom'] = 0;
+            siteActAlloc = Object.assign({}, siteActAlloc);
+            siteActAlloc['Events & Showroom'] = (siteActAlloc['Events & Showroom'] || 0) + siteEventTotal;
+          }
+
           var channelKeys = Object.keys(siteChannelPlanned).length
             ? Object.keys(siteChannelPlanned)
             : Object.keys(siteChannelData);
+
+          // Ensure channels with allocations are shown even if not in planned
+          Object.keys(siteActAlloc).forEach(function(ch) {
+            if (channelKeys.indexOf(ch) === -1) channelKeys.push(ch);
+          });
 
           if (channelKeys.length > 0) {
             acHtml += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">';
@@ -1031,6 +1072,7 @@ function renderBudgetTracker() {
               + '<th style="text-align:left">Channel</th>'
               + '<th style="text-align:right">Annual planned</th>'
               + '<th style="text-align:right">Committed</th>'
+              + '<th style="text-align:right;color:#2563EB">Allocated</th>'
               + '<th style="text-align:right">Remaining</th>'
               + '<th style="min-width:80px">Used</th>'
               + '</tr></thead><tbody>';
@@ -1042,14 +1084,17 @@ function renderBudgetTracker() {
               }, 0);
               var chCommitData = siteChannelData[ch] || {};
               var chCommitTotal = Math.round(Object.values(chCommitData).reduce(function(s, v){ return s + v; }, 0));
-              var chRemaining = chPlanTotal - chCommitTotal;
-              var chPct = chPlanTotal > 0 ? Math.min(100, Math.round(chCommitTotal / chPlanTotal * 100)) : 0;
+              var chAllocTotal = Math.round(siteActAlloc[ch] || 0);
+              var chUsed = Math.max(chCommitTotal, chAllocTotal);
+              var chRemaining = chPlanTotal - chUsed;
+              var chPct = chPlanTotal > 0 ? Math.min(100, Math.round(chUsed / chPlanTotal * 100)) : 0;
               var chColor = chPct > 100 ? '#DC2626' : chPct > 85 ? '#D97706' : '#2563EB';
               var remainStyle = chRemaining < 0 ? 'color:#DC2626;font-weight:700' : chRemaining < chPlanTotal * 0.1 ? 'color:#D97706;font-weight:700' : 'color:#059669';
               acHtml += '<tr>'
                 + '<td style="font-size:12px;font-weight:600">' + btEsc(ch) + '</td>'
                 + '<td style="text-align:right;font-family:var(--font-m);font-size:11px">' + (chPlanTotal > 0 ? '&pound;' + chPlanTotal.toLocaleString() : '&mdash;') + '</td>'
                 + '<td style="text-align:right;font-family:var(--font-m);font-size:11px;color:#D97706;font-weight:' + (chCommitTotal > 0 ? '700' : '400') + '">' + (chCommitTotal > 0 ? '&pound;' + chCommitTotal.toLocaleString() : '&mdash;') + '</td>'
+                + '<td style="text-align:right;font-family:var(--font-m);font-size:11px;color:#2563EB;font-weight:' + (chAllocTotal > 0 ? '700' : '400') + '">' + (chAllocTotal > 0 ? '&pound;' + chAllocTotal.toLocaleString() : '&mdash;') + '</td>'
                 + '<td style="text-align:right;font-family:var(--font-m);font-size:11px;' + remainStyle + '">' + (chPlanTotal > 0 ? (chRemaining < 0 ? '-' : '') + '&pound;' + Math.abs(chRemaining).toLocaleString() : '&mdash;') + '</td>'
                 + '<td><div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:2px">'
                 +   '<div style="height:100%;width:' + chPct + '%;background:' + chColor + ';border-radius:2px"></div>'
@@ -1071,31 +1116,31 @@ function renderBudgetTracker() {
   tbody.innerHTML = rows;
 
   // Metrics
-  var totalCommitted = 0;
-  Object.values(BRIEF_COMMITMENTS).forEach(function(sm) { Object.values(sm).forEach(function(v){ totalCommitted += v; }); });
-  // Add events planned to committed total for remaining calculation
+  // Calculate totals for metrics
+  var totalAllocated = 0;
   var totalEventsPlanned = 0;
-  if (typeof EV_EVENTS_BUDGET !== 'undefined') {
-    var planYear = parseInt(PLAN_YEAR) || new Date().getFullYear();
-    EV_EVENTS_BUDGET.forEach(function(ev) {
-      if (!ev.start_date) return;
-      if (new Date(ev.start_date + 'T00:00:00').getFullYear() !== planYear) return;
-      totalEventsPlanned += ev.planned_budget || 0;
-    });
-  }
-  var trueRemaining = totalPlanned - totalCommitted - totalActual - totalEventsPlanned;
-  var pct = totalActual > 0 ? Math.round(totalActual/totalPlanned*100) : totalCommitted > 0 ? Math.round(totalCommitted/totalPlanned*100) : 0;
-  // Smart currency format: £M for ≥100k, £K for ≥1k, exact £ for smaller
+  var planYearM = parseInt(PLAN_YEAR) || new Date().getFullYear();
+  Object.values(window.ACTIVITY_ALLOCATIONS || {}).forEach(function(months) {
+    Object.values(months).forEach(function(v){ totalAllocated += v; });
+  });
+  (EV_EVENTS_BUDGET || []).forEach(function(ev) {
+    if (!ev.start_date) return;
+    if (new Date(ev.start_date + 'T00:00:00').getFullYear() !== planYearM) return;
+    totalEventsPlanned += ev.planned_budget || 0;
+  });
+  var trueRemaining = totalPlanned - totalAllocated - totalEventsPlanned - totalActual;
+  var pct = totalActual > 0 ? Math.round(totalActual/totalPlanned*100) : totalAllocated > 0 ? Math.round(totalAllocated/totalPlanned*100) : 0;
   function fmtBudget(v) {
     if (v >= 100000) return '&pound;' + (v/1000000).toFixed(2) + 'M';
     if (v >= 1000)   return '&pound;' + (v/1000).toFixed(1) + 'K';
     return '&pound;' + v.toLocaleString();
   }
   metricsEl.innerHTML = [
-    {label:'Total planned ' + PLAN_YEAR,  val: fmtBudget(totalPlanned),                                                               sub:'Across all brands',             color:'var(--swansway)'},
-    {label:'Committed (briefs)',           val: totalCommitted > 0 ? fmtBudget(totalCommitted) : '&pound;0',                           sub:'From saved briefs',             color:'#D97706'},
-    {label:'Actual spent',                 val: totalActual > 0 ? fmtBudget(totalActual) : '&pound;0',                                 sub:'Entered in site budgets',       color:'#059669'},
-    {label:'Remaining headroom',           val: fmtBudget(Math.max(0, trueRemaining)),                                                 sub:'Planned &minus; committed &minus; actual &minus; events', color:'#6B7280'},
+    {label:'Total planned ' + PLAN_YEAR,  val: fmtBudget(totalPlanned),                         sub:'Across all brands',                      color:'var(--swansway)'},
+    {label:'Activities allocated',         val: totalAllocated > 0 ? fmtBudget(totalAllocated) : '&pound;0', sub:'From quarterly activity planning', color:'#2563EB'},
+    {label:'Events committed',             val: totalEventsPlanned > 0 ? fmtBudget(totalEventsPlanned) : '&pound;0', sub:'From events & placements',  color:'#BB0A21'},
+    {label:'Actual spent',                 val: totalActual > 0 ? fmtBudget(totalActual) : '&pound;0', sub:'Entered in site budgets',             color:'#059669'},
+    {label:'Remaining headroom',           val: fmtBudget(Math.max(0, trueRemaining)),            sub:'Planned &minus; allocated &minus; events &minus; actual', color:'#6B7280'},
   ].map(function(m) {
     return '<div class="metric" style="border-top-color:' + m.color + '"><div class="metric-label">' + m.label + '</div><div class="metric-val" style="color:' + m.color + '">' + m.val + '</div><div class="metric-sub">' + m.sub + '</div></div>';
   }).join('');
@@ -1113,16 +1158,16 @@ function renderBudgetSummary() {
   var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">';
   BUDGET_BRANDS.forEach(function(b) {
     var sites = (typeof HUB_SITES !== 'undefined') ? HUB_SITES.filter(function(s){ return s.brand_id === b.id; }) : [];
-    var planned = 0, actual = 0, committed = 0;
+    var planned = 0, actual = 0, allocated = 0;
     sites.forEach(function(site) {
       var d = SITE_BUDGETS[site.site_id] || {};
       for (var i = 0; i < 12; i++) {
         planned   += d['m' + i + '_planned'] || 0;
         actual    += d['m' + i + '_actual']  || 0;
-        committed += (BRIEF_COMMITMENTS[site.site_id] || {})[i] || 0;
+        allocated += ((window.ACTIVITY_ALLOCATIONS || {})[site.site_id] || {})[i] || 0;
       }
     });
-    if (planned === 0 && actual === 0 && committed === 0) {
+    if (planned === 0 && actual === 0 && allocated === 0) {
       // No data yet — show placeholder
       html += '<div style="background:var(--white);border:1px solid var(--border);border-left:4px solid ' + b.color + ';border-radius:4px;padding:10px 14px">'
         + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">'
@@ -1134,12 +1179,11 @@ function renderBudgetSummary() {
       return;
     }
     var pctActual    = planned > 0 ? Math.min(100, Math.round(actual    / planned * 100)) : 0;
-    var pctCommitted = planned > 0 ? Math.min(100 - pctActual, Math.round(committed / planned * 100)) : 0;
-    var pctRemaining = Math.max(0, 100 - pctActual - pctCommitted);
+    var pctAllocated = planned > 0 ? Math.min(100 - pctActual, Math.round(allocated / planned * 100)) : 0;
     var statusColor  = pctActual > 90 ? '#DC2626' : pctActual > 50 ? '#059669' : '#6B7280';
-    var actualStr    = actual    > 0 ? '&pound;' + (actual/1000).toFixed(0)    + 'K spent'    : '';
-    var committedStr = committed > 0 ? '&pound;' + (committed/1000).toFixed(0) + 'K committed' : '';
-    var subStr       = actualStr + (actualStr && committedStr ? ' &middot; ' : '') + committedStr
+    var actualStr    = actual    > 0 ? '&pound;' + (actual/1000).toFixed(0) + 'K spent' : '';
+    var allocStr     = allocated > 0 ? '&pound;' + (allocated/1000).toFixed(0) + 'K allocated' : '';
+    var subStr       = actualStr + (actualStr && allocStr ? ' &middot; ' : '') + allocStr
                        || ('&pound;' + (planned/1000).toFixed(0) + 'K planned');
     html += '<div style="background:var(--white);border:1px solid var(--border);border-left:4px solid ' + b.color + ';border-radius:4px;padding:10px 14px">'
       + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">'
@@ -1148,7 +1192,7 @@ function renderBudgetSummary() {
       + '</div>'
       + '<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;display:flex">'
       + (pctActual    > 0 ? '<div style="width:' + pctActual    + '%;background:#059669;height:6px"></div>' : '')
-      + (pctCommitted > 0 ? '<div style="width:' + pctCommitted + '%;background:#D97706;height:6px"></div>' : '')
+      + (pctAllocated > 0 ? '<div style="width:' + pctAllocated + '%;background:#2563EB;height:6px"></div>' : '')
       + '</div>'
       + '<div style="font-size:10px;color:var(--ink-faint);margin-top:4px">' + subStr + '</div>'
       + '</div>';
@@ -1608,10 +1652,7 @@ async function loadSiteBudgets() {
       await calLoadFromSupabase();
     }
     await Promise.all([
-      typeof loadBriefCommitmentsForTracker === 'function' ? loadBriefCommitmentsForTracker() : Promise.resolve(),
-      loadChannelCommitments(),
       loadEventsForBudget(),
-      loadSocialBudgets(),
       loadActivityAllocations()
     ]);
     if (Object.keys(BRAND_CHANNELS_DATA).length) {
@@ -1847,19 +1888,41 @@ window.ACTIVITY_ALLOCATIONS = {}; // [site_id][month] = total planned
 async function loadActivityAllocations() {
   try {
     var year = parseInt(PLAN_YEAR) || new Date().getFullYear();
-    var r = await fetch(SUPABASE_URL + '/rest/v1/activity_budget_lines?year=eq.' + year + '&select=site_id,month,planned&limit=10000', {
+    // Fetch with channel_id so we can build channel breakdown
+    var r = await fetch(SUPABASE_URL + '/rest/v1/activity_budget_lines?year=eq.' + year + '&select=site_id,channel_id,month,planned&limit=10000', {
       headers: getAuthHeaders({'Content-Type':'application/json'})
     });
     if (!r.ok) return;
     var rows = await r.json() || [];
+
+    // Also fetch channel mapping: channel_id -> sbl_channel_name
+    var chanR = await fetch(SUPABASE_URL + '/rest/v1/activity_channels?select=id,sbl_channel_name&active=eq.true', {
+      headers: getAuthHeaders({'Content-Type':'application/json'})
+    });
+    var chanRows = chanR.ok ? await chanR.json() : [];
+    var chanMap = {}; // channel_id -> sbl_channel_name
+    chanRows.forEach(function(c) { if (c.sbl_channel_name) chanMap[c.id] = c.sbl_channel_name; });
+
     window.ACTIVITY_ALLOCATIONS = {};
+    window.ACTIVITY_ALLOCATIONS_BY_CHANNEL = {};
+
     rows.forEach(function(row) {
       if (!row.site_id || !row.planned) return;
-      if (!window.ACTIVITY_ALLOCATIONS[row.site_id]) window.ACTIVITY_ALLOCATIONS[row.site_id] = {};
       var m = parseInt(row.month) - 1; // convert 1-12 to 0-11
+
+      // Monthly total by site
+      if (!window.ACTIVITY_ALLOCATIONS[row.site_id]) window.ACTIVITY_ALLOCATIONS[row.site_id] = {};
       window.ACTIVITY_ALLOCATIONS[row.site_id][m] = (window.ACTIVITY_ALLOCATIONS[row.site_id][m] || 0) + (row.planned || 0);
+
+      // By channel for channel breakdown
+      var chanName = chanMap[row.channel_id];
+      if (chanName) {
+        if (!window.ACTIVITY_ALLOCATIONS_BY_CHANNEL[row.site_id]) window.ACTIVITY_ALLOCATIONS_BY_CHANNEL[row.site_id] = {};
+        window.ACTIVITY_ALLOCATIONS_BY_CHANNEL[row.site_id][chanName] =
+          (window.ACTIVITY_ALLOCATIONS_BY_CHANNEL[row.site_id][chanName] || 0) + (row.planned || 0);
+      }
     });
-    console.log('Activity allocations loaded:', rows.length, 'rows');
+    console.log('Activity allocations loaded:', rows.length, 'rows,', Object.keys(window.ACTIVITY_ALLOCATIONS).length, 'sites');
   } catch(e) { console.warn('loadActivityAllocations:', e); }
 }
 
