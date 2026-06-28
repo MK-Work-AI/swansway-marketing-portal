@@ -704,24 +704,32 @@ function renderBrandSites(brandId) {
     totalCommitted += sc;
   });
 
-  // Update summary row to include committed
+  // Calculate allocated (from activity_budget_lines) and events
+  var totalAllocated = 0, totalEvents = 0;
+  sites.forEach(function(site) {
+    for (var ai=0;ai<12;ai++) totalAllocated += ((window.ACTIVITY_ALLOCATIONS||{})[site.site_id]||{})[ai]||0;
+    (EV_EVENTS_BUDGET||[]).forEach(function(ev) {
+      if (ev.site_id !== site.site_id || !ev.start_date) return;
+      if (new Date(ev.start_date+'T00:00:00').getFullYear() === (parseInt(PLAN_YEAR)||new Date().getFullYear())) totalEvents += ev.planned_budget||0;
+    });
+  });
+
   html = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.5rem">';
-  // Social budgets for this brand
-  var brandSocialData = window.SOCIAL_BUDGETS_BRAND && window.SOCIAL_BUDGETS_BRAND[brandId];
-  var totalSocial = brandSocialData ? brandSocialData.total : 0;
   html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Brand planned total</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:var(--swansway)">£' + totalPlan.toLocaleString() + '</div></div>';
-  html += '<div style="background:var(--white);border:1px solid var(--border);border-top:3px solid #D97706;border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Committed (briefs)</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:#D97706">' + (totalCommitted > 0 ? '£' + totalCommitted.toLocaleString() : '—') + '</div></div>';
-  html += '<div style="background:var(--white);border:1px solid var(--border);border-top:3px solid #1877F2;border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Social budgeted</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:#1877F2">' + (totalSocial > 0 ? '£' + totalSocial.toLocaleString() : '—') + '</div></div>';
+  html += '<div style="background:var(--white);border:1px solid var(--border);border-top:3px solid #2563EB;border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Activities allocated</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:#2563EB">' + (totalAllocated > 0 ? '£' + totalAllocated.toLocaleString() : '—') + '</div></div>';
+  html += '<div style="background:var(--white);border:1px solid var(--border);border-top:3px solid #BB0A21;border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Events committed</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:#BB0A21">' + (totalEvents > 0 ? '£' + totalEvents.toLocaleString() : '—') + '</div></div>';
   html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">YTD actual</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:#059669">' + (totalActual > 0 ? '£' + totalActual.toLocaleString() : '—') + '</div></div>';
-  var variance = totalActual - totalPlan;
-  html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Variance</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:' + (variance > 0 ? '#DC2626' : '#059669') + '">' + (totalActual > 0 ? (variance >= 0 ? '+' : '') + '£' + Math.abs(variance).toLocaleString() : '—') + '</div></div>';
+  var variance = totalActual > 0 ? totalActual - totalPlan : 0;
+  var remaining = totalPlan - totalAllocated - totalEvents - totalActual;
+  html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px 14px"><div style="font-family:var(--font-m);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Remaining</div><div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:' + (remaining < 0 ? '#DC2626' : '#059669') + '">' + (totalPlan > 0 ? (remaining < 0 ? '-' : '') + '£' + Math.abs(Math.round(remaining)).toLocaleString() : '—') + '</div></div>';
   html += '</div>';
 
   html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">';
   html += '<thead><tr style="background:var(--swansway);color:#fff">';
   html += '<th style="padding:8px 12px;text-align:left;font-family:var(--font-m);font-size:10px;font-weight:500;letter-spacing:0.08em">Site</th>';
   html += '<th style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:10px;font-weight:500">Annual planned</th>';
-  html += '<th style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:10px;font-weight:500;color:#FCD34D">Committed</th>';
+  html += '<th style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:10px;font-weight:500;color:#60A5FA">Allocated</th>';
+  html += '<th style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:10px;font-weight:500;color:#FCA5A5">Events</th>';
   html += '<th style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:10px;font-weight:500">YTD actual</th>';
   html += '<th style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:10px;font-weight:500">Variance</th>';
   HUB_MONTHS.forEach(function(m) { html += '<th style="padding:8px 6px;text-align:right;font-family:var(--font-m);font-size:9px;font-weight:500;min-width:52px">' + m + '</th>'; });
@@ -730,31 +738,44 @@ function renderBrandSites(brandId) {
   sites.forEach(function(site, idx) {
     var d = SITE_BUDGETS[site.site_id] || {};
     var plan = d.annual_planned || 0;
-    var committed = window.BRIEF_COMMITMENTS && window.BRIEF_COMMITMENTS[site.site_id]
-      ? Object.values(window.BRIEF_COMMITMENTS[site.site_id]).reduce(function(s,v){ return s+v; }, 0) : 0;
+    // committed removed — using activity allocations now
     var actual = 0;
     for (var i = 0; i < 12; i++) actual += (d['m' + i + '_actual'] || 0);
     var v = actual - plan;
-    var evData = typeof getEventBudgetBySite === 'function' ? getEventBudgetBySite(site.site_id) : null;
+    // Site allocated and events
+    var siteAlloc = 0;
+    for (var ai4=0;ai4<12;ai4++) siteAlloc += ((window.ACTIVITY_ALLOCATIONS||{})[site.site_id]||{})[ai4]||0;
+    var siteEvTotal = 0;
+    (EV_EVENTS_BUDGET||[]).forEach(function(ev) {
+      if (ev.site_id !== site.site_id || !ev.start_date) return;
+      if (new Date(ev.start_date+'T00:00:00').getFullYear() === (parseInt(PLAN_YEAR)||new Date().getFullYear())) siteEvTotal += ev.planned_budget||0;
+    });
     var bg = idx % 2 === 0 ? 'var(--white)' : 'var(--surface)';
     var siteAccordId = 'brs-' + site.site_id.replace(/[^a-z0-9]/gi,'_');
     var siteHasChannels = Object.keys((SITE_BUDGETS[site.site_id] || {}).channels || {}).length > 0;
     html += '<tr style="background:' + bg + ';cursor:' + (siteHasChannels?'pointer':'default') + '"' + (siteHasChannels ? ' data-accord="' + siteAccordId + '"' : '') + '>';
     html += '<td style="padding:8px 12px;font-size:13px;font-weight:600">' + (siteHasChannels ? '<span style="font-size:10px;color:var(--ink-soft);margin-right:4px" id="brs-chv-'+siteAccordId+'">&#9654;</span>' : '') + site.site_name + '</td>';
     html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:var(--swansway);font-weight:700">' + (plan > 0 ? '£' + plan.toLocaleString() : '—') + '</td>';
-    html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:#D97706;font-weight:600">' + (committed > 0 ? '£' + committed.toLocaleString() : '—') + '</td>';
+    html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:#2563EB;font-weight:600">' + (siteAlloc > 0 ? '£' + siteAlloc.toLocaleString() : '—') + '</td>';
+    html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:#BB0A21;font-weight:600">' + (siteEvTotal > 0 ? '£' + siteEvTotal.toLocaleString() : '—') + '</td>';
     html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:#059669">' + (actual > 0 ? '£' + actual.toLocaleString() : '—') + '</td>';
-    html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:' + (v > 0 ? '#DC2626' : '#059669') + '">' + (actual > 0 ? (v >= 0 ? '+' : '') + '£' + Math.abs(v).toLocaleString() : '—') + '</td>';
+    var remaining2 = plan - siteAlloc - siteEvTotal - actual;
+    html += '<td style="padding:8px 12px;text-align:right;font-family:var(--font-m);font-size:12px;color:' + (remaining2 < 0 ? '#DC2626' : '#059669') + '">' + (plan > 0 ? (remaining2 < 0 ? '-' : '') + '£' + Math.abs(Math.round(remaining2)).toLocaleString() : '—') + '</td>';
     for (var i = 0; i < 12; i++) {
       var mPlan = d['m' + i + '_planned'] || 0;
       var mAct  = d['m' + i + '_actual']  || 0;
-      var mCmt  = (window.BRIEF_COMMITMENTS && window.BRIEF_COMMITMENTS[site.site_id]) ? (window.BRIEF_COMMITMENTS[site.site_id][i] || 0) : 0;
-      var mEvPl = evData ? (evData[i].planned || 0) : 0;
-      var mPct  = mPlan > 0 ? Math.min(100, Math.round(mAct / mPlan * 100)) : 0;
+      var mAlloc = ((window.ACTIVITY_ALLOCATIONS||{})[site.site_id]||{})[i]||0;
+      var mEvPl  = 0;
+      (EV_EVENTS_BUDGET||[]).forEach(function(ev) {
+        if (ev.site_id !== site.site_id || !ev.start_date) return;
+        var evD = new Date(ev.start_date+'T00:00:00');
+        if (evD.getFullYear() === (parseInt(PLAN_YEAR)||new Date().getFullYear()) && evD.getMonth() === i) mEvPl += ev.planned_budget||0;
+      });
+      var mPct = mPlan > 0 ? Math.min(100, Math.round(mAct / mPlan * 100)) : 0;
       html += '<td style="padding:4px 6px;text-align:right;vertical-align:top;line-height:1.3">';
       html += '<div style="font-family:var(--font-m);font-size:10px;color:var(--ink-faint)">' + fmtCell(mPlan) + '</div>';
-      if (mCmt > 0) html += '<div style="font-size:9px;color:#D97706;font-weight:600">' + fmtCell(mCmt) + ' cmt</div>';
-      if (mEvPl > 0) html += '<div style="font-size:9px;color:#7C3AED">' + fmtCell(mEvPl) + ' ev</div>';
+      if (mAlloc > 0) html += '<div style="font-size:9px;color:#2563EB;font-weight:600">' + fmtCell(mAlloc) + ' alloc</div>';
+      if (mEvPl > 0)  html += '<div style="font-size:9px;color:#BB0A21;font-weight:600">' + fmtCell(mEvPl) + ' ev</div>';
       if (mAct > 0) {
         html += '<div style="font-size:9px;color:#059669">' + fmtCell(mAct) + ' act</div>';
         html += '<div style="height:3px;background:var(--border);border-radius:2px;margin-top:2px"><div style="height:3px;background:' + (mPct > 100 ? '#DC2626' : '#059669') + ';width:' + Math.min(100,mPct) + '%;border-radius:2px"></div></div>';
@@ -764,28 +785,41 @@ function renderBrandSites(brandId) {
     html += '</tr>';
     if (siteHasChannels) {
       var chD = (SITE_BUDGETS[site.site_id]||{}).channels||{};
-      var chC = (window.BRIEF_COMMITMENTS_BY_CHANNEL||{})[site.site_id]||{};
+      var siteActAllocByCh = (window.ACTIVITY_ALLOCATIONS_BY_CHANNEL||{})[site.site_id]||{};
       var cR = '';
-      Object.keys(chD).forEach(function(ch) {
-        var cM = chD[ch];
+      // Include event costs in Events & Showroom channel
+      var siteEvForCh = 0;
+      (EV_EVENTS_BUDGET||[]).forEach(function(ev) {
+        if (ev.site_id !== site.site_id || !ev.start_date) return;
+        if (new Date(ev.start_date+'T00:00:00').getFullYear() === (parseInt(PLAN_YEAR)||new Date().getFullYear())) siteEvForCh += ev.planned_budget||0;
+      });
+      var channelAllocWithEvs = Object.assign({}, siteActAllocByCh);
+      if (siteEvForCh > 0) channelAllocWithEvs['Events & Showroom'] = (channelAllocWithEvs['Events & Showroom']||0) + siteEvForCh;
+
+      // Merge planned channels with any that have allocations
+      var allChKeys = Object.keys(chD);
+      Object.keys(channelAllocWithEvs).forEach(function(ch) { if (allChKeys.indexOf(ch)===-1) allChKeys.push(ch); });
+
+      allChKeys.forEach(function(ch) {
+        var cM = chD[ch]||{};
         var cP = Object.values(cM).reduce(function(s,v){return s+(typeof v==='object'?(v.planned||0):v);},0);
-        var cCt = Math.round(Object.values(chC[ch]||{}).reduce(function(s,v){return s+v;},0));
-        var cRm = cP-cCt; var cPc = cP>0?Math.min(100,Math.round(cCt/cP*100)):0;
+        var cAl = Math.round(channelAllocWithEvs[ch]||0);
+        var cRm = cP-cAl; var cPc = cP>0?Math.min(100,Math.round(cAl/cP*100)):0;
         var rCl = cRm<0?'#DC2626':cRm<cP*0.1?'#D97706':'#059669';
         var bCl = cPc>90?'#DC2626':cPc>70?'#D97706':'#2563EB';
         cR += '<tr style="background:#F8FAFF">';
         cR += '<td style="padding:4px 12px 4px 24px;font-size:11px">'+ch+'</td>';
         cR += '<td style="text-align:right;padding:4px 10px;font-size:11px;font-family:var(--font-m);color:var(--swansway)">'+(cP>0?'&#163;'+cP.toLocaleString():'&mdash;')+'</td>';
-        cR += '<td style="text-align:right;padding:4px 10px;font-size:11px;font-family:var(--font-m);color:#D97706;font-weight:'+(cCt>0?'700':'400')+'">'+(cCt>0?'&#163;'+cCt.toLocaleString():'&mdash;')+'</td>';
+        cR += '<td style="text-align:right;padding:4px 10px;font-size:11px;font-family:var(--font-m);color:#2563EB;font-weight:'+(cAl>0?'700':'400')+'">'+(cAl>0?'&#163;'+cAl.toLocaleString():'&mdash;')+'</td>';
         cR += '<td style="text-align:right;padding:4px 10px;font-size:11px;font-family:var(--font-m);color:'+rCl+'">'+(cP>0?(cRm<0?'-':'')+'&#163;'+Math.abs(cRm).toLocaleString():'&mdash;')+'</td>';
         cR += '<td style="padding:4px 10px"><div style="display:flex;align-items:center;gap:4px"><div style="flex:1;height:3px;background:var(--border);border-radius:2px"><div style="height:100%;width:'+cPc+'%;background:'+bCl+';border-radius:2px"></div></div><span style="font-size:9px;font-family:var(--font-m);color:var(--ink-soft)">'+cPc+'%</span></div></td>';
         cR += '</tr>';
       });
-      html += '<tr class="brs-detail-row"><td colspan="17" style="padding:0;background:#F0F4FF;border-left:3px solid #2563EB">';
+      html += '<tr class="brs-detail-row"><td colspan="19" style="padding:0;background:#F0F4FF;border-left:3px solid #2563EB">';
       html += '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#E8EFFF">';
       html += '<th style="padding:4px 12px 4px 24px;text-align:left;font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase">Channel</th>';
       html += '<th style="padding:4px 10px;text-align:right;font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase">Planned</th>';
-      html += '<th style="padding:4px 10px;text-align:right;font-size:9px;font-family:var(--font-m);color:#D97706;text-transform:uppercase">Committed</th>';
+      html += '<th style="padding:4px 10px;text-align:right;font-size:9px;font-family:var(--font-m);color:#2563EB;text-transform:uppercase">Allocated</th>';
       html += '<th style="padding:4px 10px;text-align:right;font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase">Remaining</th>';
       html += '<th style="padding:4px 10px;font-size:9px;font-family:var(--font-m);color:var(--ink-soft);text-transform:uppercase">Used</th>';
       html += '</tr></thead><tbody>'+cR+'</tbody></table></td></tr>';
@@ -1006,7 +1040,7 @@ function renderBrandChannelMix(brandId) {
 
   // Build site channel planned and committed totals
   var sitePlanned = {};
-  var siteCommitted = {};
+  var siteAllocated = {};
   brandSites.forEach(function(site) {
     var chans = (SITE_BUDGETS[site.site_id] || {}).channels || {};
     Object.keys(chans).forEach(function(ch) {
@@ -1014,10 +1048,9 @@ function renderBrandChannelMix(brandId) {
       var total = Object.values(mData).reduce(function(s,v){ return s+(typeof v==='object'?(v.planned||0):v); }, 0);
       sitePlanned[ch] = (sitePlanned[ch] || 0) + total;
     });
-    var cmt = (window.BRIEF_COMMITMENTS_BY_CHANNEL || {})[site.site_id] || {};
-    Object.keys(cmt).forEach(function(ch) {
-      var total = Math.round(Object.values(cmt[ch]).reduce(function(s,v){ return s+v; }, 0));
-      siteCommitted[ch] = (siteCommitted[ch] || 0) + total;
+    var actAlloc = (window.ACTIVITY_ALLOCATIONS_BY_CHANNEL || {})[site.site_id] || {};
+    Object.keys(actAlloc).forEach(function(ch) {
+      siteAllocated[ch] = (siteAllocated[ch] || 0) + (actAlloc[ch] || 0);
     });
   });
 
@@ -1034,7 +1067,7 @@ function renderBrandChannelMix(brandId) {
   var grandPlanned = 0, grandCommitted = 0;
   channels.forEach(function(ch) {
     var plan = Math.round(sitePlanned[ch.channel] || 0);
-    var cmt  = Math.round(siteCommitted[ch.channel] || 0);
+    var cmt  = Math.round(siteAllocated[ch.channel] || 0);
     var rem  = plan - cmt;
     var cPct = plan > 0 ? Math.min(Math.round(cmt / plan * 100), 100) : 0;
     var planPct = brandBudget > 0 ? Math.min(Math.round(plan / brandBudget * 100), 100) : 0;
