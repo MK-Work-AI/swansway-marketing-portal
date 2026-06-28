@@ -769,23 +769,28 @@ function plCheckAlloc(input) {
 }
 /* ══ Save allocations ══ */
 async function plSaveAllocations(actId) {
-  var btn = document.getElementById('ap-save-alloc-btn');
+  var btn = document.getElementById('pl-budget-save-btn');
   if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
   try {
-    var inputs   = document.querySelectorAll('#ap-budget-detail input[type="number"][data-site]');
-    var upserts  = [];
+    // Collect all allocation inputs from the modal
+    var inputs  = document.querySelectorAll('#pl-budget-modal-body input[type="number"][data-site]');
+    var upserts = [];
     inputs.forEach(function(inp) {
+      var val = parseFloat(inp.value) || 0;
       upserts.push({
         activity_id: actId,
         site_id:     inp.getAttribute('data-site'),
         channel_id:  inp.getAttribute('data-channel'),
         month:       parseInt(inp.getAttribute('data-month')),
         year:        PL.year,
-        planned:     parseFloat(inp.value) || 0,
+        planned:     val,
         actual:      0
       });
     });
-    if (!upserts.length) return;
+    if (!upserts.length) {
+      plShowToast('Nothing to save', '#6B7280');
+      return;
+    }
     var r = await fetch(SUPA_PL + '/activity_budget_lines', {
       method: 'POST',
       headers: getAuthHeaders({ 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates,return=minimal' }),
@@ -793,11 +798,15 @@ async function plSaveAllocations(actId) {
     });
     if (!r.ok) throw new Error(await r.text());
     plShowToast('Budget allocations saved ✓', '#059669');
+    plCloseBudgetModal();
     plRenderBudgetStrip();
+    await plLoadData();
+    plRenderActivities();
   } catch(e) {
     plShowToast('Save failed: ' + e.message, '#DC2626');
+    console.error('Save allocations error:', e);
   } finally {
-    if (btn) { btn.textContent = 'Save budget allocations'; btn.disabled = false; }
+    if (btn) { btn.textContent = 'Save allocations'; btn.disabled = false; }
   }
 }
 
