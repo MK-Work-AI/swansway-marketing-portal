@@ -440,8 +440,17 @@ async function plOpenActPanel(id) {
 
     + '<div class="pl-panel-section-hdr">Budget Allocation</div>'
     + '<div style="margin-bottom:12px">'
+    + '<div style="display:flex;gap:8px;margin-bottom:8px">'
+    + '<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 12px">'
+    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-faint);margin-bottom:3px">Total budget</div>'
+    + '<div style="font-family:var(--font-d);font-size:16px;font-weight:700;color:var(--ink)">' + (a.total_budget ? '£' + Number(a.total_budget).toLocaleString('en-GB') : '—') + '</div>'
+    + '</div>'
+    + '<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 12px">'
+    + '<div style="font-family:var(--font-m);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-faint);margin-bottom:3px">Allocated</div>'
+    + '<div style="font-family:var(--font-d);font-size:16px;font-weight:700;color:var(--swansway)" id="ap-alloc-total">Loading…</div>'
+    + '</div>'
+    + '</div>'
     + '<button class="btn btn-primary" id="ap-budget-modal-btn" data-id="' + a.id + '" style="width:100%">💷 Allocate budget by site & channel</button>'
-    + (a.total_budget ? '<div style="font-size:11px;color:var(--ink-faint);margin-top:5px;text-align:center">Total budget set: £' + Number(a.total_budget).toLocaleString('en-GB') + '</div>' : '<div style="font-size:11px;color:var(--ink-faint);margin-top:5px;text-align:center">Set a total budget above, then allocate by site & channel</div>')
     + '</div>'
 
     + '<div class="pl-panel-section-hdr">Brief for Oceros</div>'
@@ -472,6 +481,9 @@ async function plOpenActPanel(id) {
 
   var budgetModalBtn = document.getElementById('ap-budget-modal-btn');
   if (budgetModalBtn) budgetModalBtn.addEventListener('click', function() { plOpenBudgetModal(this.getAttribute('data-id')); });
+
+  // Load allocated total for this activity
+  plLoadAllocTotal(a.id);
 
   // Load deliverables async
   await plLoadDeliverables(a.id);
@@ -571,6 +583,20 @@ async function plRemoveDeliverable(delId, actId) {
     await fetch(SUPA_PL + '/activity_deliverables?id=eq.' + delId, { method:'DELETE', headers: getAuthHeaders() });
     await plLoadDeliverables(actId);
   } catch(e) { plShowToast('Error: ' + e.message, '#DC2626'); }
+}
+
+/* ══ Load allocated total for panel ══ */
+async function plLoadAllocTotal(actId) {
+  var el = document.getElementById('ap-alloc-total');
+  if (!el) return;
+  try {
+    var r = await fetch(SUPA_PL + '/activity_budget_lines?activity_id=eq.' + actId + '&select=planned', { headers: getAuthHeaders() });
+    var rows = r.ok ? await r.json() : [];
+    var total = rows.reduce(function(s, r) { return s + (r.planned || 0); }, 0);
+    el.textContent = total ? '£' + total.toLocaleString('en-GB') : '—';
+  } catch(e) {
+    el.textContent = '—';
+  }
 }
 
 /* ══ Budget allocation modal (full width) ══ */
@@ -802,6 +828,8 @@ async function plSaveAllocations(actId) {
     plRenderBudgetStrip();
     await plLoadData();
     plRenderActivities();
+    // Refresh the allocated total in the panel if still open
+    plLoadAllocTotal(actId);
   } catch(e) {
     plShowToast('Save failed: ' + e.message, '#DC2626');
     console.error('Save allocations error:', e);
