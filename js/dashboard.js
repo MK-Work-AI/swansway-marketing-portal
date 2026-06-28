@@ -7,38 +7,42 @@ var DB = {
 };
 
 async function dbInit() {
-  // Wait for BRAND_NAMES to be available (loaded by bundle-core.js)
-  if (typeof BRAND_NAMES === 'undefined' || typeof getAuthHeaders === 'undefined') {
-    setTimeout(dbInit, 400);
+  // Wait for core globals to be ready
+  if (typeof BRAND_NAMES === 'undefined' || typeof getAuthHeaders === 'undefined' || typeof HUB_SITES === 'undefined') {
+    setTimeout(dbInit, 300);
     return;
   }
 
   var SUPA = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
   var Q = 3; var YEAR = 2026;
   var qtag = 'Q' + Q + '-' + YEAR;
-
-  // Greeting
-  var hour = new Date().getHours();
-  var greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  var nameEl = document.getElementById('user-name');
-  var firstName = nameEl ? nameEl.textContent.split(' ')[0] : '';
-  document.getElementById('db-greeting').textContent = greet + (firstName && firstName !== 'Loading…' ? ', ' + firstName : '');
-
-  // Date
   var now = new Date();
-  document.getElementById('db-date').textContent = now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) + ' · Q' + Q + ' ' + YEAR;
+
+  // Greeting — update now and again after user loads
+  function updateGreeting() {
+    var hour = now.getHours();
+    var greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    var nameEl = document.getElementById('user-name');
+    var firstName = nameEl ? nameEl.textContent.replace('Loading…','').trim().split(' ')[0] : '';
+    var el = document.getElementById('db-greeting');
+    if (el) el.textContent = greet + (firstName ? ', ' + firstName : '');
+  }
+  updateGreeting();
+  setTimeout(updateGreeting, 2000); // retry after user name loads
+
+  var dateEl = document.getElementById('db-date');
+  if (dateEl) dateEl.textContent = now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) + ' · Q' + Q + ' ' + YEAR;
 
   try {
-    // Load all Q3 activities and events in parallel
     var [actR, evR] = await Promise.all([
       fetch(SUPA + '/activities?quarter=eq.' + Q + '&year=eq.' + YEAR + '&is_archived=eq.false&select=id,title,type_id,brand_id,rag_status,stage,assigned_to&limit=500', { headers: getAuthHeaders() }),
-      fetch(SUPA + '/events?is_archived=eq.false&select=id,title,brand_id,site_id,start_date,end_date,rag_status,planned_budget,event_type_id&order=start_date&limit=200', { headers: getAuthHeaders() }),
+      fetch(SUPA + '/events?is_archived=eq.false&select=id,title,brand_id,site_id,start_date,end_date,rag_status,planned_budget,event_type_id,quarter_tags&order=start_date&limit=200', { headers: getAuthHeaders() }),
     ]);
 
     DB.activities = actR.ok ? await actR.json() : [];
     var allEvents  = evR.ok  ? await evR.json()  : [];
-    DB.events = allEvents.filter(function(e) { return e.quarter_tags && e.quarter_tags.indexOf && e.quarter_tags.indexOf(qtag) !== -1; });
-    // Also include events happening this week regardless of quarter tag
+    DB.events = allEvents.filter(function(e) { return e.quarter_tags && e.quarter_tags.indexOf(qtag) !== -1; });
+
     var weekStart = new Date(now); weekStart.setHours(0,0,0,0);
     var weekEnd   = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
     DB.eventsThisWeek = allEvents.filter(function(e) {
@@ -55,7 +59,13 @@ async function dbInit() {
   dbRenderKPIs();
   dbRenderUrgent();
   dbRenderThisWeek();
-  dbRenderBrands();
+
+  // Wait for SITE_BUDGETS before rendering brands
+  if (typeof SITE_BUDGETS !== 'undefined' && Object.keys(SITE_BUDGETS).length) {
+    dbRenderBrands();
+  } else {
+    setTimeout(function() { dbRenderBrands(); }, 2000);
+  }
 }
 
 function dbRenderKPIs() {
