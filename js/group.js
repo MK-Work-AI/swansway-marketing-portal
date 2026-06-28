@@ -686,7 +686,7 @@ function renderBudgetTracker() {
   var thSumStyle = 'background:var(--swansway);color:#fff;font-family:var(--font-m);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;padding:9px 10px;text-align:right;white-space:nowrap;width:90px';
   var hdr = '<tr><th style="'+th1Style+'">Brand / Site</th>';
   CAL_MONTHS.forEach(function(m) { hdr += '<th style="'+thStyle+'">' + m + '</th>'; });
-  hdr += '<th style="'+thSumStyle+'">Planned</th><th style="'+thSumStyle+'">Actual</th><th style="'+thSumStyle+'">Variance</th></tr>';
+  hdr += '<th style="'+thSumStyle+'">Planned</th><th style="'+thSumStyle+'">' + '<span style="color:#2563EB">Allocated</span>' + '</th><th style="'+thSumStyle+'">Actual</th><th style="'+thSumStyle+'">Variance</th></tr>';
   thead.innerHTML = hdr;
 
   var totalPlanned = 0, totalActual = 0;
@@ -775,6 +775,7 @@ function renderBudgetTracker() {
       + '</td>'
       + brandCells
       + '<td style="text-align:right;font-size:11px;color:var(--ink-soft);font-weight:700">' + (brandPlan > 0 ? '&pound;' + brandPlan.toLocaleString() : '&mdash;') + '</td>'
+      + (function() { var brandAlloc = 0; sites.forEach(function(site) { for (var ai=0;ai<12;ai++) { brandAlloc += ((window.ACTIVITY_ALLOCATIONS || {})[site.site_id] || {})[ai] || 0; } }); return '<td style="text-align:right;font-size:12px;font-weight:700;color:#2563EB">' + (brandAlloc > 0 ? '&pound;' + brandAlloc.toLocaleString() : '&mdash;') + '</td>'; })()
       + '<td style="text-align:right;font-size:12px;font-weight:700">' + (brandActual > 0 ? '&pound;' + brandActual.toLocaleString() : brandCommitted > 0 ? '<span style="color:#D97706">&pound;' + brandCommitted.toLocaleString() + '</span>' : '&mdash;') + '</td>'
       + '<td style="text-align:right;font-size:11px;' + varStyle + '">' + varStr + '</td>'
       + '</tr>';
@@ -792,6 +793,7 @@ function renderBudgetTracker() {
           var sa = d['m' + mi + '_actual']  || 0;
           var sc = (BRIEF_COMMITMENTS[site.site_id] || {})[mi] || 0;
           var ssoc = (siteSocialData.months[mi] || 0);
+          var salloc = ((window.ACTIVITY_ALLOCATIONS || {})[site.site_id] || {})[mi] || 0;
           sitePlan += sp; siteActual += sa; siteCommitted += sc;
           var scls = sa === 0 ? '' : ((sa-sp) > sp*0.1 ? ' budget-over' : (sa-sp) < -sp*0.1 ? ' budget-under' : ' budget-on');
           var sinner;
@@ -815,6 +817,7 @@ function renderBudgetTracker() {
           } else {
             sinner = sp > 0 ? '<em style="color:var(--ink-faint)">&pound;' + sp.toLocaleString() + '</em>' : '<em style="color:var(--ink-faint)">&mdash;</em>';
           }
+          if (salloc > 0) sinner += '<div style="font-size:9px;color:#2563EB;font-weight:600;line-height:1.2">&pound;' + salloc.toLocaleString() + ' allocated</div>';
           siteCells += '<td class="budget-cell' + scls + '" style="font-size:11px;padding:4px 8px;line-height:1.4">' + sinner + '</td>';
         }
         var sVarStr, sVarStyle;
@@ -881,6 +884,7 @@ function renderBudgetTracker() {
           + '<td style="padding:7px 10px 7px 28px;font-size:12px;color:var(--ink);border-left:4px solid ' + b.color + '">' + siteLabel + '</td>'
           + siteCells
           + '<td style="text-align:right;font-size:11px;color:var(--ink-faint);padding:4px 8px">' + (sitePlan > 0 ? '&pound;' + sitePlan.toLocaleString() : '&mdash;') + '</td>'
+          + (function() { var sAlloc = 0; for (var ai2=0;ai2<12;ai2++) { sAlloc += ((window.ACTIVITY_ALLOCATIONS || {})[site.site_id] || {})[ai2] || 0; } return '<td style="text-align:right;font-size:11px;padding:4px 8px;color:#2563EB;font-weight:700">' + (sAlloc > 0 ? '&pound;' + sAlloc.toLocaleString() : '&mdash;') + '</td>'; })()
           + '<td style="text-align:right;font-size:11px;padding:4px 8px">' + actOrCmt + '</td>'
           + '<td style="text-align:right;font-size:11px;' + sVarStyle + ';padding:4px 8px">' + sVarStr + '</td>'
           + '</tr>';
@@ -889,7 +893,7 @@ function renderBudgetTracker() {
         if (hasItems) {
           var STATUS_C = { planned:'#6B7280', briefed:'#D97706', active:'#059669', completed:'#374151', approved:'#2563EB', cancelled:'#DC2626' };
           var STATUS_E = { draft:'#6B7280', confirmed:'#2563EB', completed:'#059669', cancelled:'#DC2626' };
-          var colCount = 16;
+          var colCount = 17;
           var acHtml = '<td colspan="' + colCount + '" style="padding:0;border-left:4px solid ' + b.color + ';background:var(--surface);border-bottom:1px solid var(--border)">';
           acHtml += '<div class="bt-accord" id="' + accordId + '" style="display:none"><div style="padding:14px 20px 18px">';
 
@@ -1607,7 +1611,8 @@ async function loadSiteBudgets() {
       typeof loadBriefCommitmentsForTracker === 'function' ? loadBriefCommitmentsForTracker() : Promise.resolve(),
       loadChannelCommitments(),
       loadEventsForBudget(),
-      loadSocialBudgets()
+      loadSocialBudgets(),
+      loadActivityAllocations()
     ]);
     if (Object.keys(BRAND_CHANNELS_DATA).length) {
       updateGroupChannelsFromBrands();
@@ -1836,6 +1841,29 @@ function getSocialBudgetBySite(siteId, brandId) {
   });
   return merged;
 }
+/* ══ Activity budget allocations for budget tracker ══ */
+window.ACTIVITY_ALLOCATIONS = {}; // [site_id][month] = total planned
+
+async function loadActivityAllocations() {
+  try {
+    var year = parseInt(PLAN_YEAR) || new Date().getFullYear();
+    var r = await fetch(SUPABASE_URL + '/rest/v1/activity_budget_lines?year=eq.' + year + '&select=site_id,month,planned&limit=10000', {
+      headers: getAuthHeaders({'Content-Type':'application/json'})
+    });
+    if (!r.ok) return;
+    var rows = await r.json() || [];
+    window.ACTIVITY_ALLOCATIONS = {};
+    rows.forEach(function(row) {
+      if (!row.site_id || !row.planned) return;
+      if (!window.ACTIVITY_ALLOCATIONS[row.site_id]) window.ACTIVITY_ALLOCATIONS[row.site_id] = {};
+      var m = parseInt(row.month) - 1; // convert 1-12 to 0-11
+      window.ACTIVITY_ALLOCATIONS[row.site_id][m] = (window.ACTIVITY_ALLOCATIONS[row.site_id][m] || 0) + (row.planned || 0);
+    });
+    console.log('Activity allocations loaded:', rows.length, 'rows');
+  } catch(e) { console.warn('loadActivityAllocations:', e); }
+}
+
+
 async function loadSiteKPIs() {
   var _p = window.location.pathname;
   if (!_p.endsWith('index.html') && !_p.endsWith('/') &&
