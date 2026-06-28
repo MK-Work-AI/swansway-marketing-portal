@@ -31,7 +31,8 @@ if (typeof navToggle === 'undefined') {
 <script src="config.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="bundle-core.js?v=105"></script>
-<script src="js/group.js?v=113" defer></script>
+<script src="js/group.js?v=118" defer></script>
+<script src="js/dashboard.js?v=100" defer></script>
 <script src="js/brand.js?v=102" defer></script>
 </head>
 <body>
@@ -107,8 +108,7 @@ if (typeof navToggle === 'undefined') {
         Planning <span class="nav-dd-chevron">▾</span>
       </button>
       <div class="nav-dd-panel">
-        <button class="nav-dd-item" onclick="window.location='calendar.html'">Campaign Calendar</button>
-        <button class="nav-dd-item nav-item-cta" onclick="window.location='brief.html'">Campaign Builder</button>
+        <button class="nav-dd-item" onclick="window.location='planner.html'">📅 Quarterly Planner</button>
         <button class="nav-dd-item" onclick="window.location='events.html'">Events &amp; Placements</button>
         <button class="nav-dd-item" onclick="window.location='social.html'">Social Hub</button>
       </div>
@@ -188,31 +188,115 @@ if (typeof navToggle === 'undefined') {
 
 <main id="main-content" class="main">
   <div class="view active" id="view-group">
-  
-  <div id="active-campaigns-banner" style="display:none;margin-bottom:1.5rem"></div>
 
-  <div class="page-strip">
-    <div class="page-strip-left"></div>
-    <div class="action-row">
+  <!-- ── Dashboard styles ── -->
+  <style>
+    .db-greeting { font-family:var(--font-d); font-size:24px; font-weight:800; color:var(--ink); margin-bottom:2px; }
+    .db-date { font-family:var(--font-b); font-size:13px; color:var(--ink-soft); margin-bottom:20px; }
+    .db-kpi-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+    .db-kpi { background:var(--white); border:1px solid var(--border); border-radius:6px; padding:16px 18px; cursor:pointer; transition:box-shadow .15s; }
+    .db-kpi:hover { box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+    .db-kpi-icon { font-size:22px; margin-bottom:8px; }
+    .db-kpi-val { font-family:var(--font-d); font-size:28px; font-weight:800; line-height:1; margin-bottom:4px; }
+    .db-kpi-label { font-family:var(--font-m); font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-faint); }
+    .db-kpi-sub { font-family:var(--font-b); font-size:11px; color:var(--ink-soft); margin-top:3px; }
+    .db-panels { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
+    .db-panel { background:var(--white); border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+    .db-panel-hdr { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--surface); }
+    .db-panel-title { font-family:var(--font-d); font-size:13px; font-weight:700; color:var(--ink); }
+    .db-panel-body { padding:0; max-height:320px; overflow-y:auto; }
+    .db-item { display:flex; align-items:flex-start; gap:12px; padding:11px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .1s; }
+    .db-item:last-child { border-bottom:none; }
+    .db-item:hover { background:var(--surface); }
+    .db-item-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:4px; }
+    .db-item-body { flex:1; min-width:0; }
+    .db-item-title { font-family:var(--font-b); font-size:12px; font-weight:600; color:var(--ink); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .db-item-sub { font-family:var(--font-b); font-size:11px; color:var(--ink-soft); }
+    .db-item-badge { font-family:var(--font-m); font-size:9px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; padding:2px 7px; border-radius:2px; flex-shrink:0; }
+    .db-empty { padding:24px 16px; text-align:center; color:var(--ink-faint); font-size:12px; }
+    .db-brands-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; margin-bottom:24px; }
+    .db-brand-card { background:var(--white); border:1px solid var(--border); border-radius:6px; padding:12px 14px; cursor:pointer; transition:box-shadow .15s; border-left:4px solid var(--bc,#ccc); }
+    .db-brand-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+    .db-brand-name { font-family:var(--font-d); font-size:13px; font-weight:800; color:var(--ink); margin-bottom:6px; }
+    .db-brand-bar-wrap { height:4px; background:var(--border); border-radius:2px; overflow:hidden; margin-bottom:6px; }
+    .db-brand-bar-fill { height:4px; border-radius:2px; }
+    .db-brand-meta { font-family:var(--font-b); font-size:10px; color:var(--ink-faint); }
+    .db-section-hdr { font-family:var(--font-d); font-size:15px; font-weight:700; color:var(--ink); margin-bottom:12px; margin-top:8px; }
+    @media(max-width:700px) {
+      .db-kpi-strip { grid-template-columns:1fr 1fr; }
+      .db-panels { grid-template-columns:1fr; }
+    }
+  </style>
 
+  <!-- Greeting -->
+  <div class="db-greeting" id="db-greeting">Good morning</div>
+  <div class="db-date" id="db-date"></div>
+
+  <!-- KPI tiles -->
+  <div class="db-kpi-strip" id="db-kpi-strip">
+    <div class="db-kpi" onclick="window.location='planner.html'" style="border-top:3px solid #DC2626">
+      <div class="db-kpi-icon">🔴</div>
+      <div class="db-kpi-val" style="color:#DC2626" id="db-kpi-atrisk">—</div>
+      <div class="db-kpi-label">At risk</div>
+      <div class="db-kpi-sub" id="db-kpi-atrisk-sub">Activities needing attention</div>
+    </div>
+    <div class="db-kpi" onclick="dbScrollToEvents()" style="border-top:3px solid #7C3AED">
+      <div class="db-kpi-icon">📅</div>
+      <div class="db-kpi-val" style="color:#7C3AED" id="db-kpi-events">—</div>
+      <div class="db-kpi-label">Events this week</div>
+      <div class="db-kpi-sub" id="db-kpi-events-sub">Across all brands</div>
+    </div>
+    <div class="db-kpi" onclick="window.location='budget.html'" style="border-top:3px solid #2563EB">
+      <div class="db-kpi-icon">💷</div>
+      <div class="db-kpi-val" style="color:#2563EB" id="db-kpi-budget">—</div>
+      <div class="db-kpi-label">Budget committed</div>
+      <div class="db-kpi-sub" id="db-kpi-budget-sub">Q3 2026 across all brands</div>
+    </div>
+    <div class="db-kpi" onclick="window.location='planner.html'" style="border-top:3px solid #059669">
+      <div class="db-kpi-icon">✅</div>
+      <div class="db-kpi-val" style="color:#059669" id="db-kpi-complete">—</div>
+      <div class="db-kpi-label">Activities on track</div>
+      <div class="db-kpi-sub" id="db-kpi-complete-sub">Across all brands Q3</div>
     </div>
   </div>
 
-  <div class="metrics-row">
-    <div class="metric" style="color:#1A2E4A"><div class="metric-label">Total brands</div><div class="metric-val">11</div><div class="metric-sub">Audi to OMODA/JAECOO</div></div>
-    <div class="metric" style="color:#C8102E"><div class="metric-label">Dealership sites</div><div class="metric-val">30</div><div class="metric-sub">+ 5 Motor Match sites</div></div>
-    <div class="metric" style="color:#047857"><div class="metric-label">Group budget</div><div class="metric-val" id="group-budget-val">—</div><div class="metric-sub">Across all brands <span class="year-ref"></span></div></div>
-    <div class="metric" style="color:#7C3AED"><div class="metric-label">EV-focused spend</div><div class="metric-val">38%</div><div class="metric-sub">BYD, CUPRA, VW, OMODA</div></div>
+  <!-- Two-panel row: Needs attention + This week -->
+  <div class="db-panels">
+
+    <!-- Needs attention -->
+    <div class="db-panel">
+      <div class="db-panel-hdr">
+        <span class="db-panel-title">🔴 Needs attention</span>
+        <span style="font-family:var(--font-m);font-size:10px;color:var(--ink-faint)" id="db-urgent-count"></span>
+      </div>
+      <div class="db-panel-body" id="db-urgent-list">
+        <div class="db-empty">Loading…</div>
+      </div>
+    </div>
+
+    <!-- This week -->
+    <div class="db-panel">
+      <div class="db-panel-hdr">
+        <span class="db-panel-title">📅 This week</span>
+        <span style="font-family:var(--font-m);font-size:10px;color:var(--ink-faint)" id="db-week-count"></span>
+      </div>
+      <div class="db-panel-body" id="db-week-list">
+        <div class="db-empty">Loading…</div>
+      </div>
+    </div>
+
   </div>
 
-  <div class="sh"><div><div class="sh-title">All 11 Brands at a Glance</div><div class="sh-sub">Click any brand card to open its full marketing plan</div></div></div>
-  <div class="brand-grid" id="group-brand-grid"></div>
-
-  <div class="sh"><div><div class="sh-title">Recommended Budget Split by Brand</div><div class="sh-sub">Weighted by site count, segment margin and EV priority</div></div></div>
-  <div class="chart-wrap">
-    <div class="chart-canvas-wrap"><canvas id="groupBudgetChart" role="img" aria-label="Group budget split by brand">Audi 19%, VW 14%, Land Rover 12%, SEAT/CUPRA 10%, Honda 9%, Peugeot 9%, VW Commercial 8%, Jaguar 7%, BYD 6%, OMODA/JAECOO 4%, Motor Match 2%.</canvas></div>
-    <div class="chart-legend" id="groupBudgetLegend"></div>
+  <!-- Brands at a glance -->
+  <div class="db-section-hdr">Brands at a glance — Q3 2026</div>
+  <div class="db-brands-grid" id="db-brands-grid">
+    <div class="db-empty">Loading…</div>
   </div>
+
+  <!-- Hidden elements still needed by existing JS -->
+  <div id="group-budget-val" style="display:none"></div>
+  <div id="active-campaigns-banner" style="display:none"></div>
+
 </div>
 </div>
 </main>
@@ -225,9 +309,10 @@ function navBrand(id) {
 }
 
 window.addEventListener('load', function() {
-  // All scripts loaded — safe to call functions
-  if (typeof renderGroupBrandCards === 'function') renderGroupBrandCards();
-  if (typeof renderGroupBudgetChart === 'function') setTimeout(renderGroupBudgetChart, 200);
+  // Dashboard init — runs after auth resolves
+  setTimeout(function() {
+    if (typeof dbInit === 'function') dbInit();
+  }, 800);
   if (typeof calInit === 'function') calInit();
   if (typeof spLoad === 'function') spLoad();
 });
