@@ -310,9 +310,7 @@ function navBrand(id) {
 
 window.addEventListener('load', function() {
   // Dashboard init — runs after auth resolves
-  setTimeout(function() {
-    if (typeof dbInit === 'function') dbInit();
-  }, 800);
+  // dbInit triggered by auth event in dashboard.js
   if (typeof calInit === 'function') calInit();
   if (typeof spLoad === 'function') spLoad();
 });
