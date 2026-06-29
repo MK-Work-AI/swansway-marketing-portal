@@ -9,9 +9,14 @@ var DB = {
 var _dbInitDone = false;
 async function dbInit() {
   if (_dbInitDone) return;
-  // Wait for auth + core globals
-  if (typeof BRAND_NAMES === 'undefined' || typeof getAuthHeaders === 'undefined' || typeof HUB_SITES === 'undefined' || typeof SB_USER === 'undefined' || !SB_USER) {
-    setTimeout(dbInit, 300);
+  // Wait for auth + core globals — SB_USER set by bundle-core after sign-in
+  if (typeof getAuthHeaders === 'undefined' || typeof SB_USER === 'undefined' || !SB_USER) {
+    setTimeout(dbInit, 400);
+    return;
+  }
+  // Also wait for HUB_SITES and BRAND_NAMES
+  if (typeof HUB_SITES === 'undefined' || !HUB_SITES.length || typeof BRAND_NAMES === 'undefined') {
+    setTimeout(dbInit, 400);
     return;
   }
   _dbInitDone = true;
@@ -281,6 +286,12 @@ window.addEventListener('swBudgetsLoaded', function() {
   if (_dbInitDone) { dbRenderBrands(); dbRenderKPIs(); }
 });
 
-// dbInit is called from sbHandleSession in bundle-core.js after auth confirms
-// Fallback poll in case bundle-core already fired
-setTimeout(dbInit, 2000);
+// Poll until auth is ready — works regardless of bundle-core version
+(function dbPoll() {
+  if (_dbInitDone) return;
+  if (typeof SB_USER !== 'undefined' && SB_USER && typeof BRAND_NAMES !== 'undefined') {
+    dbInit();
+  } else {
+    setTimeout(dbPoll, 500);
+  }
+})();
