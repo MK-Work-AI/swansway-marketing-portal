@@ -6,12 +6,15 @@ var DB = {
   loaded:     false
 };
 
+var _dbInitDone = false;
 async function dbInit() {
-  // Wait for core globals to be ready
-  if (typeof BRAND_NAMES === 'undefined' || typeof getAuthHeaders === 'undefined' || typeof HUB_SITES === 'undefined') {
+  if (_dbInitDone) return;
+  // Wait for auth + core globals
+  if (typeof BRAND_NAMES === 'undefined' || typeof getAuthHeaders === 'undefined' || typeof HUB_SITES === 'undefined' || typeof SB_USER === 'undefined' || !SB_USER) {
     setTimeout(dbInit, 300);
     return;
   }
+  _dbInitDone = true;
 
   var SUPA = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
   var Q = 3; var YEAR = 2026;
@@ -34,18 +37,26 @@ async function dbInit() {
   if (dateEl) dateEl.textContent = now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) + ' · Q' + Q + ' ' + YEAR;
 
   try {
+    // Q3 = months Jul(7), Aug(8), Sep(9)
+    var q3Start = YEAR + '-07-01';
+    var q3End   = YEAR + '-09-30';
+
     var [actR, evR] = await Promise.all([
       fetch(SUPA + '/activities?quarter=eq.' + Q + '&year=eq.' + YEAR + '&is_archived=eq.false&select=id,title,type_id,brand_id,rag_status,stage,assigned_to&limit=500', { headers: getAuthHeaders() }),
-      fetch(SUPA + '/events?is_archived=eq.false&select=id,title,brand_id,site_id,start_date,end_date,rag_status,planned_budget,event_type_id,quarter_tags&order=start_date&limit=200', { headers: getAuthHeaders() }),
+      fetch(SUPA + '/events?start_date=gte.' + q3Start + '&start_date=lte.' + q3End + '&select=id,title,brand_id,site_id,start_date,end_date,rag_status,planned_budget&order=start_date&limit=200', { headers: getAuthHeaders() }),
     ]);
 
-    DB.activities = actR.ok ? await actR.json() : [];
-    var allEvents  = evR.ok  ? await evR.json()  : [];
-    DB.events = allEvents.filter(function(e) { return e.quarter_tags && e.quarter_tags.indexOf(qtag) !== -1; });
+    var acts = actR.ok ? await actR.json() : [];
+    var allEvents = evR.ok ? await evR.json() : [];
+    
+    console.log('Dashboard: loaded', acts.length, 'activities,', allEvents.length, 'Q3 events');
+    
+    DB.activities = Array.isArray(acts) ? acts : [];
+    DB.events = Array.isArray(allEvents) ? allEvents : [];
 
     var weekStart = new Date(now); weekStart.setHours(0,0,0,0);
     var weekEnd   = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
-    DB.eventsThisWeek = allEvents.filter(function(e) {
+    DB.eventsThisWeek = DB.events.filter(function(e) {
       if (!e.start_date) return false;
       var d = new Date(e.start_date + 'T00:00:00');
       return d >= weekStart && d <= weekEnd;
@@ -122,6 +133,7 @@ function dbRenderUrgent() {
   // At risk activities + events without budget
   var urgent = [];
 
+  console.log('Dashboard urgent: activities sample rag_status =', DB.activities.slice(0,3).map(function(a){return a.rag_status;}));
   DB.activities.filter(function(a) { return a.rag_status === 'At Risk'; }).forEach(function(a) {
     var bname = (BRAND_NAMES||{})[a.brand_id] || a.brand_id;
     var color = (BRAND_COLORS||{})[a.brand_id] || '#DC2626';
@@ -265,8 +277,14 @@ function dbEsc(s) {
 }
 
 // Refresh brands grid once site budgets load
-var _dbBrandsRefreshed = false;
-var _dbOrigLoadSiteBudgets = null;
 window.addEventListener('swBudgetsLoaded', function() {
-  if (!_dbBrandsRefreshed) { _dbBrandsRefreshed = true; dbRenderBrands(); dbRenderKPIs(); }
+  if (_dbInitDone) { dbRenderBrands(); dbRenderKPIs(); }
 });
+
+// Hook into Supabase auth event — fire dbInit once user is signed in
+document.addEventListener('sb:signed_in', function() { dbInit(); });
+document.addEventListener('sb:session', function() { dbInit(); });
+
+// Also poll as fallback — catches cases where auth fired before this script loaded
+setTimeout(dbInit, 1500);
+setTimeout(dbInit, 3000);
