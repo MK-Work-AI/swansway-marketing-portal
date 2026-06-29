@@ -1461,6 +1461,7 @@ async function sbHandleSession(session) {
   if(typeof loadSiteContacts === 'function')   loadSiteContacts();
   if(typeof calInit === 'function')            calInit();
   if(typeof spLoad === 'function')             spLoad();
+  if(typeof dbInit === 'function')             setTimeout(dbInit, 500);
   // Refresh save bar if brief is open
   const saveBar = document.getElementById('bb-save-bar');
   const saveBtn = document.getElementById('bb-save-btn');
