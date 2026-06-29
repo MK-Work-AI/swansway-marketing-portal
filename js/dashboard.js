@@ -281,10 +281,6 @@ window.addEventListener('swBudgetsLoaded', function() {
   if (_dbInitDone) { dbRenderBrands(); dbRenderKPIs(); }
 });
 
-// Hook into Supabase auth event — fire dbInit once user is signed in
-document.addEventListener('sb:signed_in', function() { dbInit(); });
-document.addEventListener('sb:session', function() { dbInit(); });
-
-// Also poll as fallback — catches cases where auth fired before this script loaded
-setTimeout(dbInit, 1500);
-setTimeout(dbInit, 3000);
+// dbInit is called from sbHandleSession in bundle-core.js after auth confirms
+// Fallback poll in case bundle-core already fired
+setTimeout(dbInit, 2000);
