@@ -1,4 +1,4 @@
-// dashboard.js v110 — Swansway Marketing Portal home dashboard
+// dashboard.js v111 — Swansway Marketing Portal home dashboard
 
 var DB = {
   activities: [],
@@ -173,7 +173,7 @@ function dbRenderUrgent() {
   DB.activities.filter(function(a) { return a.rag_status === 'At Risk'; }).forEach(function(a) {
     var bname = (BRAND_NAMES||{})[a.brand_id] || a.brand_id;
     var color = (BRAND_COLORS||{})[a.brand_id] || '#DC2626';
-    urgent.push({ type:'activity', title: a.title, sub: bname + ' · At Risk', color:'#DC2626', dot:color, href:'planner.html', id:a.id });
+    urgent.push({ type:'activity', title: a.title, sub: bname + ' · At Risk', color:'#DC2626', dot:color, href:'planner.html?brand=' + a.brand_id + '&activity=' + a.id, id:a.id });
   });
 
   // Events this week with no status update
@@ -185,7 +185,7 @@ function dbRenderUrgent() {
       if (site) siteName = ' · ' + site.site_name;
     }
     var color = (BRAND_COLORS||{})[e.brand_id] || '#7C3AED';
-    urgent.push({ type:'event', title: e.title, sub: bname + siteName + ' · This week · Not Started', color:'#D97706', dot:color, href:'planner.html' });
+    urgent.push({ type:'event', title: e.title, sub: bname + siteName + ' · This week · Not Started', color:'#D97706', dot:color, href:'events.html?event=' + e.id });
   });
 
   // Not Started activities that should be underway (Q3 has started)
@@ -195,7 +195,7 @@ function dbRenderUrgent() {
   notStarted.forEach(function(a) {
     var bname = (BRAND_NAMES||{})[a.brand_id] || a.brand_id;
     var color = (BRAND_COLORS||{})[a.brand_id] || '#6B7280';
-    urgent.push({ type:'activity', title: a.title, sub: bname + ' · Not started — Q3 underway', color:'#6B7280', dot:color, href:'planner.html', id:a.id });
+    urgent.push({ type:'activity', title: a.title, sub: bname + ' · Not started — Q3 underway', color:'#6B7280', dot:color, href:'planner.html?brand=' + a.brand_id + '&activity=' + a.id, id:a.id });
   });
 
   if (countEl) countEl.textContent = urgent.length + ' item' + (urgent.length !== 1 ? 's' : '');
@@ -235,7 +235,7 @@ function dbRenderThisWeek() {
     }
     var d = new Date(e.start_date + 'T00:00:00');
     var dayStr = d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
-    items.push({ title: e.title, sub: dayStr + siteName + ' · ' + bname, dot: color, badge:'event', badgeColor:'#7C3AED', href:'planner.html' });
+    items.push({ title: e.title, sub: dayStr + siteName + ' · ' + bname, dot: color, badge:'event', badgeColor:'#7C3AED', href:'events.html?event=' + e.id });
   });
 
   // Activities In Progress assigned to current user
@@ -243,7 +243,7 @@ function dbRenderThisWeek() {
   DB.activities.filter(function(a) { return a.rag_status === 'In Progress'; }).slice(0, 8).forEach(function(a) {
     var bname = (BRAND_NAMES||{})[a.brand_id] || a.brand_id;
     var color = (BRAND_COLORS||{})[a.brand_id] || '#059669';
-    items.push({ title: a.title, sub: bname + ' · In Progress', dot: color, badge:'activity', badgeColor:'#059669', href:'planner.html' });
+    items.push({ title: a.title, sub: bname + ' · In Progress', dot: color, badge:'activity', badgeColor:'#059669', href:'planner.html?brand=' + a.brand_id + '&activity=' + a.id });
   });
 
   if (countEl) countEl.textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
