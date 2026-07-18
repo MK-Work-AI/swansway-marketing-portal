@@ -384,6 +384,10 @@ function plOpenEventPanel(id) {
       + '<button class="btn" style="color:#DC2626;border-color:#FECACA;margin-left:auto" id="ep-del-btn" data-id="' + e.id + '">Delete</button>'
     : '';
 
+  // Add Edit in Events button to footer
+  var editBtn = '<button class="btn" style="margin-right:auto" onclick="window.location=\'events.html?event=' + e.id + '\'">✏ Edit in Events</button>';
+  footer = editBtn + footer;
+
   plShowPanel(plE(brandName) + ' Event', content, footer);
 
   // Bind
