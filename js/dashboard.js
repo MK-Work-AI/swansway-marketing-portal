@@ -1,4 +1,4 @@
-// dashboard.js v104 — Swansway Marketing Portal home dashboard
+// dashboard.js v107 — Swansway Marketing Portal home dashboard
 
 var DB = {
   activities: [],
@@ -8,24 +8,41 @@ var DB = {
 
 var _dbInitDone = false;
 var _dbInitRunning = false;
+
 async function dbInit() {
   if (_dbInitDone || _dbInitRunning) return;
-  // Wait for auth + core globals — SB_USER set by bundle-core after sign-in
-  if (typeof getAuthHeaders === 'undefined' || typeof SB_USER === 'undefined' || !SB_USER) {
-    return; // sbHandleSession will call us again
-  }
-  // Also wait for HUB_SITES and BRAND_NAMES
-  if (typeof HUB_SITES === 'undefined' || !HUB_SITES.length || typeof BRAND_NAMES === 'undefined') {
-    setTimeout(dbInit, 500);
+
+  // Must have a real user JWT — anon key returns 0 rows from RLS tables
+  var token = window.SB_ACCESS_TOKEN;
+  if (!token || !SB_USER || token === SUPABASE_ANON_KEY) {
+    console.log('Dashboard: waiting for user token...');
     return;
   }
+
+  // Must have core globals
+  if (typeof HUB_SITES === 'undefined' || !HUB_SITES.length || typeof BRANDS === 'undefined' || !BRANDS.length) {
+    setTimeout(dbInit, 300);
+    return;
+  }
+
+  // Build BRAND_NAMES and BRAND_COLORS from BRANDS array if not set
+  if (typeof BRAND_NAMES === 'undefined' || !Object.keys(BRAND_NAMES).length) {
+    window.BRAND_NAMES = {};
+    window.BRAND_COLORS = {};
+    BRANDS.forEach(function(b) {
+      window.BRAND_NAMES[b.id] = b.name;
+      window.BRAND_COLORS[b.id] = b.color;
+    });
+  }
+
   _dbInitRunning = true;
+  console.log('Dashboard: starting init with token', token.substring(0, 20) + '...');
+
   var SUPA = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
   var Q = 3; var YEAR = 2026;
-  var qtag = 'Q' + Q + '-' + YEAR;
   var now = new Date();
 
-  // Greeting — update now and again after user loads
+  // Greeting
   function updateGreeting() {
     var hour = now.getHours();
     var greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -35,33 +52,26 @@ async function dbInit() {
     if (el) el.textContent = greet + (firstName ? ', ' + firstName : '');
   }
   updateGreeting();
-  setTimeout(updateGreeting, 2000); // retry after user name loads
+  setTimeout(updateGreeting, 2000);
 
   var dateEl = document.getElementById('db-date');
   if (dateEl) dateEl.textContent = now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) + ' · Q' + Q + ' ' + YEAR;
 
   try {
-    // Q3 = months Jul(7), Aug(8), Sep(9)
+    var hdrs = getAuthHeaders();
     var q3Start = YEAR + '-07-01';
     var q3End   = YEAR + '-09-30';
 
     var [actR, evR] = await Promise.all([
-      fetch(SUPA + '/activities?quarter=eq.' + Q + '&year=eq.' + YEAR + '&is_archived=eq.false&select=id,title,type_id,brand_id,rag_status,stage,assigned_to&limit=500', { headers: getAuthHeaders() }),
-      fetch(SUPA + '/events?start_date=gte.' + q3Start + '&start_date=lte.' + q3End + '&select=id,title,brand_id,site_id,start_date,end_date,rag_status,planned_budget&order=start_date&limit=200', { headers: getAuthHeaders() }),
+      fetch(SUPA + '/activities?quarter=eq.' + Q + '&year=eq.' + YEAR + '&is_archived=eq.false&select=id,title,type_id,brand_id,rag_status,stage,assigned_to&limit=500', { headers: hdrs }),
+      fetch(SUPA + '/events?start_date=gte.' + q3Start + '&start_date=lte.' + q3End + '&select=id,title,brand_id,site_id,start_date,end_date,rag_status,planned_budget&order=start_date&limit=200', { headers: hdrs }),
     ]);
 
     var acts = actR.ok ? await actR.json() : [];
     var allEvents = evR.ok ? await evR.json() : [];
-    
+
     console.log('Dashboard: loaded', acts.length, 'activities,', allEvents.length, 'Q3 events');
-    if (!acts.length && !allEvents.length) {
-      // Auth token not ready yet — retry
-      _dbInitDone = false;
-      setTimeout(dbInit, 1000);
-      return;
-    }
-    _dbInitDone = true;
-    _dbInitRunning = false;
+
     DB.activities = Array.isArray(acts) ? acts : [];
     DB.events = Array.isArray(allEvents) ? allEvents : [];
 
@@ -72,24 +82,29 @@ async function dbInit() {
       var d = new Date(e.start_date + 'T00:00:00');
       return d >= weekStart && d <= weekEnd;
     });
+
     DB.loaded = true;
+    _dbInitDone = true;
+    _dbInitRunning = false;
+
   } catch(err) {
     console.warn('dbInit load error:', err);
     DB.activities = []; DB.events = []; DB.eventsThisWeek = [];
     _dbInitRunning = false;
+    return;
   }
 
   dbRenderKPIs();
   dbRenderUrgent();
   dbRenderThisWeek();
 
-  // Wait for SITE_BUDGETS before rendering brands
   if (typeof SITE_BUDGETS !== 'undefined' && Object.keys(SITE_BUDGETS).length) {
     dbRenderBrands();
   } else {
     setTimeout(function() { dbRenderBrands(); }, 2000);
   }
 }
+
 
 function dbRenderKPIs() {
   var acts = DB.activities;
@@ -102,7 +117,7 @@ function dbRenderKPIs() {
   // Events this week
   var evWk = DB.eventsThisWeek || [];
   document.getElementById('db-kpi-events').textContent = evWk.length;
-  var BN = typeof BRAND_NAMES !== 'undefined' ? BRAND_NAMES : {};
+  var BN = (typeof BRAND_NAMES !== 'undefined' && Object.keys(BRAND_NAMES).length) ? BRAND_NAMES : {};
   document.getElementById('db-kpi-events-sub').textContent = evWk.length ? evWk.map(function(e){ return BN[e.brand_id]||e.brand_id; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).slice(0,3).join(', ') : 'No events this week';
 
   // Budget committed — from SITE_BUDGETS (loaded by group.js)
