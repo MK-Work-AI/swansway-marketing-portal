@@ -1408,7 +1408,7 @@ function sbInit() {
       }
       if (_event === 'SIGNED_IN' || _event === 'INITIAL_SESSION') _authHandled = true;
       sbHandleSession(session);
-      if(_event === 'SIGNED_IN') {
+      if(_event === 'SIGNED_IN') { if(typeof dbInit === 'function') setTimeout(dbInit, 1000);
         closeAuth();
         history.replaceState(null, '', window.location.pathname + window.location.search + window.location.hash);
         const name = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'You';
@@ -1461,7 +1461,6 @@ async function sbHandleSession(session) {
   if(typeof loadSiteContacts === 'function')   loadSiteContacts();
   if(typeof calInit === 'function')            calInit();
   if(typeof spLoad === 'function')             spLoad();
-  if(typeof dbInit === 'function')             setTimeout(dbInit, 500);
   // Refresh save bar if brief is open
   const saveBar = document.getElementById('bb-save-bar');
   const saveBtn = document.getElementById('bb-save-btn');
