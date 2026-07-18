@@ -1,4 +1,4 @@
-// dashboard.js v103 — Swansway Marketing Portal home dashboard
+// dashboard.js v104 — Swansway Marketing Portal home dashboard
 
 var DB = {
   activities: [],
@@ -7,18 +7,19 @@ var DB = {
 };
 
 var _dbInitDone = false;
+var _dbInitRunning = false;
 async function dbInit() {
-  if (_dbInitDone) return;
+  if (_dbInitDone || _dbInitRunning) return;
   // Wait for auth + core globals — SB_USER set by bundle-core after sign-in
   if (typeof getAuthHeaders === 'undefined' || typeof SB_USER === 'undefined' || !SB_USER) {
-    setTimeout(dbInit, 400);
-    return;
+    return; // sbHandleSession will call us again
   }
   // Also wait for HUB_SITES and BRAND_NAMES
   if (typeof HUB_SITES === 'undefined' || !HUB_SITES.length || typeof BRAND_NAMES === 'undefined') {
-    setTimeout(dbInit, 400);
+    setTimeout(dbInit, 500);
     return;
   }
+  _dbInitRunning = true;
   var SUPA = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
   var Q = 3; var YEAR = 2026;
   var qtag = 'Q' + Q + '-' + YEAR;
@@ -60,6 +61,7 @@ async function dbInit() {
       return;
     }
     _dbInitDone = true;
+    _dbInitRunning = false;
     DB.activities = Array.isArray(acts) ? acts : [];
     DB.events = Array.isArray(allEvents) ? allEvents : [];
 
@@ -74,6 +76,7 @@ async function dbInit() {
   } catch(err) {
     console.warn('dbInit load error:', err);
     DB.activities = []; DB.events = []; DB.eventsThisWeek = [];
+    _dbInitRunning = false;
   }
 
   dbRenderKPIs();
@@ -290,12 +293,10 @@ window.addEventListener('swBudgetsLoaded', function() {
   if (_dbInitDone) { dbRenderBrands(); dbRenderKPIs(); }
 });
 
-// Poll until auth is ready — works regardless of bundle-core version
-(function dbPoll() {
-  if (_dbInitDone) return;
-  if (typeof SB_USER !== 'undefined' && SB_USER && typeof BRAND_NAMES !== 'undefined') {
-    dbInit();
-  } else {
-    setTimeout(dbPoll, 500);
-  }
-})();
+// dbInit is called from sbHandleSession in bundle-core.js after auth
+// Fallback in case page loads with existing session before sbHandleSession fires
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    if (!_dbInitDone && typeof SB_USER !== 'undefined' && SB_USER) dbInit();
+  }, 2000);
+});
