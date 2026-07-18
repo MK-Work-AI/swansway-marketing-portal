@@ -1187,3 +1187,44 @@ function plShowToast(msg, bg) {
   t.style.display = 'block'; t.style.opacity = '1';
   setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.style.display='none'; t.style.opacity='1'; }, 300); }, 3000);
 }
+
+/* ══ URL param: auto-open activity from dashboard ══ */
+(function() {
+  function plCheckUrlParams() {
+    var params = new URLSearchParams(window.location.search);
+    var brandId = params.get('brand');
+    var activityId = params.get('activity');
+    if (!brandId && !activityId) return;
+
+    var attempts = 0;
+    function tryOpen() {
+      attempts++;
+      if (attempts > 20) return; // give up after 10s
+
+      // Wait for brand data to load
+      if (!PL.activities || !PL.activities.length) {
+        setTimeout(tryOpen, 500);
+        return;
+      }
+
+      // Switch brand if needed and wait for it to load
+      if (brandId && PL.brand !== brandId) {
+        plSetBrand(brandId);
+        setTimeout(tryOpen, 800); // wait for brand switch + data load
+        return;
+      }
+
+      // Open activity panel using the correct function
+      if (activityId && typeof plOpenActPanel === 'function') {
+        var act = PL.activities.find(function(a){ return a.id === activityId; });
+        if (act) {
+          plOpenActPanel(activityId);
+          return;
+        }
+      }
+      setTimeout(tryOpen, 500);
+    }
+    setTimeout(tryOpen, 1500); // wait for initial load
+  }
+  document.addEventListener('DOMContentLoaded', plCheckUrlParams);
+})();
