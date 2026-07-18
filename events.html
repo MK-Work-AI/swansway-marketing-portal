@@ -321,7 +321,15 @@ document.addEventListener('click', navCloseAll);
 
 <script>
 window.addEventListener('load', function() {
-  if (typeof evInit === 'function') evInit();
+  if (typeof evInit === 'function') {
+    evInit().then(function() {
+      var params = new URLSearchParams(window.location.search);
+      var eventId = params.get('event');
+      if (eventId && typeof evOpenDetail === 'function') {
+        setTimeout(function() { evOpenDetail(eventId); }, 300);
+      }
+    });
+  }
 });
 </script>
 
