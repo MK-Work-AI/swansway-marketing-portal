@@ -1,4 +1,4 @@
-// dashboard.js v102 — Swansway Marketing Portal home dashboard
+// dashboard.js v103 — Swansway Marketing Portal home dashboard
 
 var DB = {
   activities: [],
@@ -19,8 +19,6 @@ async function dbInit() {
     setTimeout(dbInit, 400);
     return;
   }
-  _dbInitDone = true;
-
   var SUPA = 'https://humitzrleflxnlnodpde.supabase.co/rest/v1';
   var Q = 3; var YEAR = 2026;
   var qtag = 'Q' + Q + '-' + YEAR;
@@ -55,7 +53,13 @@ async function dbInit() {
     var allEvents = evR.ok ? await evR.json() : [];
     
     console.log('Dashboard: loaded', acts.length, 'activities,', allEvents.length, 'Q3 events');
-    
+    if (!acts.length && !allEvents.length) {
+      // Auth token not ready yet — retry
+      _dbInitDone = false;
+      setTimeout(dbInit, 1000);
+      return;
+    }
+    _dbInitDone = true;
     DB.activities = Array.isArray(acts) ? acts : [];
     DB.events = Array.isArray(allEvents) ? allEvents : [];
 
