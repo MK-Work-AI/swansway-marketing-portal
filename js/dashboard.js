@@ -1,4 +1,4 @@
-// dashboard.js v107 — Swansway Marketing Portal home dashboard
+// dashboard.js v108 — Swansway Marketing Portal home dashboard
 
 var DB = {
   activities: [],
@@ -46,8 +46,17 @@ async function dbInit() {
   function updateGreeting() {
     var hour = now.getHours();
     var greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-    var nameEl = document.getElementById('user-name');
-    var firstName = nameEl ? nameEl.textContent.replace('Loading…','').trim().split(' ')[0] : '';
+    // Try CB_TEAM first for real name, fall back to user-name element
+    var firstName = '';
+    if (typeof CB_CURRENT_USER !== 'undefined' && CB_CURRENT_USER && typeof CB_TEAM !== 'undefined' && CB_TEAM[CB_CURRENT_USER]) {
+      firstName = CB_TEAM[CB_CURRENT_USER].name.split(' ')[0];
+    }
+    if (!firstName) {
+      var nameEl = document.getElementById('user-name');
+      var raw = nameEl ? nameEl.textContent.replace('Loading…','').trim() : '';
+      // If it looks like an email prefix (no space, has dot), skip it
+      if (raw && raw.indexOf(' ') !== -1) firstName = raw.split(' ')[0];
+    }
     var el = document.getElementById('db-greeting');
     if (el) el.textContent = greet + (firstName ? ', ' + firstName : '');
   }
