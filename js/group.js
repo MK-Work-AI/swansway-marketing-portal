@@ -1,4 +1,4 @@
-// v100
+// v119
 if (typeof swSocialFromBrief === 'undefined') {
   window.swSocialFromBrief = function(briefId, briefData) {
     var brandId = briefData.brand_id || (briefData.brand && briefData.brand.id) || null;
@@ -974,8 +974,8 @@ function renderBudgetTracker() {
               if (ev.end_date && ev.end_date !== ev.start_date) dateStr += ' &ndash; ' + btFmtDate(ev.end_date);
               var budgetCell = ev.planned_budget ? '&pound;' + Number(ev.planned_budget).toLocaleString() : '&mdash;';
               if (ev.actual_spend) budgetCell += '<div style="font-size:9px;color:#059669;font-weight:600;line-height:1.2">&pound;' + Number(ev.actual_spend).toLocaleString() + ' actual</div>';
-              acHtml += '<tr>'
-                + '<td style="font-weight:600">' + btEsc(ev.title || 'Untitled') + '</td>'
+              acHtml += '<tr style="cursor:pointer" onclick="window.location=\'events.html?event=' + ev.id + '\'" onmouseenter="this.style.background=\'var(--surface)\'" onmouseleave="this.style.background=\'\'">' 
+                + '<td style="font-weight:600">' + btEsc(ev.title || 'Untitled') + ' <span style="font-size:10px;color:var(--ink-faint)">↗</span></td>'
                 + '<td><span style="font-size:10px;padding:2px 7px;border-radius:3px;background:#F3F4F6;font-family:var(--font-m)">' + btEsc(ev.event_type || 'Event') + '</span></td>'
                 + '<td style="color:var(--ink-soft);white-space:nowrap">' + dateStr + '</td>'
                 + '<td style="color:var(--ink-faint);font-size:11px">This site</td>'
